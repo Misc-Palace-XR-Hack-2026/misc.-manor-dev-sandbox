@@ -1,0 +1,46 @@
+Build Off:
+- 90 minute video (commercial) presentation
+- usable prototype
+
+Project: Misc. Palace
+German, Levi, Jawen, Daniel
+
+Prototype is NOT a MVP, we should treat this as experience first and build something doable
+in two weeks to create this experience, and showcase it in a punchy video.
+
+We can tackle the video and the prototype as two different but intertwining deliverables.
+
+The hackathon recommended dividing the work into four roles, coordinator, video, designer, and programmer
+but I wanted to break away from that because there's multiple roles I would like to try and that may be interesting to all.
+
+// Work Organization
+To still organize the work someone can own the coordination, the video, the design, the programming and each person can be 
+second in each category and dabble in any of the others.
+Ex. Levi could be lead of the video (w his experience in TV production) and German can be second. 
+While German leads design and Jawen is second, etc.
+
+// Development Sandbox
+Another way to unify the project and remain in constant reminder of the core idea of the Misc. Palace,
+I thought the first thing we should swarm to create are 4 rooms, one for each dev, in some sandbox environment,
+where each dev plays with the objects and media they would all save and iterate on the concept in their own spaces
+but share the links and objects with each other for inspiration and feedback.
+
+// Prototype Deliverable
+At the end of the prototype, we will allow all users to be able to check out each of the devs finished or mostly fleshed out rooms.
+The prototype experience will be limited and start with the users organizing 8-9 objects in the "shared shelf" or "shared wall" of their rooms.
+Each of objects will have a preview of the media as they hold it and work w the objects (regardless of what object the devs choose torepresern their media,
+the preview can still show what the media is underlying the 3D model)
+This shared wall acts as the small turotial space to place the beginning 8-9 objects, which each come from the 4 devs' rooms. The shared wall also
+subtly reinforces the idea that objects can come from elsewhere and be shared. 
+For the last object, the user will be prompted to select any media, file, link, or worthwhile internet resource, to map it to an object and place it in the room.
+This time the object will not go in the shared shelf, but anywhere else in their room. There will then be an option to upload a folder of files/media, and the user
+can either finish organizing it manually or choose a "magic cleanup" option that auto organizes the media into the best objects it can and places them in the room.
+As a final hoorah of the demo, the user can then exit their room to see that they are in a cul-de-sac of rooms and see the contents and layouts of the other devs. 
+
+// Things to think about
+- Users can choose 1st person POV or a 3rd person POV and they see a sort of avatar or character moving around the space.
+- There should be a set list of some cool default objects that do well to represent and playfully depict any sort of media.
+- It should take as little friction and time as possible for users to start organizing and cutomizing the room / space, it should not be tedious while also being personal.
+- Maybe we should make a tutorial version where the first thing users organise are the pre-selected dev objects (quicker, less personal) versus organizing objects and media they either provide or at least pick the 3D models.
+    - We should balance quick and intuitive first experience with what is most personal and interesting.
+    - Is it more interesting / engaging to put away pre selected objects or take the extra time to provide and adorn the objects and then put away?

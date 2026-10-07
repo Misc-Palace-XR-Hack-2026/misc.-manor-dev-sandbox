@@ -1,0 +1,43 @@
+:root {
+  color-scheme: dark;
+  --bg: #26232d;
+  --panel: #2f2b38;
+  --line: #443e52;
+  --text: #ece7f5;
+  --muted: #a39cb5;
+  --accent: #dba08f;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; font: 13px/1.4 system-ui, sans-serif; background: var(--bg); color: var(--text); }
+body { display: flex; }
+
+#menu { width: 360px; flex: none; height: 100%; overflow-y: auto; padding: 14px; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+#room { flex: 1; position: relative; overflow: hidden; }
+#room canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+
+h1 { margin: 0; font: italic 600 20px Georgia, serif; }
+input, select, button { font: inherit; color: var(--text); background: #3a3546; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+input { width: 100%; }
+button { cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: 0.4; cursor: default; }
+.owner { font-weight: 600; }
+.add { display: flex; flex-direction: column; gap: 6px; }
+.row-inline { display: flex; gap: 6px; }
+.row-inline select { flex: 1; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 6px; }
+.status { color: var(--muted); font-size: 12px; }
+.status.error { color: #ff8f8f; }
+
+.list { display: flex; flex-direction: column; gap: 6px; }
+.row { padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: #342f3f; cursor: pointer; }
+.row.selected { border-color: #ffe27a; box-shadow: 0 0 0 1px #ffe27a; }
+.row.inbox { opacity: 0.7; cursor: default; }
+.row .title { font-weight: 600; word-break: break-word; }
+.row .meta, .row .where { color: var(--muted); font-size: 12px; word-break: break-all; }
+.row a { color: var(--accent); }
+.row .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.row .actions button, .row .actions select { padding: 3px 7px; font-size: 12px; }
+.more { color: var(--muted); text-align: center; padding: 8px; }
+
+.tooltip { position: absolute; pointer-events: none; padding: 4px 8px; border-radius: 6px; background: rgba(30, 26, 38, 0.92); color: var(--text); font-size: 12px; white-space: nowrap; }

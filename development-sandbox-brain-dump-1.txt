@@ -1,0 +1,17 @@
+@pitch-off-docs/misc-palace-pitch-off-presentation.pdf @build-docs/build-concept.txt 
+
+we are on the build portion of this hackathon and i want to tdo something like build-concept
+
+before all that, i want to hone in on the development sandbox experience. The idea is the prototype and work will change as we go, but at the end whatever we produce we should have at least 4 rooms worked on and customized by each dev, bc they are the ones that are most exposed ot this system the longest
+
+the cool part would be if throughout development the devs could always tinker and play w their own room regardless of what the final product is, and at the end of the day whatever the final product is we can export what the devs have saves as links and media in a way that will transfer to the final product
+
+so i want to create this dev snadbox w the idea that it could be detsroyed,changed, visually reworked, and things recreated but the universal basics are the same, media is saved as different bjects for different people in each room and should be able to be shared and ransferred and ampped to any other medium or respresentation, whats important is that we can save current stateand always recreate it for devs to keep playing and eventually export to final product
+
+so lets say i can provide a general room 3d voxel thing, i created it a whiela go, and that devs can either save stuff in this pre-prototype 3d space in rooms, and maybe also to simplify also save it in a menu sort of fashio nwhile the 3d stuff may be down or not exist, so options to save and know their stuff,and the visuals and all that can be saved later, but we want devs to alwasy have their rooms to look at and all play w the same voxel alyout start but beableto customize immediately to play around
+
+some basic upload bookmarks or media interface, some basic map to objects interface (for both 3d and the 2d menu simplified) and some auto organie into objects or default ahts wecan figure out later
+
+what is the best way to make this shared sandbox development environement and to share w my devs for them to use while we iterate and work on the final delvierables and then be abe to integrate later and expand as needed?
+
+read the docs i sent and lets discuss

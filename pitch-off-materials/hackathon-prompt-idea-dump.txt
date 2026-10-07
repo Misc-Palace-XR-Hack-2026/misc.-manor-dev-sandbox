@@ -1,0 +1,261 @@
+Design Prompt:
+
+Design an experience so compelling that someone who has never used XR, spatial computing, or wearables would be excited to use the medium.
+
+Technology Tracks
+
+🥽Choose how and with what technology to build
+
+Tracks apply only during the Pitch-Off, when the community selects the top 2 projects in each track. In the Hack finals, tracks no longer apply and all projects compete together for awards.
+
+Desktop & Mobile 3D
+
+Computer vision and 3D experiences for traditional 2D screens, including mobile, desktop, tablet, web-based solutions, Unity, WebXR, and Three.js.
+
+Head-Mounted Displays
+
+Mixed, virtual, and augmented reality experienced in devices such as Apple Vision Pro, HTC Vive, and Meta Quest.
+
+Holographic Displays
+
+Passive-viewing and interactive content for holographic and interactive displays, including Proto.
+
+Wearables, IoT & Smart Glasses
+
+Non-traditional wearables and connected devices, including display smart glasses, smart watches, and IoT devices.
+
+Hardware note: Use equipment available to you or facilitated through your local chapter. Many manufacturers offer simulation previews that can support development without owning the device.
+
+Two-Phase Experience
+
+🛠️The Journey: Ideate > Pitch > Build
+
+A six-week experience: a three-week Pitch-Off followed by a three-week Hack phase, with the final week serving as Presentation Week. Plan for roughly 1–4 working hours per week.
+
+Ideate
+
+Explore a narrow user persona, a meaningful problem, and a compelling use case for spatial computing.
+
+Pitch · Phase 1
+
+Develop a presentation of no more than 3 minutes. Community voting advances the top 2 projects in each technology track.
+
+Build · Phase 2
+
+Finalist teams create a 60-second video and a working demo or persuasive prototype for the final showcase.
+
+Phase 1 Deliverable
+
+A persuasive pitch no longer than 3 minutes
+Individuals or teams may present
+Community votes for the top 2 projects in each track
+Phase 2 Deliverables
+
+A 60-second video
+A working demo or convincing prototype
+All finalists compete together across award categories
+ 
+
+
+By the end of this session, you should have:
+
+ 
+
+Registered a project (as an individual or as a team) or officially joined a team you’ll contribute to
+A clear Pitch-Off plan: track selection + the core story you’ll deliver in a ≤3-minute pitch to earn votes into the finals (top 2 projects per track advance)
+What we’ll do together (in person brainstorming artifact)
+We’ll run a structured working session focused on team formation and de-risking your pitch direction.
+ 
+
+Outcomes for the week:
+
+Rapid share-outs of ideas-in-progress (problem/persona/“killer use case” hook)
+Matchmaking: join a team, recruit missing skillsets, or merge overlapping concepts
+Track selection sanity check + “is this compelling to non-XR users?” pressure-test
+Logistics: where teams will collaborate in sanctioned spaces and how to coordinate locally. Your working rooms for the week listed below:
+Columbus:
+NYC Metro:
+Delaware
+Jersey City:
+Bring a rough, 60–90 second explanation covering: your target persona, the pain/opportunity, why spatial computing/wearables changes the game, and which track you’re targeting. The goal is speed, not polish.
+ 
+
+Practical notes on tech & hardware
+
+Tracks are meant to guide how you build, but the organizing team can’t provide every device—plan to build with what you have access to, what your local chapter can facilitate, or via manufacturer simulation previews.
+
+ 
+
+Time expectation
+
+Plan for ~1–4 hours/week during the program; your team lead can help you contribute asynchronously if you can’t make every session.
+
+ 
+
+Where to coordinate
+
+Join the Teams community channel to find teams, leads, and updates: go/XRTK. Or consider using a designated Teams Chat for your colleagues.
+
+
+---
+
+Our materials:
+
+A 3D room that represents all saved files, links, and resources for the individual to have a sharable space that serves as their collection of knowledge both that they have saved and those that they have created. Can be created for a single person or for a larger team repo
+
+rooms organized in cul-de-sacs or neighborhoods, org by teams or adjacent employees, and also a random exploration mode to go to anyone’s room
+
+Have team based rooms or even sections of rooms dedicated to different purposes
+
+quick sorting - toss away things you don’t want and slide around what you want to keep and organize.
+
+image
+
+I never got around to the procedural voxel room generation but we could generate a basic cool layout per room and then allow people to add objects and models as needed and those get linked to XYZ also feel free to add the others folks in here and discuss any other ideas just wanted to share this while I had it 
+
+Things that can save (links):
+
+Images
+Videos
+Link to:
+Confluence / documentation
+Articles (jpmc, medium, etc.)
+Website, webapp, portal of info / resources (udemy)
+Tools (jira, spinnaker, jules, aws console, Dynatrace, blazemeter)
+Files (link in sharepoint or something)
+MD file
+PDF
+Etc.
+Audio
+ 
+
+Maybe start w 10-20 cool objects that are neat to interact with and people immediately attribute some universal functionality / meaning to it that maps to links
+
+There are singular objects:
+
+- a book
+
+- a toy (yoyo
+
+- a tool (a wrench, magnifying glass, screw, a calculator?)
+
+- a vinyl record, cassette tape, CD
+
+- picture frame
+
+- a box TV
+
+- a camera
+
+- musical instruments (guitar, piano, keyboard)
+
+- a lamp?
+
+ 
+
+And containers/holding objects or objects/furniture that holds singular objects or contains objects
+
+Record player / records holder, CD player, CD case
+Bookshelf or the entire bookcase w multiple shelves
+A chest (for random or misc objects)
+Fish tank?
+ 
+ 
+
+Shared space or a dedicated wall of the room that allows for interaction across rooms or from people visiting
+
+Cork board for people to leave messages and post it notes when they visit
+Portal to other peoples objects or links
+A shared cubicle or cubby for other people and myself to organize links/objects into project spaces in the cubby as objects/containers
+
+
+---
+
+Pitch off ideas:
+
+Benefits:
+
+Space to represent favorite things/knowledge - novel
+Fine tuning it and having fun organizing it - satisfaction/gamify
+Sharing with others 
+navigating internet/resources in novel and interesting ways
+Communicate that idea by:
+
+Initial slide: separate services (spotify, youtube, website links, random cool stuff shows as all separate)
+the problem is navigating web is boring and stale and kind of front page of whatever u ingest
+problem statement: 
+How can I navigate the internet in a novel and interesting way that feels more human and personal? How do I organize my knowledge and media in meaningful ways? How can I visually or seamlessly see my resources are becoming stale, outdated, dusty? Can we centralize knowledge in meaningful ways for productivity, inquiry, exploration?
+Next slide: Communicate the concept of bringing all these sources together
+those same links and medias now put into a 3D space of some room to showcase 
+shows how this can make organizing and maintaining resources inherently satisfying, memorable in 3D space, and a place to linger in, explore, and make use of
+Next slide: Communicate the concept of navigating and exploring other rooms as a way of discovering new content, knowledge, resources
+showcase a zoomed out view of my room next to a cul de sac of other rooms, scrum team organized
+different filters to allow your room to be placed next to different peoples, random, or a group of friends that you set
+Next slide: customize your room with other peoples links, objects, layouts, into that dedicated "wall" or space for universal content
+Final slide: communicate the intrigue of media as a 3d space, interconnected and embedded to and from the curated spaces of others
+ 
+
+Benefit:
+
+When things are old they atart appearing in the box for you to unpack again?
+Inventory bar could have older or infrequently used stuff for reorganization / reclassification?
+maybe a lil robot that goes around repoing all old stuff and making you have to deal w it or something
+ 
+
+ 
+---
+
+
+
+Meeting Summary For Misc. Palace  XR Hack Touch Base
+
+Thursday, September 24, 2026 | 11:58 AM - 01:42 PM
+
+
+
+Quick recap
+
+The meeting focused on preparing a pitch for a 3D virtual room concept that lets users organize and share links and resources in a spatial, gamified way. Davis, Matt showed a rough demo of a room where users could pick up, place, and organize objects representing links, and discussed possible visual styles, including isometric views and more immersive 3D layouts. Dominguez, German outlined a potential pitch structure, starting with the problem of disorganized bookmarks and scattered resources, then showing how links could be mapped to objects in a room, and finally highlighting the benefits of sharing and exploring other people’s rooms. The group discussed how to communicate the core idea clearly in a short pitch, emphasizing the fun and satisfaction of organizing, the potential for AI integrations, and ideas like visual cues for stale links and a “smart tray” for related items. They also brainstormed ways to keep the experience engaging over time, such as reorganizing infrequently used items and using a robot or cleaning mechanic to prompt users to review old content. Davis, Matt agreed to share the repo and images and to act as an advisor, while Dominguez, German and Gaines, Jawan planned to refine the pitch and visuals for the upcoming presentation.
+
+ 
+
+Next steps
+
+  1.   g: Create and finalize the pitch deck for tomorrow's pitch-off, focusing on the core idea, benefits, and a concise problem statement.
+  2.   j: Collaborate with g to finalize the pitch deck today, and communicate any updates or constraints.
+  3.   m: Send access to the GitHub repo to g andj by adding their personal emails.
+  4.   m: Provide images and assets from the repo (including isometric and hand-interaction visuals) g and j for use in the pitch.
+  5.   g: Add m to the team as an advisor for input and feedback.
+  6.   g: Reach out to potential teammates d and L to invite them to join the team.
+
+ 
+
+Summary
+
+Virtual Room Application Demonstration
+
+G and m demonstrated a virtual room application that allows users to click and place objects like books and papers, with features for editing room layouts and importing/exporting layouts. m showed the current version of the prototype and offered to share it with the team via email, g expressed enthusiasm about the core concept being understandable but noted that the infinite possibilities for exploration might need to be focused for the pitch.
+
+3D Space Linking Presentation Approach
+
+g proposed a three-part presentation approach for their 3D space linking project, suggesting users start with a simple shared wall experience where they can organize a small set of provided links before progressing to importing their own bookmarks. The presentation would showcase a gradual onboarding process from a basic flat wall view to a fully curated room, with the possibility of demonstrating shared spaces where users can exchange objects and links with other users. g sought feedback from m and others on what elements would work best for pitching the concept while maintaining clarity for future implementation.
+
+Three-Minute Pitch Preparation Strategy
+
+g and m discussed preparing a three-minute pitch for an upcoming presentation. Matt advised focusing on benefits and potential wins rather than getting bogged down in tutorials or detailed explanations. He suggested using visual representations and screenshots to help convey the concept effectively, emphasizing the need to paint a clear picture of how the product would benefit users. The discussion also touched on structuring the pitch to highlight the core idea first, followed by how the user experience would be guided even for those new to gaming or VR.
+
+Internet Resource Organization Presentation
+
+g and m discussed creating a presentation about organizing internet resources and links, with g suggesting starting with an example of different content buckets like YouTube and Spotify. m proposed framing it as solving the problem of forgotten bookmarks and old saved content. Jawan added that the main issue is people not realizing how disorganized their file management is, and suggested the tool could automatically gather relevant documents based on clicked links.
+
+Digital Organization App Improvements
+
+The team discussed ideas for improving a digital organization app, with m suggesting AI integrations and a gamified interface to help users manage their bookmarks and digital assets. j proposed a gamification concept involving limited visible assets on screen with the ability to hide and reload items, while g suggested incorporating visual indicators for stale or unavailable links. The discussion focused on making the app more personal and intuitive while addressing the core problem of organizing digital content.
+
+Resource Visualization and Knowledge Centralization
+
+g and m discussed visualizing how resources become outdated and centralizing knowledge in a meaningful way. They explored the concept of presenting disparate services as objects in a virtual room, with icons representing different resources displayed above objects like bookshelves or CD players. M suggested using images from a game called "Unboxing" to demonstrate the satisfying aspect of adding items to the virtual space, and he offered to email relevant images to help with the presentation.
+
+3D Workspace Design Concepts
+
+The team discussed design concepts for a 3D room-based workspace application, focusing on navigation between rooms and interaction with objects. They explored different visual approaches including isometric views and discussed features like filtering to connect with random or specific team members. The group also considered implementing a "repo robot" concept to help users manage and organize older or less frequently used items in their virtual space. Davis agreed to serve as an advisor for the project team, while g and j will continue developing the concept further.

@@ -1,0 +1,209 @@
+import { parseBookmarksHtml } from '../core/bookmarks';
+import { safeUrl } from '../core/content';
+import type { Store } from '../core/store';
+import { CONTENT_TYPES, OBJECT_KINDS, type ContentType, type ObjectKind } from '../core/types';
+
+// 2D fallback view: always works, even if the 3D room is broken. Built with DOM nodes + textContent only,
+// so imported titles and URLs can never inject markup.
+
+export interface RepoRoom {
+  name: string;
+  data: unknown;
+}
+
+const MAX_ROWS = 200;
+
+function el<K extends keyof HTMLElementTagNameMap>(
+  tag: K, props: Partial<HTMLElementTagNameMap[K]> & { class?: string } = {}, ...kids: (Node | string)[]
+): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  const { class: cls, ...rest } = props;
+  if (cls) node.className = cls;
+  Object.assign(node, rest);
+  node.append(...kids);
+  return node;
+}
+
+function download(name: string, text: string): void {
+  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  const a = el('a', { href: url, download: name });
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export class MenuView {
+  private list = el('div', { class: 'list' });
+  private status = el('div', { class: 'status' });
+  private undoBtn = el('button', { textContent: 'Undo' });
+  private ownerInput = el('input', { class: 'owner', title: 'Whose room is this?' });
+  private flashMsg = '';
+
+  constructor(root: HTMLElement, private store: Store, repoRooms: RepoRoom[]) {
+    root.append(
+      el('h1', { textContent: 'Misc. Palace sandbox' }),
+      this.ownerInput,
+      this.buildAddForm(),
+      this.buildToolbar(repoRooms),
+      this.status,
+      this.list,
+    );
+    this.ownerInput.addEventListener('change', () => store.setOwner(this.ownerInput.value));
+    store.subscribe(() => this.render());
+    this.render();
+  }
+
+  private flash(msg: string): void {
+    this.flashMsg = msg;
+    this.renderStatus();
+  }
+
+  // ---- static pieces ----------------------------------------------------
+  private buildAddForm(): HTMLElement {
+    const title = el('input', { placeholder: 'Title (optional)' });
+    const ref = el('input', { placeholder: 'Paste a link, or a file name' });
+    const type = el('select');
+    type.append(el('option', { value: 'auto', textContent: 'type: auto' }));
+    for (const t of CONTENT_TYPES) type.append(el('option', { value: t, textContent: t }));
+    const add = el('button', { textContent: 'Add to room' });
+    const submit = () => {
+      if (!ref.value.trim() && !title.value.trim()) return;
+      this.store.addItem({ title: title.value, sourceRef: ref.value, type: type.value as ContentType | 'auto' });
+      title.value = ref.value = '';
+      ref.focus();
+    };
+    add.addEventListener('click', submit);
+    for (const i of [title, ref]) i.addEventListener('keydown', (e) => e.key === 'Enter' && submit());
+    return el('div', { class: 'add' }, ref, title, el('div', { class: 'row-inline' }, type, add));
+  }
+
+  private buildToolbar(repoRooms: RepoRoom[]): HTMLElement {
+    const pick = (accept: string, onFile: (text: string) => void): HTMLInputElement => {
+      const input = el('input', { type: 'file', accept, hidden: true });
+      input.addEventListener('change', async () => {
+        const f = input.files?.[0];
+        input.value = '';
+        if (f) onFile(await f.text());
+      });
+      return input;
+    };
+    const roomFile = pick('.json,application/json', (text) => {
+      try {
+        this.store.replaceState(JSON.parse(text));
+        this.flash('Room loaded. Undo brings your previous room back.');
+      } catch (e) {
+        this.flash(`Could not load room: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    });
+    const bookmarkFile = pick('.html,text/html', (text) => {
+      const { added, placed } = this.store.importBookmarks(parseBookmarksHtml(text));
+      this.flash(`Imported ${added} bookmarks (${placed} placed in the room, the rest are in the inbox).`);
+    });
+
+    const button = (label: string, fn: () => void, title = '') => {
+      const b = el('button', { textContent: label, title });
+      b.addEventListener('click', fn);
+      return b;
+    };
+    this.undoBtn.addEventListener('click', () => this.store.undo());
+
+    const repo = el('select', { title: 'Rooms committed in the repo (rooms/*.json)' });
+    repo.append(el('option', { value: '', textContent: 'Load repo room...' }));
+    repoRooms.forEach((r, i) => repo.append(el('option', { value: String(i), textContent: r.name })));
+    repo.addEventListener('change', () => {
+      const room = repoRooms[Number(repo.value)];
+      repo.value = '';
+      if (!room) return;
+      try {
+        this.store.replaceState(room.data);
+        this.flash(`Loaded ${room.name}.`);
+      } catch (e) {
+        this.flash(`Could not load ${room.name}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    });
+
+    return el(
+      'div',
+      { class: 'toolbar' },
+      this.undoBtn,
+      button('Auto-organize', () => this.flash(`Placed ${this.store.autoOrganize()} objects.`), 'Magic cleanup (stub)'),
+      button('Export room', () => download(`${this.store.state.owner.toLowerCase().replace(/\W+/g, '-')}.json`, this.store.exportJson()), 'Save a JSON file to commit under rooms/'),
+      button('Import room', () => roomFile.click()),
+      button('Import bookmarks', () => bookmarkFile.click(), 'Chrome / browser bookmarks export (.html)'),
+      repo, roomFile, bookmarkFile,
+    );
+  }
+
+  // ---- dynamic pieces ---------------------------------------------------
+  private render(): void {
+    const { state, selectedId } = this.store;
+    if (document.activeElement !== this.ownerInput) this.ownerInput.value = state.owner;
+    this.undoBtn.disabled = !this.store.canUndo;
+    this.renderStatus();
+
+    this.list.replaceChildren();
+    const rows = state.contentItems.slice(0, MAX_ROWS);
+    for (const c of rows) this.list.append(this.buildRow(c.id, selectedId));
+    if (state.contentItems.length > MAX_ROWS) {
+      this.list.append(el('div', { class: 'more', textContent: `Showing ${MAX_ROWS} of ${state.contentItems.length}.` }));
+    }
+    if (rows.length === 0) this.list.append(el('div', { class: 'more', textContent: 'Nothing here yet. Add a link above.' }));
+  }
+
+  private renderStatus(): void {
+    const { state, saveError } = this.store;
+    const inRoom = state.representations.length;
+    const placed = state.placements.length;
+    const base = `${state.contentItems.length} saved, ${inRoom} in room, ${placed} placed`;
+    this.status.textContent = saveError ?? (this.flashMsg ? `${this.flashMsg}  |  ${base}` : base);
+    this.status.classList.toggle('error', Boolean(saveError));
+  }
+
+  private buildRow(contentId: string, selectedId: string | null): HTMLElement {
+    const store = this.store;
+    const c = store.content(contentId)!;
+    const rep = store.repFor(contentId);
+    const slotId = rep ? store.slotOf(rep.id) : undefined;
+    const slotLabel = slotId ? store.layout.slots.find((s) => s.id === slotId)?.label : undefined;
+
+    const title = el('span', { class: 'title', textContent: c.title, title: 'Double-click to rename' });
+    title.addEventListener('dblclick', () => {
+      const next = window.prompt('Rename', c.title);
+      if (next) store.renameItem(c.id, next);
+    });
+
+    const href = c.sourceKind === 'url' ? safeUrl(c.sourceRef) : null;
+    const meta = el('div', { class: 'meta' }, `${c.type}${c.tags.length ? ' - ' + c.tags.join(', ') : ''} - `);
+    if (href) meta.append(el('a', { href, target: '_blank', rel: 'noopener noreferrer', textContent: 'open' }));
+    else meta.append(c.sourceRef || 'note');
+
+    const where = el('div', { class: 'where' }, rep ? (slotLabel ?? 'held: pick a spot in the room') : 'inbox (not in room)');
+
+    const actions = el('div', { class: 'actions' });
+    const act = (label: string, fn: () => void) => {
+      const b = el('button', { textContent: label });
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        fn();
+      });
+      actions.append(b);
+    };
+    if (rep) {
+      const kind = el('select', { title: 'Which object shows this media' });
+      for (const k of OBJECT_KINDS) kind.append(el('option', { value: k, textContent: k, selected: k === rep.objectKind }));
+      kind.addEventListener('click', (e) => e.stopPropagation());
+      kind.addEventListener('change', () => store.setKind(rep.id, kind.value as ObjectKind));
+      actions.append(kind);
+      if (slotId) act('Pick up', () => (store.unplace(rep.id), store.select(rep.id)));
+      act('Stash', () => store.stash(rep.id));
+    } else {
+      act('Bring out', () => store.bringOut(c.id));
+    }
+    act('Delete', () => store.deleteContent(c.id));
+
+    const row = el('div', { class: 'row' }, title, meta, where, actions);
+    row.classList.toggle('selected', Boolean(rep && rep.id === selectedId));
+    row.classList.toggle('inbox', !rep);
+    if (rep) row.addEventListener('click', () => store.select(rep.id === selectedId ? null : rep.id));
+    return row;
+  }
+}
