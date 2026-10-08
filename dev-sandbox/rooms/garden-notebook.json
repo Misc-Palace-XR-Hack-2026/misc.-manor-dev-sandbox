@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "room_garden_notebook",
+  "owner": "The garden notebook",
+  "layoutId": "cozy-loft",
+  "lighting": "dawn",
+  "surfaces": {
+    "floor": { "preset": "tile" },
+    "wall": { "preset": "plaster" },
+    "background": { "preset": "sky" }
+  },
+  "contentItems": [
+    { "id": "c1", "type": "article", "title": "A living collection", "sourceKind": "url", "sourceRef": "https://en.wikipedia.org/wiki/Botanical_garden", "tags": ["garden"], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c2", "type": "article", "title": "Notice the small things", "sourceKind": "url", "sourceRef": "https://en.wikipedia.org/wiki/Nature_journaling", "tags": ["journal"], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c3", "type": "link", "title": "A world of birds", "sourceKind": "url", "sourceRef": "https://www.allaboutbirds.org/", "tags": ["nature"], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c4", "type": "note", "title": "Seed packet: wait and watch", "sourceKind": "note", "sourceRef": "Keep a record of what changes around you.", "tags": ["garden"], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c5", "type": "note", "title": "Windowsill basil", "sourceKind": "note", "sourceRef": "A plant for the morning light.", "tags": ["garden"], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c6", "type": "note", "title": "Reading chair in the sun", "sourceKind": "note", "sourceRef": "Sit with the notebook.", "tags": [], "createdAt": "2026-10-08T00:00:00.000Z" }
+  ],
+  "representations": [
+    { "id": "r1", "contentItemId": "c1", "objectKind": "notebook" },
+    { "id": "r2", "contentItemId": "c2", "objectKind": "book" },
+    { "id": "r3", "contentItemId": "c3", "objectKind": "photoFrame" },
+    { "id": "r4", "contentItemId": "c4", "objectKind": "box" },
+    { "id": "r5", "contentItemId": "c5", "objectKind": "plant" },
+    { "id": "r6", "contentItemId": "c6", "objectKind": "armchair" }
+  ],
+  "placements": [
+    { "representationId": "r1", "slotId": "loft-2" },
+    { "representationId": "r2", "slotId": "block-1" },
+    { "representationId": "r3", "slotId": "loft-1" },
+    { "representationId": "r4", "slotId": "floor-4" },
+    { "representationId": "r5", "slotId": "floor-5" },
+    { "representationId": "r6", "slotId": "floor-3" }
+  ]
+}

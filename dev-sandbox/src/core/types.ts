@@ -8,8 +8,19 @@ export type ContentType = (typeof CONTENT_TYPES)[number];
 
 export const OBJECT_KINDS = [
   'book', 'photoFrame', 'record', 'tv', 'boombox', 'box', 'plant', 'mug', 'notebook', 'trophy',
+  'armchair', 'sideTable', 'turntable', 'rug',
+  'cat', 'teapot', 'lantern', 'headphones', 'cassette', 'cushion',
 ] as const;
 export type ObjectKind = (typeof OBJECT_KINDS)[number];
+
+export const OBJECT_LABELS: Record<ObjectKind, string> = {
+  book: 'Book', photoFrame: 'Photo frame', record: 'Record player (classic)', tv: 'TV',
+  boombox: 'Boombox', box: 'Storage box', plant: 'Leafy plant', mug: 'Mug',
+  notebook: 'Notebook', trophy: 'Trophy', armchair: 'Armchair',
+  sideTable: 'Side table', turntable: 'Turntable cabinet', rug: 'Patterned rug',
+  cat: 'Sleeping cat', teapot: 'Teapot', lantern: 'Paper lantern',
+  headphones: 'Headphones', cassette: 'Cassette tape', cushion: 'Floor cushion',
+};
 
 /** Which object represents which media by default. Devs can change any object freely. */
 export const DEFAULT_OBJECT: Record<ContentType, ObjectKind> = {
@@ -17,7 +28,7 @@ export const DEFAULT_OBJECT: Record<ContentType, ObjectKind> = {
   article: 'notebook',
   image: 'photoFrame',
   video: 'tv',
-  music: 'record',
+  music: 'turntable',
   doc: 'book',
   file: 'box',
   note: 'notebook',
@@ -26,6 +37,7 @@ export const DEFAULT_OBJECT: Record<ContentType, ObjectKind> = {
 
 /** The media itself. Never changes when an object is moved or swapped. */
 export interface ContentItem {
+  imageData?: string;
   id: string;
   type: ContentType;
   title: string;
@@ -50,6 +62,9 @@ export interface Placement {
 
 /** One saved room = one dev's file in rooms/. */
 export interface RoomState {
+  soundtrack?: import("./soundtrack").Soundtrack;
+  surfaces?: import("./surfaces").SurfaceSettings;
+  lighting?: import("./appearance").Lighting;
   schemaVersion: number;
   id: string;
   owner: string;

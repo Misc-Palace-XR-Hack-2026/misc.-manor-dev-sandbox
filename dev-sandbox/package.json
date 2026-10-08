@@ -7,13 +7,15 @@
     "dev": "vite",
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node tests/run.mjs"
   },
   "dependencies": {
     "three": "^0.186.1"
   },
   "devDependencies": {
     "@types/three": "^0.186.0",
+    "esbuild": "^0.28.2",
     "typescript": "^7.0.2",
     "vite": "^6.4.4"
   }
