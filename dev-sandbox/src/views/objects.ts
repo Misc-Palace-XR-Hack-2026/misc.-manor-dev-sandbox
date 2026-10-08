@@ -67,6 +67,118 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
     cyl(0.025, 0.04, 0.16, 0xe6b73c, 0, 0.06, 0),
     cyl(0.12, 0.05, 0.18, 0xf2c94c, 0, 0.22, 0),
   ],
+  cat: () => {
+    const fur = mat(0xf3d2a4);
+    const pink = mat(0xefb0a0);
+    const dark = mat(0x3a281c);
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10), fur);
+    body.name = 'cat-body';
+    body.scale.set(1.55, 0.68, 1.15);
+    body.position.set(0, 0.122, -0.02);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.105, 10, 8), fur);
+    head.name = 'cat-head';
+    head.scale.set(1.15, 0.95, 1);
+    head.position.set(0, 0.145, 0.16);
+    const earL = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.1, 4), fur);
+    earL.name = 'cat-ear-l';
+    earL.position.set(-0.055, 0.25, 0.13);
+    earL.rotation.set(0.2, 0.15, 0.42);
+    const earR = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.1, 4), mat(0xf3d2a4));
+    earR.name = 'cat-ear-r';
+    earR.position.set(0.055, 0.25, 0.13);
+    earR.rotation.set(0.2, -0.15, -0.42);
+    const innerL = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.055, 4), pink);
+    innerL.position.set(-0.055, 0.242, 0.138);
+    innerL.rotation.copy(earL.rotation);
+    const innerR = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.055, 4), mat(0xefb0a0));
+    innerR.position.set(0.055, 0.242, 0.138);
+    innerR.rotation.copy(earR.rotation);
+    const tail = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.028, 6, 12, Math.PI), fur);
+    tail.name = 'cat-tail';
+    tail.position.set(0.16, 0.1, -0.12);
+    tail.rotation.set(0.2, 1.1, 0.9);
+    const eye = (x: number) => {
+      const e = new THREE.Mesh(new THREE.SphereGeometry(0.016, 6, 4), dark);
+      e.scale.set(1.6, 0.25, 0.7);
+      e.position.set(x, 0.155, 0.25);
+      return e;
+    };
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.016, 6, 4), pink);
+    nose.position.set(0, 0.125, 0.265);
+    const paw = (x: number, z: number) => {
+      const p = new THREE.Mesh(new THREE.SphereGeometry(0.038, 6, 5), fur);
+      p.scale.set(1.1, 0.5, 1.25);
+      p.position.set(x, 0.03, z);
+      return p;
+    };
+    return [
+      body, head, earL, earR, innerL, innerR, tail,
+      eye(-0.038), eye(0.038), nose,
+      paw(-0.08, 0.13), paw(0.08, 0.13), paw(-0.1, -0.08), paw(0.1, -0.08),
+    ];
+  },
+  teapot: () => {
+    const ceramic = 0xf3efe6;
+    const lid = 0xc46a4a;
+    const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.022, 0.12, 8), mat(ceramic));
+    spout.position.set(0.12, 0.12, 0);
+    spout.rotation.z = -Math.PI / 2.6;
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.012, 6, 10), mat(ceramic));
+    handle.position.set(-0.1, 0.12, 0);
+    handle.rotation.y = Math.PI / 2;
+    return [
+      cyl(0.09, 0.07, 0.14, ceramic, 0, 0.02, 0),
+      cyl(0.04, 0.04, 0.03, lid, 0, 0.16, 0),
+      cyl(0.012, 0.012, 0.03, lid, 0, 0.19, 0),
+      spout,
+      handle,
+    ];
+  },
+  lantern: () => {
+    const paper = mat(0xf6e2b8);
+    paper.emissive = new THREE.Color(0xffcc77);
+    paper.emissiveIntensity = 0.35;
+    const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.18, 8), paper);
+    shade.position.set(0, 0.16, 0);
+    return [
+      cyl(0.04, 0.04, 0.04, 0x6f4e37),
+      shade,
+      cyl(0.035, 0.035, 0.02, 0x6f4e37, 0, 0.25, 0),
+      cyl(0.008, 0.008, 0.05, 0xc2a17d, 0, 0.27, 0),
+    ];
+  },
+  headphones: () => {
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.016, 6, 12, Math.PI), mat(0x5c4033));
+    band.rotation.z = Math.PI;
+    band.position.set(0, 0.16, 0);
+    const cup = (x: number) => {
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.04, 10), mat(0x3d2b22));
+      c.rotation.z = Math.PI / 2;
+      c.position.set(x, 0.09, 0);
+      return c;
+    };
+    const pad = (x: number) => {
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.048, 0.018, 10), mat(0xc9a96e));
+      p.rotation.z = Math.PI / 2;
+      p.position.set(x * 0.72, 0.09, 0);
+      return p;
+    };
+    return [band, cup(-0.11), cup(0.11), pad(-0.11), pad(0.11)];
+  },
+  cassette: () => [
+    box(0.34, 0.04, 0.22, 0xd9c4a0),
+    box(0.3, 0.01, 0.16, 0x5b3a29, 0, 0.04, 0),
+    cyl(0.035, 0.035, 0.02, 0x2b2b2e, -0.07, 0.04, 0),
+    cyl(0.035, 0.035, 0.02, 0x2b2b2e, 0.07, 0.04, 0),
+    box(0.12, 0.018, 0.06, 0xc0463b, 0, 0.01, 0.09),
+  ],
+  cushion: () => {
+    const pillow = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.08, 8), mat(0xc46a4a));
+    pillow.position.set(0, 0.04, 0);
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.02, 8), mat(0xe8dbc2));
+    top.position.set(0, 0.085, 0);
+    return [pillow, top];
+  },
 };
 
 // Objects are drawn at ~half a unit; scale up so they read clearly next to a 6-unit room.
