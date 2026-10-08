@@ -3,6 +3,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { Store } from '../core/store';
 import type { ObjectKind } from '../core/types';
 import { buildObject } from './objects';
+import { disposeGroup } from './resources';
+import { LIGHTING_PRESETS } from '../core/appearance';
 
 // Thin 3D adapter: draws store.state and sends clicks back as store commands. Holds no truth of its own.
 // Replaceable later (IWSDK, Babylon) as long as the store contract stays the same.
@@ -13,6 +15,7 @@ const YAW = Math.PI / 4; // objects face the isometric camera
 interface Entry {
   group: THREE.Group;
   kind: ObjectKind;
+  contentKey: string;
   target: THREE.Vector3;
 }
 
@@ -29,6 +32,10 @@ export class RoomView {
   private tooltip: HTMLDivElement;
   private downAt: { x: number; y: number } | null = null;
   private layoutId = '';
+  private lightingKey: string | null = null;
+  private hemi = new THREE.HemisphereLight(0xffffff, 0xd9a47a, 1.7);
+  private sun = new THREE.DirectionalLight(0xfff1dc, 2.1);
+  private lamp = new THREE.PointLight(0xffd8a8, 0, 6, 2);
   private roomGroup = new THREE.Group();
 
   constructor(private container: HTMLElement, private store: Store) {
@@ -74,8 +81,9 @@ export class RoomView {
 
   // ---- scene setup ------------------------------------------------------
   private addLights(): void {
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0xd9a47a, 1.7));
-    const sun = new THREE.DirectionalLight(0xfff1dc, 2.1);
+    this.scene.add(this.hemi, this.lamp);
+    this.lamp.position.set(5.6, 1.4, 3.7);
+    const sun = this.sun;
     sun.position.set(8, 13, -7); // from behind the right wall so the window frames throw shadows into the room
     sun.target.position.set(3, 0, 3);
     sun.castShadow = true;
@@ -97,12 +105,13 @@ export class RoomView {
   private buildLayout(): void {
     const layout = this.store.layout;
     this.layoutId = layout.id;
-    this.scene.background = new THREE.Color(layout.palette.background);
-    this.roomGroup.clear();
+    const palette = layout.palette;
+    this.scene.background = new THREE.Color(palette.background);
+    disposeGroup(this.roomGroup);
     const materials = {
-      wall: new THREE.MeshStandardMaterial({ color: layout.palette.wall, roughness: 0.95 }),
-      floor: new THREE.MeshStandardMaterial({ color: layout.palette.floor, roughness: 0.95 }),
-      accent: new THREE.MeshStandardMaterial({ color: layout.palette.accent, roughness: 0.9 }),
+      wall: new THREE.MeshStandardMaterial({ color: palette.wall, roughness: 0.95 }),
+      floor: new THREE.MeshStandardMaterial({ color: palette.floor, roughness: 0.95 }),
+      accent: new THREE.MeshStandardMaterial({ color: palette.accent, roughness: 0.9 }),
     };
     for (const b of layout.boxes) {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(...b.size), materials[b.material]);
@@ -112,7 +121,7 @@ export class RoomView {
       this.roomGroup.add(mesh);
     }
     this.markers.clear();
-    this.markerGroup.clear();
+    disposeGroup(this.markerGroup);
     for (const slot of layout.slots) {
       const m = new THREE.Mesh(
         new THREE.CircleGeometry(0.3, 28),
@@ -141,6 +150,14 @@ export class RoomView {
   // ---- state -> scene ---------------------------------------------------
   private sync(): void {
     if (this.layoutId !== this.store.layout.id) this.buildLayout();
+    const key = this.store.state.lighting ?? '';
+    if (this.lightingKey !== key) {
+      this.lightingKey = key;
+      const p = this.store.state.lighting ? LIGHTING_PRESETS[this.store.state.lighting] : null;
+      this.sun.color.setHex(p?.sunColor ?? 0xfff1dc); this.sun.intensity=p?.sunIntensity ?? 2.1;
+      this.hemi.color.setHex(p?.hemiSky ?? 0xffffff);this.hemi.groundColor.setHex(p?.hemiGround ?? 0xd9a47a);this.hemi.intensity=p?.hemiIntensity ?? 1.7;
+      this.lamp.color.setHex(p?.lampColor ?? 0xffd8a8);this.lamp.intensity=p?.lampIntensity ?? 0;
+    }
     const { state, layout } = this.store;
     const live = new Set<string>();
 
@@ -149,25 +166,29 @@ export class RoomView {
       const slot = layout.slots.find((s) => s.id === slotId);
       if (!slot) continue; // unplaced: lives in the menu until it is put down
       live.add(rep.id);
+      const content=this.store.content(rep.contentItemId);
+      const contentKey=JSON.stringify([content?.title,content?.imageData]);
       let entry = this.objects.get(rep.id);
-      if (entry && entry.kind !== rep.objectKind) {
+      if (entry && (entry.kind !== rep.objectKind || entry.contentKey !== contentKey)) {
+        disposeGroup(entry.group);
         this.objectsGroup.remove(entry.group);
         this.objects.delete(rep.id);
         entry = undefined;
       }
       if (!entry) {
-        const group = buildObject(rep.objectKind);
+        const group = buildObject(rep.objectKind, content);
         group.rotation.y = YAW;
         group.position.set(slot.pos[0], slot.pos[1], slot.pos[2]);
         group.userData.repId = rep.id;
         this.objectsGroup.add(group);
-        entry = { group, kind: rep.objectKind, target: new THREE.Vector3() };
+        entry = { group, kind: rep.objectKind, contentKey, target: new THREE.Vector3() };
         this.objects.set(rep.id, entry);
       }
       entry.target.set(slot.pos[0], slot.pos[1], slot.pos[2]);
     }
     for (const [id, entry] of this.objects) {
       if (!live.has(id)) {
+        disposeGroup(entry.group);
         this.objectsGroup.remove(entry.group);
         this.objects.delete(id);
       }

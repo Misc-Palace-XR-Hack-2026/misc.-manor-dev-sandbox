@@ -1,7 +1,9 @@
+import { LIGHTING_PRESETS, type Lighting } from '../core/appearance';
 import { parseBookmarksHtml } from '../core/bookmarks';
+import { preparePhoto } from './photo-upload';
 import { safeUrl } from '../core/content';
 import type { Store } from '../core/store';
-import { CONTENT_TYPES, OBJECT_KINDS, type ContentType, type ObjectKind } from '../core/types';
+import { CONTENT_TYPES, OBJECT_KINDS, OBJECT_LABELS, type ContentType, type ObjectKind } from '../core/types';
 
 // 2D fallback view: always works, even if the 3D room is broken. Built with DOM nodes + textContent only,
 // so imported titles and URLs can never inject markup.
@@ -37,11 +39,13 @@ export class MenuView {
   private undoBtn = el('button', { textContent: 'Undo' });
   private ownerInput = el('input', { class: 'owner', title: 'Whose room is this?' });
   private flashMsg = '';
+  private lighting = el('select', { id: 'lighting-preset' });
 
   constructor(root: HTMLElement, private store: Store, repoRooms: RepoRoom[]) {
     root.append(
       el('h1', { textContent: 'Misc. Palace sandbox' }),
       this.ownerInput,
+      this.buildLighting(),
       this.buildAddForm(),
       this.buildToolbar(repoRooms),
       this.status,
@@ -58,22 +62,46 @@ export class MenuView {
   }
 
   // ---- static pieces ----------------------------------------------------
+  private buildLighting(): HTMLElement {
+    this.lighting.append(el('option', {value:'', textContent:'Original lighting'}));
+    for (const [value,p] of Object.entries(LIGHTING_PRESETS)) this.lighting.append(el('option',{value,textContent:p.label}));
+    this.lighting.addEventListener('change', () => this.store.setLighting((this.lighting.value || undefined) as Lighting | undefined));
+    return el('section',{class:'appearance'},el('h2',{textContent:'Room atmosphere'}),
+      el('label',{htmlFor:'lighting-preset',textContent:'Lighting preset'}),this.lighting);
+  }
+
   private buildAddForm(): HTMLElement {
     const title = el('input', { placeholder: 'Title (optional)' });
     const ref = el('input', { placeholder: 'Paste a link, or a file name' });
     const type = el('select');
     type.append(el('option', { value: 'auto', textContent: 'type: auto' }));
     for (const t of CONTENT_TYPES) type.append(el('option', { value: t, textContent: t }));
+    const kind = el('select', { id: 'new-object-kind' });
+    kind.append(el('option', {value:'',textContent:'Automatic by content type'}));
+    for (const k of OBJECT_KINDS) kind.append(el('option', {value:k,textContent:OBJECT_LABELS[k]}));
     const add = el('button', { textContent: 'Add to room' });
     const submit = () => {
       if (!ref.value.trim() && !title.value.trim()) return;
-      this.store.addItem({ title: title.value, sourceRef: ref.value, type: type.value as ContentType | 'auto' });
+      this.store.addItem({ title: title.value, sourceRef: ref.value, type: type.value as ContentType | 'auto', kind: (kind.value || undefined) as ObjectKind | undefined });
       title.value = ref.value = '';
       ref.focus();
     };
     add.addEventListener('click', submit);
     for (const i of [title, ref]) i.addEventListener('keydown', (e) => e.key === 'Enter' && submit());
-    return el('div', { class: 'add' }, ref, title, el('div', { class: 'row-inline' }, type, add));
+    const photo = el('input', {type:'file',accept:'image/png,image/jpeg',id:'local-photo'});
+    photo.addEventListener('change',async()=>{
+      const file=photo.files?.[0];if(!file)return;
+      photo.disabled=true;this.flash('Preparing photo locally…');
+      try {
+        const data=await preparePhoto(file);
+        this.store.addPhoto(title.value.trim() || file.name.replace(/\.[^.]+$/, ''), data);
+        this.flash(this.store.saveError ? 'Photo added in memory only. Export your room before leaving.' : 'Photo added. Stored on this device and included in room exports.');
+      } catch(e) {this.flash(`Photo not added: ${e instanceof Error ? e.message : String(e)}`);}
+      finally {photo.disabled=false;photo.value='';}
+    });
+    return el('div', { class: 'add' }, ref, title, el('label', {htmlFor:'new-object-kind',textContent:'Object representation'}), kind, el('div', { class: 'row-inline' }, type, add),
+      el('label',{htmlFor:'local-photo',textContent:'Upload local photo'}),photo,
+      el('small',{textContent:'PNG / JPEG · up to 12 MB · resized to 1024 px. No upload to a server.'}));
   }
 
   private buildToolbar(repoRooms: RepoRoom[]): HTMLElement {
@@ -137,6 +165,7 @@ export class MenuView {
   private render(): void {
     const { state, selectedId } = this.store;
     if (document.activeElement !== this.ownerInput) this.ownerInput.value = state.owner;
+    this.lighting.value = state.lighting ?? '';
     this.undoBtn.disabled = !this.store.canUndo;
     this.renderStatus();
 
@@ -174,7 +203,7 @@ export class MenuView {
     const href = c.sourceKind === 'url' ? safeUrl(c.sourceRef) : null;
     const meta = el('div', { class: 'meta' }, `${c.type}${c.tags.length ? ' - ' + c.tags.join(', ') : ''} - `);
     if (href) meta.append(el('a', { href, target: '_blank', rel: 'noopener noreferrer', textContent: 'open' }));
-    else meta.append(c.sourceRef || 'note');
+    else meta.append(c.imageData ? 'local photo · included in export' : c.sourceRef || 'note');
 
     const where = el('div', { class: 'where' }, rep ? (slotLabel ?? 'held: pick a spot in the room') : 'inbox (not in room)');
 
@@ -189,7 +218,7 @@ export class MenuView {
     };
     if (rep) {
       const kind = el('select', { title: 'Which object shows this media' });
-      for (const k of OBJECT_KINDS) kind.append(el('option', { value: k, textContent: k, selected: k === rep.objectKind }));
+      for (const k of OBJECT_KINDS) kind.append(el('option', { value: k, textContent: OBJECT_LABELS[k], selected: k === rep.objectKind }));
       kind.addEventListener('click', (e) => e.stopPropagation());
       kind.addEventListener('change', () => store.setKind(rep.id, kind.value as ObjectKind));
       actions.append(kind);
