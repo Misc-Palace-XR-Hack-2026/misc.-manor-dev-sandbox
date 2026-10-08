@@ -179,7 +179,7 @@ export class MenuView {
     return el('section',{class:'appearance'},el('h2',{textContent:'Room atmosphere'}),
       el('label',{htmlFor:'lighting-preset',textContent:'Lighting preset'}),this.lighting,
       el('label',{htmlFor:'room-soundtrack',textContent:'Room music'}),this.soundtrack,
-      el('small',{textContent:'Follow lighting uses the matching mood track. Pick a track to keep it when lighting changes, or choose no music. Drop MP3s into src/audio/ named after each lighting preset when you have the files.'}));
+      el('small',{textContent:'Follow lighting uses the matching mood track, or the cozy trailer on Original lighting. Pick a track to keep it when lighting changes, or choose no music.'}));
   }
 
   private buildNeighborhood(repoRooms: RepoRoom[]): HTMLElement {

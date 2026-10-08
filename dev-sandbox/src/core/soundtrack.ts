@@ -1,6 +1,7 @@
 import { LIGHTING_PRESETS, type Lighting } from './appearance';
 
 export const ROOM_TRACKS = [
+  'original',
   'daylight', 'dawn', 'sunset', 'candlelight', 'overcast',
   'cyber', 'twilight', 'emerald', 'ember', 'vaporwave',
 ] as const;
@@ -20,6 +21,7 @@ export const LIGHTING_TRACKS: Record<Lighting, RoomTrack> = {
 };
 
 export const TRACK_LABELS: Record<RoomTrack, string> = {
+  original: 'Cozy room trailer',
   daylight: 'Crisp daylight',
   dawn: 'Warm dawn',
   sunset: 'Sunset amber',
@@ -57,14 +59,14 @@ export function soundtrackFromUnknown(input: unknown): Soundtrack | undefined {
 export function currentTrack(state: { lighting?: Lighting; soundtrack?: Soundtrack }): RoomTrack | undefined {
   const soundtrack = state.soundtrack;
   if (!soundtrack || soundtrack.mode === 'follow') {
-    return state.lighting ? LIGHTING_TRACKS[state.lighting] : undefined;
+    return state.lighting ? LIGHTING_TRACKS[state.lighting] : 'original';
   }
   if (soundtrack.mode === 'off') return undefined;
   return soundtrack.track;
 }
 
 export function trackUrl(track: RoomTrack): string {
-  return `/src/audio/${track}.mp3`;
+  return `/audio/${track}.mp3`;
 }
 
 export function lightingKeys(): Lighting[] {

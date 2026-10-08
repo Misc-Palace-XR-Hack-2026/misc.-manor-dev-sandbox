@@ -8,7 +8,7 @@ globalThis.localStorage = { getItem: () => null, setItem: () => {} } as unknown 
 test('room soundtrack can follow lighting, pick a track, or play nothing', () => {
   const store = new Store(newRoom());
   assert.equal(store.state.soundtrack, undefined);
-  assert.equal(currentTrack(store.state), undefined);
+  assert.equal(currentTrack(store.state), 'original');
 
   store.setLighting('dawn');
   assert.equal(currentTrack(store.state), LIGHTING_TRACKS.dawn);
@@ -37,5 +37,5 @@ test('room soundtrack can follow lighting, pick a track, or play nothing', () =>
   assert.match(validateRoom({ ...store.state, soundtrack: { mode: 'track', track: 'missing' } })!, /soundtrack/i);
   assert.ok(validSoundtrack({ mode: 'off' }));
   assert.equal(soundtrackFromUnknown({ soundtrack: { mode: 'track', track: 'dawn' } })?.track, 'dawn');
-  assert.deepEqual(Object.keys(LIGHTING_TRACKS).sort(), [...ROOM_TRACKS].sort());
+  assert.deepEqual(Object.keys(LIGHTING_TRACKS).sort(), [...ROOM_TRACKS].filter((t) => t !== 'original').sort());
 });

@@ -1,7 +1,8 @@
 # Room soundtrack files
 
-Drop licensed MP3s here, named after lighting presets:
+Licensed MP3s live in `public/audio/`, named after soundtrack ids:
 
+- original.mp3 — Cozy room cinematic trailer (Original lighting)
 - daylight.mp3
 - dawn.mp3
 - sunset.mp3
@@ -13,4 +14,4 @@ Drop licensed MP3s here, named after lighting presets:
 - ember.mp3
 - vaporwave.mp3
 
-Until these files exist, Room music still saves Follow lighting / a chosen track / No music, but playback is silent.
+Vite serves them at `/audio/<id>.mp3`. Follow lighting uses Original’s trailer until a lighting preset is chosen.

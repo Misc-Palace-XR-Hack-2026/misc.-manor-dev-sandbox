@@ -9,7 +9,7 @@ export class SoundtrackPlayer {
     this.audio.loop = true;
     this.audio.preload = 'none';
     this.audio.addEventListener('error', () => {
-      /* Files are optional until the licensed MP3s are dropped into src/audio/. */
+      /* Missing files stay silent; licensed tracks live in public/audio/. */
     });
     store.subscribe(() => this.sync());
     this.sync();
