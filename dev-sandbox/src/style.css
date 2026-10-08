@@ -20,6 +20,12 @@ h1 { margin: 0; font: italic 600 20px Georgia, serif; }
 .appearance h2 { margin: 0 0 3px; font: 600 16px Georgia, serif; color: #eee5cc; }
 .appearance label { color: #d8d9c9; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; }
 .appearance select { width: 100%; }
+.surfaces { display: block; }
+.surfaces summary { cursor: pointer; font-weight: 600; }
+.surfaces label, .surfaces small { display: block; margin-top: 8px; }
+.surfaces input { margin-top: 4px; }
+.surface-error { color: #ffb9a8; margin: 5px 0; }
+.surface-render-error { position: absolute; bottom: 10px; left: 15px; right: 15px; padding: 10px; background: #392c34; color: #ffb9a8; }
 .appearance small { color: #bcc4b0; line-height: 1.5; margin-top: 3px; }
 input, select, button { font: inherit; color: var(--text); background: #3a3546; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
 input { width: 100%; }

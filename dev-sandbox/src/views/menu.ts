@@ -1,3 +1,4 @@
+import { SURFACE_PRESETS, type SurfaceTarget } from '../core/surfaces';
 import { LIGHTING_PRESETS, type Lighting } from '../core/appearance';
 import { parseBookmarksHtml } from '../core/bookmarks';
 import { preparePhoto } from './photo-upload';
@@ -39,6 +40,7 @@ export class MenuView {
   private undoBtn = el('button', { textContent: 'Undo' });
   private ownerInput = el('input', { class: 'owner', title: 'Whose room is this?' });
   private flashMsg = '';
+  private surfaceSelects = new Map<SurfaceTarget, HTMLSelectElement>();
   private lighting = el('select', { id: 'lighting-preset' });
 
   constructor(root: HTMLElement, private store: Store, repoRooms: RepoRoom[]) {
@@ -46,6 +48,7 @@ export class MenuView {
       el('h1', { textContent: 'Misc. Palace sandbox' }),
       this.ownerInput,
       this.buildLighting(),
+      this.buildSurfaces(),
       this.buildAddForm(),
       this.buildToolbar(repoRooms),
       this.status,
@@ -70,12 +73,49 @@ export class MenuView {
       el('label',{htmlFor:'lighting-preset',textContent:'Lighting preset'}),this.lighting);
   }
 
+  private buildSurfaces(): HTMLElement {
+    const section = el('details', {class:'appearance surfaces'}, el('summary',{textContent:'Floor, walls & background'}));
+    section.append(el('small',{textContent:'Independent finishes. Floor includes the loft; stairs and accent blocks keep their original finish.'}));
+    for (const target of Object.keys(SURFACE_PRESETS) as SurfaceTarget[]) {
+      const select = el('select',{id:`surface-${target}`});
+      select.append(el('option',{value:'',textContent:'Original'}));
+      for(const [value,label] of Object.entries(SURFACE_PRESETS[target])) select.append(el('option',{value,textContent:label}));
+      select.append(el('option',{value:'custom',textContent:'Custom image',disabled:true}));
+      this.surfaceSelects.set(target,select);
+      const error = el('p',{class:'surface-error',hidden:true}); error.setAttribute('role','alert');
+      let generation = 0;
+      select.addEventListener('change',()=>{
+        generation++; error.hidden=true;
+        this.store.setSurface(target,select.value ? {preset:select.value} : undefined);
+      });
+      const upload = el('input',{type:'file',accept:'image/png,image/jpeg',id:`upload-${target}`});
+      upload.addEventListener('change',async()=>{
+        const file=upload.files?.[0]; if(!file)return;
+        const token=++generation, state=this.store.state, snapshot=this.store.exportJson();
+        upload.disabled=true;error.hidden=true;
+        try {
+          const imageData=await preparePhoto(file);
+          // Undo/import or another edit during decode must not be overwritten by late work.
+          if(token!==generation || this.store.state!==state || this.store.exportJson()!==snapshot) return;
+          this.store.setSurface(target,{preset:'custom',imageData});
+          if(this.store.saveError) {error.textContent='Image changed in memory only. Export your room before leaving: '+this.store.saveError;error.hidden=false;}
+        } catch(e) { error.textContent=`Image not changed: ${e instanceof Error ? e.message : String(e)}`;error.hidden=false; }
+        finally {upload.disabled=false;upload.value='';}
+      });
+      section.append(el('label',{htmlFor:select.id,textContent:`${target} preset`}),select,
+        el('label',{htmlFor:upload.id,textContent:`Upload ${target} image`}),upload,error);
+    }
+    section.append(el('small',{textContent:'PNG / JPEG · up to 12 MB and 32 megapixels · resized to 1024 px; max 1.5 MB encoded per image. Local only, included in room exports. Floor/wall images repeat every 2 room units; backgrounds fill the view with centered cropping, not panoramic mapping. Original removes a custom image; Undo restores it.'}));
+    return section;
+  }
+
   private buildAddForm(): HTMLElement {
     const title = el('input', { placeholder: 'Title (optional)' });
     const ref = el('input', { placeholder: 'Paste a link, or a file name' });
     const type = el('select');
+    type.append(el('option', { value: 'link', textContent: 'type: link' }));
+    for (const t of CONTENT_TYPES.filter((value) => value !== 'link')) type.append(el('option', { value: t, textContent: t }));
     type.append(el('option', { value: 'auto', textContent: 'type: auto' }));
-    for (const t of CONTENT_TYPES) type.append(el('option', { value: t, textContent: t }));
     const kind = el('select', { id: 'new-object-kind' });
     kind.append(el('option', {value:'',textContent:'Automatic by content type'}));
     for (const k of OBJECT_KINDS) kind.append(el('option', {value:k,textContent:OBJECT_LABELS[k]}));
@@ -166,6 +206,7 @@ export class MenuView {
     const { state, selectedId } = this.store;
     if (document.activeElement !== this.ownerInput) this.ownerInput.value = state.owner;
     this.lighting.value = state.lighting ?? '';
+    for(const [target,select] of this.surfaceSelects) select.value = state.surfaces?.[target]?.preset ?? '';
     this.undoBtn.disabled = !this.store.canUndo;
     this.renderStatus();
 

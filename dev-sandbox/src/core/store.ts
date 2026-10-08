@@ -1,6 +1,7 @@
+import { validSurface, validSurfaces, type SurfaceTarget, type SurfaceSelection } from './surfaces';
 import { validPhotoData } from './photos';
 import { lightingFromUnknown, validLighting, type Lighting } from './appearance';
-import { guessType } from './content';
+import { guessType, normalizeRef } from './content';
 import type { BookmarkEntry } from './bookmarks';
 import { DEFAULT_LAYOUT_ID, getLayout, type RoomLayout } from './layout';
 import {
@@ -29,6 +30,7 @@ export function validateRoom(input: unknown): string | null {
   if (!Array.isArray(s.contentItems) || !Array.isArray(s.representations) || !Array.isArray(s.placements)) {
     return 'Missing contentItems, representations or placements.';
   }
+  if (s.surfaces !== undefined && !validSurfaces(s.surfaces)) return 'Invalid room surfaces (local PNG/JPEG only, max 1024px and 1.5 MB encoded per image).';
   if (s.lighting !== undefined && !validLighting(s.lighting)) return 'Invalid room lighting.';
   const legacy = (s as { appearance?: { theme?: unknown; lighting?: unknown } }).appearance;
   if (legacy !== undefined && (!legacy || !['loft', 'study'].includes(String(legacy.theme)) ||
@@ -146,7 +148,7 @@ export class Store {
 
   // ---- commands (every one is undoable) ---------------------------------
   addItem(input: { title: string; sourceRef: string; type?: ContentType | 'auto'; kind?: ObjectKind }): string {
-    const ref = input.sourceRef.trim();
+    const ref = normalizeRef(input.sourceRef.trim());
     const type = !input.type || input.type === 'auto' ? guessType(ref) : input.type;
     let repId = '';
     this.commit((s) => {
@@ -174,6 +176,16 @@ export class Store {
     this.commit((s) => {
       const c = s.contentItems.find((x) => x.id === contentId);
       if (c) c.title = t;
+    });
+  }
+
+  setSurface(target: SurfaceTarget, selection: SurfaceSelection | undefined): void {
+    if (!['floor','wall','background'].includes(target) || (selection !== undefined && !validSurface(target, selection))) throw new Error('Invalid surface selection.');
+    this.commit(s => {
+      s.surfaces = {...s.surfaces};
+      if (selection) s.surfaces[target] = {...selection};
+      else delete s.surfaces[target];
+      if (!Object.keys(s.surfaces).length) delete s.surfaces;
     });
   }
 

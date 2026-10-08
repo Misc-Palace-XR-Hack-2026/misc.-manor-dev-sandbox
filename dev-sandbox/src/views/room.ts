@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { surfaceTexture, surfaceGeometry } from './surface-textures';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { Store } from '../core/store';
 import type { ObjectKind } from '../core/types';
@@ -32,6 +33,8 @@ export class RoomView {
   private tooltip: HTMLDivElement;
   private downAt: { x: number; y: number } | null = null;
   private layoutId = '';
+  private surfaceKey = '';
+  private surfaceError = document.createElement('p');
   private lightingKey: string | null = null;
   private hemi = new THREE.HemisphereLight(0xffffff, 0xd9a47a, 1.7);
   private sun = new THREE.DirectionalLight(0xfff1dc, 2.1);
@@ -44,6 +47,10 @@ export class RoomView {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     container.appendChild(this.renderer.domElement);
+    this.surfaceError.className = 'surface-render-error';
+    this.surfaceError.setAttribute('role','alert');
+    this.surfaceError.hidden = true;
+    container.appendChild(this.surfaceError);
 
     this.tooltip = document.createElement('div');
     this.tooltip.className = 'tooltip';
@@ -106,15 +113,27 @@ export class RoomView {
     const layout = this.store.layout;
     this.layoutId = layout.id;
     const palette = layout.palette;
-    this.scene.background = new THREE.Color(palette.background);
+    if (this.scene.background instanceof THREE.Texture) this.scene.background.dispose();
+    this.surfaceError.hidden = true;
+    const surfaces = this.store.state.surfaces;
+    const error = () => {
+      this.surfaceError.textContent = 'A saved surface image could not be decoded. Choose Original or upload another PNG/JPEG. Your room data is unchanged.';
+      this.surfaceError.hidden = false;
+    };
+    this.scene.background = surfaces?.background ? surfaceTexture('background',surfaces.background,error) : new THREE.Color(palette.background);
+    this.fitBackground();
     disposeGroup(this.roomGroup);
     const materials = {
       wall: new THREE.MeshStandardMaterial({ color: palette.wall, roughness: 0.95 }),
       floor: new THREE.MeshStandardMaterial({ color: palette.floor, roughness: 0.95 }),
       accent: new THREE.MeshStandardMaterial({ color: palette.accent, roughness: 0.9 }),
     };
+    for (const target of ['floor','wall'] as const) {
+      const selection = surfaces?.[target];
+      if (selection) { materials[target].map = surfaceTexture(target,selection,error); materials[target].color.setHex(0xffffff); }
+    }
     for (const b of layout.boxes) {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(...b.size), materials[b.material]);
+      const mesh = new THREE.Mesh(surfaceGeometry(b.size,b.min), materials[b.material]);
       mesh.position.set(b.min[0] + b.size[0] / 2, b.min[1] + b.size[1] / 2, b.min[2] + b.size[2] / 2);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
@@ -135,6 +154,18 @@ export class RoomView {
     }
   }
 
+  // Screen-space cover: never stretch a photo or assume it is a panorama.
+  private fitBackground(): void {
+    const texture = this.scene.background;
+    if (!(texture instanceof THREE.Texture)) return;
+    const image = texture.image as {width?:number;height?:number};
+    if (!image?.width || !image?.height) return;
+    const aspect = this.container.clientWidth / (this.container.clientHeight || 1);
+    const imageAspect = image.width / image.height;
+    texture.repeat.set(Math.min(1,aspect/imageAspect), Math.min(1,imageAspect/aspect));
+    texture.offset.set((1-texture.repeat.x)/2,(1-texture.repeat.y)/2);
+  }
+
   private resize(): void {
     const w = this.container.clientWidth || 1;
     const h = this.container.clientHeight || 1;
@@ -149,7 +180,11 @@ export class RoomView {
 
   // ---- state -> scene ---------------------------------------------------
   private sync(): void {
-    if (this.layoutId !== this.store.layout.id) this.buildLayout();
+    const surfaceKey = JSON.stringify(this.store.state.surfaces ?? {});
+    if (this.layoutId !== this.store.layout.id || this.surfaceKey !== surfaceKey) {
+      this.surfaceKey = surfaceKey;
+      this.buildLayout();
+    }
     const key = this.store.state.lighting ?? '';
     if (this.lightingKey !== key) {
       this.lightingKey = key;
@@ -217,6 +252,7 @@ export class RoomView {
       for (const m of this.markers.values()) (m.material as THREE.MeshBasicMaterial).opacity = pulse;
     }
     this.controls.update();
+    this.fitBackground();
     this.renderer.render(this.scene, this.camera);
   }
 
