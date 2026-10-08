@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "room_curious_web",
+  "owner": "The curious web",
+  "layoutId": "cozy-loft",
+  "lighting": "daylight",
+  "surfaces": {
+    "floor": { "preset": "wood" },
+    "wall": { "preset": "plaster" },
+    "background": { "preset": "neutral" }
+  },
+  "contentItems": [
+    { "id": "c1", "type": "link", "title": "The web, explained", "sourceKind": "url", "sourceRef": "https://developer.mozilla.org/", "tags": ["web"], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c2", "type": "article", "title": "A common place", "sourceKind": "url", "sourceRef": "https://en.wikipedia.org/wiki/Commonplace_book", "tags": ["notes"], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c3", "type": "article", "title": "Open knowledge", "sourceKind": "url", "sourceRef": "https://www.wikipedia.org/", "tags": ["web"], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c4", "type": "note", "title": "Field note: follow a curiosity", "sourceKind": "note", "sourceRef": "Collect ideas, connect them, and pass them on.", "tags": ["note"], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c5", "type": "tool", "title": "A mug for long reading", "sourceKind": "note", "sourceRef": "Stay awhile.", "tags": [], "createdAt": "2026-10-08T00:00:00.000Z" }
+  ],
+  "representations": [
+    { "id": "r1", "contentItemId": "c1", "objectKind": "book" },
+    { "id": "r2", "contentItemId": "c2", "objectKind": "notebook" },
+    { "id": "r3", "contentItemId": "c3", "objectKind": "book" },
+    { "id": "r4", "contentItemId": "c4", "objectKind": "armchair" },
+    { "id": "r5", "contentItemId": "c5", "objectKind": "mug" }
+  ],
+  "placements": [
+    { "representationId": "r1", "slotId": "loft-2" },
+    { "representationId": "r2", "slotId": "block-1" },
+    { "representationId": "r3", "slotId": "loft-1" },
+    { "representationId": "r4", "slotId": "floor-3" },
+    { "representationId": "r5", "slotId": "floor-2" }
+  ]
+}

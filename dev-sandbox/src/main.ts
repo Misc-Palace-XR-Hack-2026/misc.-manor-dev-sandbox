@@ -3,13 +3,21 @@ import { Store } from './core/store';
 import type { RoomState } from './core/types';
 import { MenuView, type RepoRoom } from './views/menu';
 import { RoomView } from './views/room';
+import { SoundtrackPlayer } from './views/soundtrack';
 
 // Every rooms/*.json committed to the repo shows up in the "Load repo room" dropdown.
 const modules = import.meta.glob('../rooms/*.json', { eager: true, import: 'default' });
-const repoRooms: RepoRoom[] = Object.entries(modules).map(([path, data]) => ({
-  name: path.split('/').pop()!.replace(/\.json$/, ''),
-  data,
-}));
+const NEIGHBORHOOD = new Set([
+  'curious-web',
+  'garden-notebook',
+  'greenhouse-conservatory',
+  'creative-atelier',
+  'vinyl-lounge',
+]);
+const repoRooms: RepoRoom[] = Object.entries(modules).map(([path, data]) => {
+  const name = path.split('/').pop()!.replace(/\.json$/, '');
+  return { name, data, neighborhood: NEIGHBORHOOD.has(name) };
+});
 
 const sample = repoRooms.find((r) => r.name === 'sample')?.data as RoomState | undefined;
 let initial: RoomState | undefined;
@@ -40,6 +48,7 @@ if (initial) {
   const store = new Store(initial);
   new MenuView(document.getElementById('menu')!, store, repoRooms);
   new RoomView(document.getElementById('room')!, store);
+  new SoundtrackPlayer(store);
 
   // Handy for poking at things from the browser console while developing.
   (window as unknown as { store: Store }).store = store;

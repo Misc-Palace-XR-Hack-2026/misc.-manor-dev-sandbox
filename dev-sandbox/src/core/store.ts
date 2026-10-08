@@ -1,5 +1,6 @@
 import { validSurface, validSurfaces, type SurfaceTarget, type SurfaceSelection } from './surfaces';
 import { validPhotoData } from './photos';
+import { soundtrackFromUnknown, validSoundtrack, type Soundtrack } from './soundtrack';
 import { lightingFromUnknown, validLighting, type Lighting } from './appearance';
 import { guessType, normalizeRef } from './content';
 import type { BookmarkEntry } from './bookmarks';
@@ -32,6 +33,7 @@ export function validateRoom(input: unknown): string | null {
   }
   if (s.surfaces !== undefined && !validSurfaces(s.surfaces)) return 'Invalid room surfaces (local PNG/JPEG only, max 1024px and 1.5 MB encoded per image).';
   if (s.lighting !== undefined && !validLighting(s.lighting)) return 'Invalid room lighting.';
+  if (s.soundtrack !== undefined && !validSoundtrack(s.soundtrack)) return 'Invalid room soundtrack.';
   const legacy = (s as { appearance?: { theme?: unknown; lighting?: unknown } }).appearance;
   if (legacy !== undefined && (!legacy || !['loft', 'study'].includes(String(legacy.theme)) ||
       (legacy.lighting !== 'loft' && !validLighting(legacy.lighting)))) return 'Invalid legacy room lighting.';
@@ -80,6 +82,9 @@ export function normalizeRoom(input: unknown): RoomState {
   delete copy.appearance;
   if (lighting) copy.lighting = lighting;
   else delete copy.lighting;
+  const soundtrack = soundtrackFromUnknown(copy);
+  if (soundtrack) copy.soundtrack = soundtrack;
+  else delete copy.soundtrack;
   return copy;
 }
 
@@ -87,6 +92,8 @@ export class Store {
   state: RoomState;
   selectedId: string | null = null; // representation id; never saved
   saveError: string | null = null;
+  visiting: string | null = null;
+  private homeSnapshot: string | null = null;
   private history: string[] = [];
   private listeners = new Set<() => void>();
 
@@ -194,6 +201,14 @@ export class Store {
     this.commit((s) => {
       if (lighting) s.lighting = lighting;
       else delete s.lighting;
+    });
+  }
+
+  setSoundtrack(soundtrack: Soundtrack | undefined): void {
+    if (soundtrack !== undefined && !validSoundtrack(soundtrack)) throw new Error('Invalid room soundtrack.');
+    this.commit((s) => {
+      if (!soundtrack || soundtrack.mode === 'follow') delete s.soundtrack;
+      else s.soundtrack = soundtrack;
     });
   }
 
@@ -329,6 +344,28 @@ export class Store {
     this.changed();
   }
 
+  /** Visit an example/neighborhood room without writing it over the personal save. */
+  visit(data: unknown, name?: string): void {
+    const error = validateRoom(data);
+    if (error) throw new Error(error);
+    if (!this.visiting) this.homeSnapshot = JSON.stringify(this.state);
+    this.pushHistory();
+    this.state = normalizeRoom(data);
+    this.visiting = name ?? this.state.owner;
+    this.selectedId = null;
+    this.emit();
+  }
+
+  returnHome(): void {
+    if (!this.homeSnapshot) return;
+    this.pushHistory();
+    this.state = JSON.parse(this.homeSnapshot) as RoomState;
+    this.homeSnapshot = null;
+    this.visiting = null;
+    this.selectedId = null;
+    this.changed();
+  }
+
   // ---- internals --------------------------------------------------------
   private freeSlotsIn(s: RoomState): string[] {
     const used = new Set(s.placements.map((p) => p.slotId));
@@ -372,7 +409,7 @@ export class Store {
   }
 
   private changed(): void {
-    this.save();
+    if (!this.visiting) this.save();
     this.emit();
   }
 

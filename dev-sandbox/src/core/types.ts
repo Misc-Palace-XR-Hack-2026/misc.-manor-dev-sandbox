@@ -62,6 +62,7 @@ export interface Placement {
 
 /** One saved room = one dev's file in rooms/. */
 export interface RoomState {
+  soundtrack?: import("./soundtrack").Soundtrack;
   surfaces?: import("./surfaces").SurfaceSettings;
   lighting?: import("./appearance").Lighting;
   schemaVersion: number;

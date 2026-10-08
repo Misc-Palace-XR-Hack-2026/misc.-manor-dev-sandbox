@@ -1,4 +1,5 @@
 import { SURFACE_PRESETS, type SurfaceTarget } from '../core/surfaces';
+import { ROOM_TRACKS, TRACK_LABELS, type RoomTrack, type Soundtrack } from '../core/soundtrack';
 import { LIGHTING_PRESETS, type Lighting } from '../core/appearance';
 import { parseBookmarksHtml } from '../core/bookmarks';
 import { preparePhoto } from './photo-upload';
@@ -12,6 +13,7 @@ import { CONTENT_TYPES, OBJECT_KINDS, OBJECT_LABELS, type ContentType, type Obje
 export interface RepoRoom {
   name: string;
   data: unknown;
+  neighborhood?: boolean;
 }
 
 const MAX_ROWS = 200;
@@ -42,21 +44,115 @@ export class MenuView {
   private flashMsg = '';
   private surfaceSelects = new Map<SurfaceTarget, HTMLSelectElement>();
   private lighting = el('select', { id: 'lighting-preset' });
+  private soundtrack = el('select', { id: 'room-soundtrack' });
+  private homeBtn = el('button', { textContent: 'Return home', hidden: true });
+  private homeBtnSheet = el('button', { textContent: 'Return home', hidden: true });
+  private chrome = el('nav', { class: 'chrome', ariaLabel: 'Room actions' });
+  private editBtn = el('button', { type: 'button', textContent: 'Edit room' });
+  private neighborhoodBtn = el('button', { type: 'button', textContent: 'Visit neighborhood' });
+  private editorClose = el('button', { type: 'button', class: 'sheet-close', textContent: 'Close editor' });
+  private neighborhoodClose = el('button', { type: 'button', class: 'sheet-close', textContent: 'Close neighborhood' });
+  private itemClose = el('button', { type: 'button', class: 'sheet-close icon-close', textContent: '×', ariaLabel: 'Close' });
+  private backdrop = el('button', { type: 'button', class: 'sheet-backdrop', hidden: true, ariaLabel: 'Close sheet' });
+  private neighborhoodSheet = el('div', { class: 'sheet neighborhood-sheet', hidden: true });
+  private itemSheet = el('div', { class: 'sheet item-sheet', hidden: true });
+  private itemTitle = el('h2', { textContent: 'Item' });
+  private itemBody = el('div', { class: 'item-body' });
+  private placing = false;
+  private itemKey = '';
 
-  constructor(root: HTMLElement, private store: Store, repoRooms: RepoRoom[]) {
+  constructor(private root: HTMLElement, private store: Store, repoRooms: RepoRoom[]) {
+    this.editorClose.addEventListener('click', () => this.closeSheets());
+    this.neighborhoodClose.addEventListener('click', () => this.closeSheets());
+    this.itemClose.addEventListener('click', () => {
+      this.placing = false;
+      this.store.select(null);
+      this.closeSheets();
+    });
+    this.backdrop.addEventListener('click', () => {
+      if (!this.itemSheet.hidden && this.store.selectedId && !this.placing) this.store.select(null);
+      this.closeSheets();
+    });
+    this.editBtn.addEventListener('click', () => this.openEditor());
+    this.neighborhoodBtn.addEventListener('click', () => this.openNeighborhood());
+    this.chrome.append(this.editBtn, this.neighborhoodBtn);
+    this.neighborhoodSheet.setAttribute('role', 'dialog');
+    this.neighborhoodSheet.setAttribute('aria-label', 'Neighborhood');
+    this.itemSheet.setAttribute('role', 'dialog');
+    this.itemSheet.setAttribute('aria-label', 'Item');
+    this.neighborhoodSheet.append(
+      el('header', { class: 'sheet-head' }, el('h2', { textContent: 'Neighborhood' }), this.neighborhoodClose),
+      el('p', { class: 'sheet-copy', textContent: 'Visit example rooms. Visiting does not overwrite your saved room.' }),
+      this.homeBtnSheet,
+      this.buildNeighborhoodButtons(repoRooms),
+    );
+    this.itemSheet.append(
+      el('header', { class: 'sheet-head' }, this.itemTitle, this.itemClose),
+      this.itemBody,
+    );
+    this.homeBtnSheet.addEventListener('click', () => {
+      this.store.returnHome();
+      this.flash('Back in your room.');
+      this.closeSheets();
+    });
+
     root.append(
+      this.editorClose,
       el('h1', { textContent: 'Misc. Palace sandbox' }),
       this.ownerInput,
       this.buildLighting(),
       this.buildSurfaces(),
+      this.buildNeighborhood(repoRooms),
       this.buildAddForm(),
       this.buildToolbar(repoRooms),
       this.status,
       this.list,
     );
+    document.body.append(this.chrome, this.backdrop, this.neighborhoodSheet, this.itemSheet);
     this.ownerInput.addEventListener('change', () => store.setOwner(this.ownerInput.value));
     store.subscribe(() => this.render());
     this.render();
+  }
+
+  private isPhone(): boolean {
+    return window.matchMedia('(max-width: 720px)').matches;
+  }
+
+  private openEditor(): void {
+    this.closeSheets();
+    this.root.classList.add('sheet-open');
+    this.backdrop.hidden = false;
+  }
+
+  private openNeighborhood(): void {
+    this.closeSheets();
+    this.neighborhoodSheet.hidden = false;
+    this.backdrop.hidden = false;
+  }
+
+  private closeSheets(): void {
+    this.root.classList.remove('sheet-open');
+    this.neighborhoodSheet.hidden = true;
+    if (!this.placing) this.itemSheet.hidden = true;
+    this.backdrop.hidden = this.itemSheet.hidden && !this.root.classList.contains('sheet-open') && this.neighborhoodSheet.hidden;
+  }
+
+  private buildNeighborhoodButtons(repoRooms: RepoRoom[]): HTMLElement {
+    const wrap = el('div', { class: 'neighborhood-actions' });
+    for (const room of repoRooms.filter((r) => r.neighborhood)) {
+      const b = el('button', { type: 'button', textContent: `Visit ${room.name.replace(/-/g, ' ')}` });
+      b.addEventListener('click', () => {
+        try {
+          this.store.visit(room.data, room.name);
+          this.flash(`Visiting ${room.name}. Return home keeps your personal save.`);
+          this.closeSheets();
+        } catch (e) {
+          this.flash(`Could not visit ${room.name}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      });
+      wrap.append(b);
+    }
+    return wrap;
   }
 
   private flash(msg: string): void {
@@ -69,8 +165,45 @@ export class MenuView {
     this.lighting.append(el('option', {value:'', textContent:'Original lighting'}));
     for (const [value,p] of Object.entries(LIGHTING_PRESETS)) this.lighting.append(el('option',{value,textContent:p.label}));
     this.lighting.addEventListener('change', () => this.store.setLighting((this.lighting.value || undefined) as Lighting | undefined));
+    this.soundtrack.append(el('option', {value:'follow', textContent:'Follow lighting'}));
+    this.soundtrack.append(el('option', {value:'off', textContent:'No music'}));
+    for (const track of ROOM_TRACKS) this.soundtrack.append(el('option', {value:track, textContent:TRACK_LABELS[track]}));
+    this.soundtrack.addEventListener('change', () => {
+      const value = this.soundtrack.value;
+      const soundtrack: Soundtrack | undefined =
+        value === 'follow' ? undefined :
+        value === 'off' ? { mode: 'off' } :
+        { mode: 'track', track: value as RoomTrack };
+      this.store.setSoundtrack(soundtrack);
+    });
     return el('section',{class:'appearance'},el('h2',{textContent:'Room atmosphere'}),
-      el('label',{htmlFor:'lighting-preset',textContent:'Lighting preset'}),this.lighting);
+      el('label',{htmlFor:'lighting-preset',textContent:'Lighting preset'}),this.lighting,
+      el('label',{htmlFor:'room-soundtrack',textContent:'Room music'}),this.soundtrack,
+      el('small',{textContent:'Follow lighting uses the matching mood track. Pick a track to keep it when lighting changes, or choose no music. Drop MP3s into src/audio/ named after each lighting preset when you have the files.'}));
+  }
+
+  private buildNeighborhood(repoRooms: RepoRoom[]): HTMLElement {
+    const examples = repoRooms.filter((r) => r.neighborhood);
+    const section = el('details', { class: 'appearance neighborhood' }, el('summary', { textContent: 'Neighborhood' }));
+    section.append(el('small', { textContent: 'Visit example rooms. Each is a JSON file in rooms/ that developers can edit. Visiting does not overwrite your saved room.' }));
+    this.homeBtn.addEventListener('click', () => {
+      this.store.returnHome();
+      this.flash('Back in your room.');
+    });
+    section.append(this.homeBtn);
+    for (const room of examples) {
+      const b = el('button', { textContent: `Visit ${room.name.replace(/-/g, ' ')}` });
+      b.addEventListener('click', () => {
+        try {
+          this.store.visit(room.data, room.name);
+          this.flash(`Visiting ${room.name}. Return home keeps your personal save.`);
+        } catch (e) {
+          this.flash(`Could not visit ${room.name}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      });
+      section.append(b);
+    }
+    return section;
   }
 
   private buildSurfaces(): HTMLElement {
@@ -206,8 +339,13 @@ export class MenuView {
     const { state, selectedId } = this.store;
     if (document.activeElement !== this.ownerInput) this.ownerInput.value = state.owner;
     this.lighting.value = state.lighting ?? '';
+    const soundtrack = state.soundtrack;
+    this.soundtrack.value = !soundtrack || soundtrack.mode === 'follow' ? 'follow' : soundtrack.mode === 'off' ? 'off' : soundtrack.track;
     for(const [target,select] of this.surfaceSelects) select.value = state.surfaces?.[target]?.preset ?? '';
     this.undoBtn.disabled = !this.store.canUndo;
+    this.homeBtn.hidden = !this.store.visiting;
+    this.homeBtnSheet.hidden = !this.store.visiting;
+    this.syncItemSheet(selectedId);
     this.renderStatus();
 
     this.list.replaceChildren();
@@ -228,7 +366,7 @@ export class MenuView {
     this.status.classList.toggle('error', Boolean(saveError));
   }
 
-  private buildRow(contentId: string, selectedId: string | null): HTMLElement {
+  private buildRow(contentId: string, selectedId: string | null, inspect = false): HTMLElement {
     const store = this.store;
     const c = store.content(contentId)!;
     const rep = store.repFor(contentId);
@@ -263,7 +401,11 @@ export class MenuView {
       kind.addEventListener('click', (e) => e.stopPropagation());
       kind.addEventListener('change', () => store.setKind(rep.id, kind.value as ObjectKind));
       actions.append(kind);
-      if (slotId) act('Pick up', () => (store.unplace(rep.id), store.select(rep.id)));
+      if (slotId) act('Pick up', () => {
+        this.placing = true;
+        store.unplace(rep.id);
+        store.select(rep.id);
+      });
       act('Stash', () => store.stash(rep.id));
     } else {
       act('Bring out', () => store.bringOut(c.id));
@@ -273,7 +415,38 @@ export class MenuView {
     const row = el('div', { class: 'row' }, title, meta, where, actions);
     row.classList.toggle('selected', Boolean(rep && rep.id === selectedId));
     row.classList.toggle('inbox', !rep);
-    if (rep) row.addEventListener('click', () => store.select(rep.id === selectedId ? null : rep.id));
+    if (rep && !inspect) row.addEventListener('click', () => store.select(rep.id === selectedId ? null : rep.id));
     return row;
+  }
+
+  private syncItemSheet(selectedId: string | null): void {
+    if (this.placing) {
+      const held = selectedId ? !this.store.slotOf(selectedId) : false;
+      if (!held) this.placing = false;
+    }
+    if (!this.isPhone() || !selectedId) {
+      this.placing = false;
+      this.itemSheet.hidden = true;
+      this.itemKey = '';
+      if (this.neighborhoodSheet.hidden && !this.root.classList.contains('sheet-open')) this.backdrop.hidden = true;
+      return;
+    }
+    if (this.placing) {
+      this.itemSheet.hidden = true;
+      this.backdrop.hidden = true;
+      return;
+    }
+    this.root.classList.remove('sheet-open');
+    this.neighborhoodSheet.hidden = true;
+    this.itemSheet.hidden = false;
+    this.backdrop.hidden = true;
+    const key = `${selectedId}:${this.store.exportJson()}`;
+    if (key === this.itemKey) return;
+    this.itemKey = key;
+    const contentId = this.store.state.representations.find((r) => r.id === selectedId)?.contentItemId;
+    const content = contentId ? this.store.content(contentId) : undefined;
+    this.itemTitle.textContent = content?.title || 'Item';
+    this.itemBody.replaceChildren();
+    if (contentId) this.itemBody.append(this.buildRow(contentId, selectedId, true));
   }
 }

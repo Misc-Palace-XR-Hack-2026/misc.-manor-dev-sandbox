@@ -40,6 +40,10 @@ export class RoomView {
   private sun = new THREE.DirectionalLight(0xfff1dc, 2.1);
   private lamp = new THREE.PointLight(0xffd8a8, 0, 6, 2);
   private roomGroup = new THREE.Group();
+  private isoOffset = new THREE.Vector3(14, 14, 14);
+  private inspectHome: { target: THREE.Vector3; offset: THREE.Vector3; zoom: number } | null = null;
+  private inspectGoal = new THREE.Vector3();
+  private inspectZoom = 1;
 
   constructor(private container: HTMLElement, private store: Store) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -229,7 +233,7 @@ export class RoomView {
       }
     }
 
-    this.markerGroup.visible = this.store.selectedId !== null;
+    this.markerGroup.visible = this.store.selectedId !== null && !(this.isPhone() && this.objects.has(this.store.selectedId));
     for (const [slotId, m] of this.markers) {
       const occupant = this.store.repAt(slotId);
       const color = !occupant ? 0xfff2b0 : occupant === this.store.selectedId ? 0x9be39b : 0xff9ec4;
@@ -251,9 +255,62 @@ export class RoomView {
       const pulse = 0.4 + Math.sin(t * 5) * 0.12;
       for (const m of this.markers.values()) (m.material as THREE.MeshBasicMaterial).opacity = pulse;
     }
-    this.controls.update();
+    const inspecting = this.isPhone() && Boolean(this.store.selectedId && this.objects.has(this.store.selectedId));
+    if (!inspecting) this.controls.update();
+    this.frameSelection();
     this.fitBackground();
     this.renderer.render(this.scene, this.camera);
+  }
+
+  private isPhone(): boolean {
+    return window.matchMedia('(max-width: 720px)').matches;
+  }
+
+  private frameSelection(): void {
+    const roomEl = this.container;
+    const selected = this.store.selectedId;
+    const entry = selected ? this.objects.get(selected) : undefined;
+    const inspecting = this.isPhone() && Boolean(entry);
+    if (!inspecting || !entry) {
+      delete roomEl.dataset.inspectX;
+      delete roomEl.dataset.inspectY;
+      if (this.inspectHome) {
+        this.controls.target.lerp(this.inspectHome.target, 0.18);
+        this.camera.position.lerp(this.inspectHome.target.clone().add(this.inspectHome.offset), 0.18);
+        this.camera.zoom += (this.inspectHome.zoom - this.camera.zoom) * 0.18;
+        this.camera.updateProjectionMatrix();
+        if (this.controls.target.distanceTo(this.inspectHome.target) < 0.04) {
+          this.controls.target.copy(this.inspectHome.target);
+          this.camera.position.copy(this.inspectHome.target).add(this.inspectHome.offset);
+          this.camera.zoom = this.inspectHome.zoom;
+          this.camera.updateProjectionMatrix();
+          this.inspectHome = null;
+        }
+      }
+      this.controls.enabled = true;
+      return;
+    }
+
+    if (!this.inspectHome) {
+      this.inspectHome = {
+        target: this.controls.target.clone(),
+        offset: this.camera.position.clone().sub(this.controls.target),
+        zoom: this.camera.zoom,
+      };
+    }
+
+    const zoom = 1.7;
+    this.inspectGoal.copy(entry.group.position);
+    this.inspectZoom = zoom;
+    this.controls.target.lerp(this.inspectGoal, 0.22);
+    this.camera.position.lerp(this.inspectGoal.clone().add(this.isoOffset), 0.22);
+    this.camera.zoom += (this.inspectZoom - this.camera.zoom) * 0.22;
+    this.camera.updateProjectionMatrix();
+    this.controls.enabled = false;
+
+    const ndc = entry.group.position.clone().project(this.camera);
+    roomEl.dataset.inspectX = String((ndc.x + 1) / 2);
+    roomEl.dataset.inspectY = String((1 - ndc.y) / 2);
   }
 
   // ---- input ------------------------------------------------------------
