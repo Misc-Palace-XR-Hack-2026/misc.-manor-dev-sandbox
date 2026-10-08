@@ -1,4 +1,8 @@
-import { guessType } from './content';
+import { validSurface, validSurfaces, type SurfaceTarget, type SurfaceSelection } from './surfaces';
+import { validPhotoData } from './photos';
+import { soundtrackFromUnknown, validSoundtrack, type Soundtrack } from './soundtrack';
+import { lightingFromUnknown, validLighting, type Lighting } from './appearance';
+import { guessType, normalizeRef } from './content';
 import type { BookmarkEntry } from './bookmarks';
 import { DEFAULT_LAYOUT_ID, getLayout, type RoomLayout } from './layout';
 import {
@@ -27,6 +31,12 @@ export function validateRoom(input: unknown): string | null {
   if (!Array.isArray(s.contentItems) || !Array.isArray(s.representations) || !Array.isArray(s.placements)) {
     return 'Missing contentItems, representations or placements.';
   }
+  if (s.surfaces !== undefined && !validSurfaces(s.surfaces)) return 'Invalid room surfaces (local PNG/JPEG only, max 1024px and 1.5 MB encoded per image).';
+  if (s.lighting !== undefined && !validLighting(s.lighting)) return 'Invalid room lighting.';
+  if (s.soundtrack !== undefined && !validSoundtrack(s.soundtrack)) return 'Invalid room soundtrack.';
+  const legacy = (s as { appearance?: { theme?: unknown; lighting?: unknown } }).appearance;
+  if (legacy !== undefined && (!legacy || !['loft', 'study'].includes(String(legacy.theme)) ||
+      (legacy.lighting !== 'loft' && !validLighting(legacy.lighting)))) return 'Invalid legacy room lighting.';
   const layout = getLayout(String(s.layoutId));
   if (!layout) return `Unknown layout: ${String(s.layoutId)}.`;
   const contentIds = new Set<string>();
@@ -34,6 +44,7 @@ export function validateRoom(input: unknown): string | null {
     if (!c || typeof c.id !== 'string' || typeof c.title !== 'string' || typeof c.sourceRef !== 'string') {
       return 'A saved item is missing its id, title or sourceRef.';
     }
+    if (c.imageData !== undefined && (c.type !== 'image' || !validPhotoData(c.imageData))) return 'Invalid photo image data (PNG/JPEG, max 1024px and 1.5 MB encoded).';
     if (!(CONTENT_TYPES as readonly string[]).includes(c.type)) return `Unknown content type: ${String(c.type)}.`;
     if (!Array.isArray(c.tags) || c.tags.some((t) => typeof t !== 'string')) return `Item ${c.id} has bad tags.`;
     if (contentIds.has(c.id)) return `Duplicate item id ${c.id}.`;
@@ -63,29 +74,48 @@ export function validateRoom(input: unknown): string | null {
   return null;
 }
 
+export function normalizeRoom(input: unknown): RoomState {
+  const error = validateRoom(input);
+  if (error) throw new Error(error);
+  const copy = JSON.parse(JSON.stringify(input)) as RoomState & { appearance?: unknown };
+  const lighting = lightingFromUnknown(copy);
+  delete copy.appearance;
+  if (lighting) copy.lighting = lighting;
+  else delete copy.lighting;
+  const soundtrack = soundtrackFromUnknown(copy);
+  if (soundtrack) copy.soundtrack = soundtrack;
+  else delete copy.soundtrack;
+  return copy;
+}
+
 export class Store {
   state: RoomState;
   selectedId: string | null = null; // representation id; never saved
   saveError: string | null = null;
+  visiting: string | null = null;
+  private homeSnapshot: string | null = null;
   private history: string[] = [];
   private listeners = new Set<() => void>();
 
   constructor(initial: RoomState) {
-    this.state = initial;
+    this.state = normalizeRoom(initial);
   }
 
   /** Last good local save, falling back to the backup copy. */
   static loadSaved(): RoomState | null {
+    let failed = false;
     for (const key of [KEY, BACKUP_KEY]) {
       try {
         const raw = localStorage.getItem(key);
-        if (!raw) continue;
+        if (raw === null) continue;
         const parsed: unknown = JSON.parse(raw);
-        if (!validateRoom(parsed)) return parsed as RoomState;
+        if (!validateRoom(parsed)) return normalizeRoom(parsed);
+        failed = true;
       } catch {
-        /* try the next copy */
+        failed = true; // try the backup, but never silently start over
       }
     }
+    if (failed) throw new Error('Saved room could not be loaded. Local data has not been changed. Recover your saved JSON before starting another room.');
     return null;
   }
 
@@ -125,11 +155,23 @@ export class Store {
 
   // ---- commands (every one is undoable) ---------------------------------
   addItem(input: { title: string; sourceRef: string; type?: ContentType | 'auto'; kind?: ObjectKind }): string {
-    const ref = input.sourceRef.trim();
+    const ref = normalizeRef(input.sourceRef.trim());
     const type = !input.type || input.type === 'auto' ? guessType(ref) : input.type;
     let repId = '';
     this.commit((s) => {
       repId = this.createItem(s, input.title.trim() || ref || 'Untitled', ref, type, [], input.kind);
+      this.placeInFreeSlot(s, repId);
+    });
+    return repId;
+  }
+
+  addPhoto(title: string, imageData: string): string {
+    if (!validPhotoData(imageData)) throw new Error('Invalid photo image data (PNG/JPEG, max 1024px and 1.5 MB encoded).');
+    let repId = '';
+    this.commit(s => {
+      repId = this.createItem(s, title.trim() || 'Local photo', '', 'image', [], 'photoFrame');
+      const c = s.contentItems[s.contentItems.length - 1];
+      c.sourceKind = 'file'; c.sourceRef = 'Local photo'; c.imageData = imageData;
       this.placeInFreeSlot(s, repId);
     });
     return repId;
@@ -141,6 +183,32 @@ export class Store {
     this.commit((s) => {
       const c = s.contentItems.find((x) => x.id === contentId);
       if (c) c.title = t;
+    });
+  }
+
+  setSurface(target: SurfaceTarget, selection: SurfaceSelection | undefined): void {
+    if (!['floor','wall','background'].includes(target) || (selection !== undefined && !validSurface(target, selection))) throw new Error('Invalid surface selection.');
+    this.commit(s => {
+      s.surfaces = {...s.surfaces};
+      if (selection) s.surfaces[target] = {...selection};
+      else delete s.surfaces[target];
+      if (!Object.keys(s.surfaces).length) delete s.surfaces;
+    });
+  }
+
+  setLighting(lighting: Lighting | undefined): void {
+    if (lighting !== undefined && !validLighting(lighting)) throw new Error('Invalid room lighting.');
+    this.commit((s) => {
+      if (lighting) s.lighting = lighting;
+      else delete s.lighting;
+    });
+  }
+
+  setSoundtrack(soundtrack: Soundtrack | undefined): void {
+    if (soundtrack !== undefined && !validSoundtrack(soundtrack)) throw new Error('Invalid room soundtrack.');
+    this.commit((s) => {
+      if (!soundtrack || soundtrack.mode === 'follow') delete s.soundtrack;
+      else s.soundtrack = soundtrack;
     });
   }
 
@@ -271,7 +339,29 @@ export class Store {
     const error = validateRoom(data);
     if (error) throw new Error(error);
     this.pushHistory();
-    this.state = JSON.parse(JSON.stringify(data)) as RoomState;
+    this.state = normalizeRoom(data);
+    this.selectedId = null;
+    this.changed();
+  }
+
+  /** Visit an example/neighborhood room without writing it over the personal save. */
+  visit(data: unknown, name?: string): void {
+    const error = validateRoom(data);
+    if (error) throw new Error(error);
+    if (!this.visiting) this.homeSnapshot = JSON.stringify(this.state);
+    this.pushHistory();
+    this.state = normalizeRoom(data);
+    this.visiting = name ?? this.state.owner;
+    this.selectedId = null;
+    this.emit();
+  }
+
+  returnHome(): void {
+    if (!this.homeSnapshot) return;
+    this.pushHistory();
+    this.state = JSON.parse(this.homeSnapshot) as RoomState;
+    this.homeSnapshot = null;
+    this.visiting = null;
     this.selectedId = null;
     this.changed();
   }
@@ -319,7 +409,7 @@ export class Store {
   }
 
   private changed(): void {
-    this.save();
+    if (!this.visiting) this.save();
     this.emit();
   }
 

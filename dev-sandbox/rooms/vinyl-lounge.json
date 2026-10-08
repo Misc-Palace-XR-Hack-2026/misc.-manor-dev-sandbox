@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "room_vinyl_lounge",
+  "owner": "The vinyl & sound lounge",
+  "layoutId": "cozy-loft",
+  "lighting": "twilight",
+  "soundtrack": { "mode": "follow" },
+  "surfaces": {
+    "floor": { "preset": "wood" },
+    "wall": { "preset": "wood" },
+    "background": { "preset": "gradient" }
+  },
+  "contentItems": [
+    { "id": "c1", "type": "article", "title": "The Great 78 Project", "sourceKind": "url", "sourceRef": "https://en.wikipedia.org/wiki/Internet_Archive", "tags": ["music"], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c2", "type": "article", "title": "Synthesis and soundscapes", "sourceKind": "url", "sourceRef": "https://en.wikipedia.org/wiki/Synthesizer", "tags": ["music"], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c3", "type": "article", "title": "Field recording archive", "sourceKind": "url", "sourceRef": "https://en.wikipedia.org/wiki/Field_recording", "tags": ["music"], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c4", "type": "music", "title": "Tonight's record", "sourceKind": "note", "sourceRef": "Put something on.", "tags": ["music"], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c5", "type": "music", "title": "Cassette from the drawer", "sourceKind": "note", "sourceRef": "A mixtape for later.", "tags": ["music"], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c6", "type": "note", "title": "Listening chair", "sourceKind": "note", "sourceRef": "Sit with the album.", "tags": [], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c7", "type": "note", "title": "Headphones on the table", "sourceKind": "note", "sourceRef": "Quiet listening.", "tags": [], "createdAt": "2026-10-08T00:00:00.000Z" }
+  ],
+  "representations": [
+    { "id": "r1", "contentItemId": "c1", "objectKind": "record" },
+    { "id": "r2", "contentItemId": "c2", "objectKind": "boombox" },
+    { "id": "r3", "contentItemId": "c3", "objectKind": "notebook" },
+    { "id": "r4", "contentItemId": "c4", "objectKind": "turntable" },
+    { "id": "r5", "contentItemId": "c5", "objectKind": "cassette" },
+    { "id": "r6", "contentItemId": "c6", "objectKind": "armchair" },
+    { "id": "r7", "contentItemId": "c7", "objectKind": "headphones" }
+  ],
+  "placements": [
+    { "representationId": "r1", "slotId": "loft-1" },
+    { "representationId": "r2", "slotId": "floor-2" },
+    { "representationId": "r3", "slotId": "block-1" },
+    { "representationId": "r4", "slotId": "floor-3" },
+    { "representationId": "r5", "slotId": "loft-2" },
+    { "representationId": "r6", "slotId": "floor-5" },
+    { "representationId": "r7", "slotId": "floor-4" }
+  ]
+}
