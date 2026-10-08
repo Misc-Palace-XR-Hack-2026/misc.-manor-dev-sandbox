@@ -6,12 +6,14 @@ try {
  const page = await context.newPage(); const errors=[]; page.on('pageerror', e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:5173');
  await page.waitForFunction(()=>window.store, {timeout:5000});
+ await page.getByRole('button', { name: 'Edit room', exact: true }).click();
  assert.equal(await page.locator('#appearance-theme').count(),0);
  const kinds=await page.evaluate(async()=> (await import('/src/core/types.ts')).OBJECT_KINDS);
  assert.deepEqual(await page.locator('#new-object-kind option').evaluateAll(os=>os.map(o=>o.value).filter(Boolean)),kinds);
  await page.getByLabel('Lighting preset').selectOption('dawn');
  assert.equal(await page.evaluate(()=>window.store.state.lighting),'dawn');
  await page.reload(); await page.waitForFunction(()=>window.store);
+ await page.getByRole('button', { name: 'Edit room', exact: true }).click();
  assert.equal(await page.getByLabel('Lighting preset').inputValue(),'dawn');
  // Import an empty fixture through the real file input (not Store mutation).
  const empty=await page.evaluate(()=>({...window.store.state,contentItems:[],representations:[],placements:[]}));
@@ -88,12 +90,14 @@ try {
  const {readFile}=await import('node:fs/promises');
  const exported=JSON.parse(await readFile(await download.path(),'utf8'));assert.deepEqual(exported,before);
  await importRoom(exported);await page.waitForTimeout(100);await page.reload();await page.waitForFunction(()=>window.store);
+ await page.getByRole('button', { name: 'Edit room', exact: true }).click();
  assert.deepEqual(await page.evaluate(()=>window.store.state),before);
  for(const [theme,lighting] of [['loft','loft'],['study','dawn']]) {
    const legacy={...before,appearance:{theme,lighting}};delete legacy.lighting;
    await importRoom(legacy);
    await page.waitForFunction(l => window.store.state.lighting === (l === 'loft' ? undefined : l), lighting);
    await page.reload();await page.waitForFunction(()=>window.store);
+   await page.getByRole('button', { name: 'Edit room', exact: true }).click();
    const migrated=await page.evaluate(()=>window.store.state);
    const expected={...before};if(lighting==='loft')delete expected.lighting;else expected.lighting=lighting;
    assert.deepEqual(migrated,expected);

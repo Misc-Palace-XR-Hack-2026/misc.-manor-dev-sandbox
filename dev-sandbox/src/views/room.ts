@@ -233,7 +233,7 @@ export class RoomView {
       }
     }
 
-    this.markerGroup.visible = this.store.selectedId !== null && !(this.isPhone() && this.objects.has(this.store.selectedId));
+    this.markerGroup.visible = this.store.selectedId !== null && !this.objects.has(this.store.selectedId);
     for (const [slotId, m] of this.markers) {
       const occupant = this.store.repAt(slotId);
       const color = !occupant ? 0xfff2b0 : occupant === this.store.selectedId ? 0x9be39b : 0xff9ec4;
@@ -255,22 +255,18 @@ export class RoomView {
       const pulse = 0.4 + Math.sin(t * 5) * 0.12;
       for (const m of this.markers.values()) (m.material as THREE.MeshBasicMaterial).opacity = pulse;
     }
-    const inspecting = this.isPhone() && Boolean(this.store.selectedId && this.objects.has(this.store.selectedId));
+    const inspecting = Boolean(this.store.selectedId && this.objects.has(this.store.selectedId));
     if (!inspecting) this.controls.update();
     this.frameSelection();
     this.fitBackground();
     this.renderer.render(this.scene, this.camera);
   }
 
-  private isPhone(): boolean {
-    return window.matchMedia('(max-width: 720px)').matches;
-  }
-
   private frameSelection(): void {
     const roomEl = this.container;
     const selected = this.store.selectedId;
     const entry = selected ? this.objects.get(selected) : undefined;
-    const inspecting = this.isPhone() && Boolean(entry);
+    const inspecting = Boolean(entry);
     if (!inspecting || !entry) {
       delete roomEl.dataset.inspectX;
       delete roomEl.dataset.inspectY;
@@ -306,6 +302,10 @@ export class RoomView {
     this.camera.position.lerp(this.inspectGoal.clone().add(this.isoOffset), 0.22);
     this.camera.zoom += (this.inspectZoom - this.camera.zoom) * 0.22;
     this.camera.updateProjectionMatrix();
+    // OrbitControls is suspended during inspection, so explicitly orient the
+    // camera toward the animated target after a prior user orbit/pan.
+    this.camera.lookAt(this.controls.target);
+    this.camera.updateMatrixWorld();
     this.controls.enabled = false;
 
     const ndc = entry.group.position.clone().project(this.camera);

@@ -6,6 +6,7 @@ try {
  const context=await browser.newContext({viewport:{width:1440,height:1000}});
  const page=await context.newPage(); const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:5173');await page.waitForFunction(()=>window.store);
+ await page.getByRole('button', { name: 'Edit room', exact: true }).click();
  await page.waitForTimeout(2000); // Chromium may restore its initial WebGL context asynchronously.
  await page.getByText('Floor, walls & background',{exact:true}).click();
  const original=await page.evaluate(()=>window.store.state);
@@ -41,7 +42,9 @@ try {
  const exported=JSON.parse(await readFile(await (await downloadPromise).path(),'utf8'));assert.deepEqual(exported,before);
  const importRoom=async data=>page.locator('input[type=file][accept=".json,application/json"]').setInputFiles({name:'room.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(data))});
  await page.getByLabel('wall preset',{exact:true}).selectOption('plaster');await importRoom(exported);await page.waitForTimeout(200);
- await page.reload();await page.waitForFunction(()=>window.store);assert.deepEqual(await page.evaluate(()=>window.store.state),before);
+ await page.reload();await page.waitForFunction(()=>window.store);
+ await page.getByRole('button', { name: 'Edit room', exact: true }).click();
+ assert.deepEqual(await page.evaluate(()=>window.store.state),before);
  await page.getByText('Floor, walls & background',{exact:true}).click();
  for(const target of ['floor','wall','background']) {
   for(const [name,mimeType,buffer] of [['bad.svg','image/svg+xml',Buffer.from('<svg/>')],['bad.png','image/png',Buffer.from('not a PNG')]]) {

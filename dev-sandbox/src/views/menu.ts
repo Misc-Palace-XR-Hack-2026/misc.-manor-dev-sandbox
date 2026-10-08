@@ -114,8 +114,8 @@ export class MenuView {
     this.render();
   }
 
-  private isPhone(): boolean {
-    return window.matchMedia('(max-width: 720px)').matches;
+  private overlayChrome(): boolean {
+    return true;
   }
 
   private openEditor(): void {
@@ -424,7 +424,7 @@ export class MenuView {
       const held = selectedId ? !this.store.slotOf(selectedId) : false;
       if (!held) this.placing = false;
     }
-    if (!this.isPhone() || !selectedId) {
+    if (!this.overlayChrome() || !selectedId) {
       this.placing = false;
       this.itemSheet.hidden = true;
       this.itemKey = '';

@@ -8,6 +8,7 @@ try {
   const errors=[]; page.on('pageerror', e=>errors.push(e.message));
   await page.goto('http://127.0.0.1:5173');
   await page.waitForFunction(()=>window.store, {timeout:5000});
+  await page.getByRole('button', { name: 'Edit room', exact: true }).click();
   const kinds=await page.evaluate(async()=> (await import('/src/core/types.ts')).OBJECT_KINDS);
   for (const kind of ['cat','teapot','lantern','headphones','cassette','cushion']) {
     assert.ok(kinds.includes(kind), `${kind} missing from catalog`);
