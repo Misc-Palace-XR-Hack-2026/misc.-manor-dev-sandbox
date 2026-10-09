@@ -39,11 +39,34 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
     cyl(0.06, 0.06, 0.025, 0xe9a23b, -0.05, 0.12, 0),
     box(0.04, 0.03, 0.22, 0x2b2b2e, 0.22, 0.12, 0),
   ],
-  tv: () => [
-    box(0.62, 0.46, 0.46, 0x56575c),
-    box(0.4, 0.32, 0.02, 0x9fc7cf, -0.04, 0.07, 0.235),
-    box(0.06, 0.28, 0.02, 0x2a2a2e, 0.2, 0.09, 0.235),
-  ],
+  tv: () => {
+    const cabinet = box(0.62, 0.46, 0.42, 0x56575c);
+    const screen = box(0.38, 0.28, 0.02, 0x9fc7cf, -0.06, 0.1, 0.22);
+    screen.name = 'tv-screen';
+    const bezel = box(0.08, 0.28, 0.02, 0x2a2a2e, 0.22, 0.1, 0.22);
+    const knob = (name: string, y: number) => {
+      const k = cyl(0.028, 0.028, 0.018, 0xc9c4b8, 0.22, y, 0.23);
+      k.name = name;
+      k.rotation.x = Math.PI / 2;
+      return k;
+    };
+    const antenna = (name: string, x: number, rotZ: number) => {
+      const a = cyl(0.008, 0.008, 0.28, 0x8a8d93, x, 0.46, -0.04);
+      a.name = name;
+      a.rotation.z = rotZ;
+      return a;
+    };
+    return [
+      cabinet,
+      screen,
+      bezel,
+      knob('tv-knob-l', 0.16),
+      knob('tv-knob-r', 0.08),
+      antenna('tv-antenna-l', -0.08, 0.35),
+      antenna('tv-antenna-r', 0.08, -0.35),
+      box(0.08, 0.03, 0.08, 0x3a3a40, 0, 0.46, -0.04),
+    ];
+  },
   boombox: () => {
     const s1 = cyl(0.09, 0.09, 0.03, 0x1e1e22, -0.18, 0.08, 0.1);
     const s2 = cyl(0.09, 0.09, 0.03, 0x1e1e22, 0.18, 0.08, 0.1);
@@ -73,48 +96,48 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
     const dark = mat(0x3a281c);
     const body = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10), fur);
     body.name = 'cat-body';
-    body.scale.set(1.55, 0.68, 1.15);
-    body.position.set(0, 0.122, -0.02);
+    body.scale.set(1.18, 0.58, 0.78);
+    body.position.set(0, 0.11, -0.01);
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.105, 10, 8), fur);
     head.name = 'cat-head';
-    head.scale.set(1.15, 0.95, 1);
-    head.position.set(0, 0.145, 0.16);
+    head.scale.set(1.02, 0.9, 0.92);
+    head.position.set(0, 0.14, 0.09);
     const earL = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.1, 4), fur);
     earL.name = 'cat-ear-l';
-    earL.position.set(-0.055, 0.25, 0.13);
+    earL.position.set(-0.042, 0.22, 0.08);
     earL.rotation.set(0.2, 0.15, 0.42);
     const earR = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.1, 4), mat(0xf3d2a4));
     earR.name = 'cat-ear-r';
-    earR.position.set(0.055, 0.25, 0.13);
+    earR.position.set(0.042, 0.22, 0.08);
     earR.rotation.set(0.2, -0.15, -0.42);
     const innerL = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.055, 4), pink);
-    innerL.position.set(-0.055, 0.242, 0.138);
+    innerL.position.set(-0.042, 0.214, 0.088);
     innerL.rotation.copy(earL.rotation);
     const innerR = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.055, 4), mat(0xefb0a0));
-    innerR.position.set(0.055, 0.242, 0.138);
+    innerR.position.set(0.042, 0.214, 0.088);
     innerR.rotation.copy(earR.rotation);
-    const tail = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.028, 6, 12, Math.PI), fur);
+    const tail = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.02, 6, 12, Math.PI), fur);
     tail.name = 'cat-tail';
-    tail.position.set(0.16, 0.1, -0.12);
+    tail.position.set(0.1, 0.1, -0.06);
     tail.rotation.set(0.2, 1.1, 0.9);
     const eye = (x: number) => {
       const e = new THREE.Mesh(new THREE.SphereGeometry(0.016, 6, 4), dark);
       e.scale.set(1.6, 0.25, 0.7);
-      e.position.set(x, 0.155, 0.25);
+      e.position.set(x, 0.145, 0.175);
       return e;
     };
     const nose = new THREE.Mesh(new THREE.SphereGeometry(0.016, 6, 4), pink);
-    nose.position.set(0, 0.125, 0.265);
+    nose.position.set(0, 0.12, 0.185);
     const paw = (x: number, z: number) => {
       const p = new THREE.Mesh(new THREE.SphereGeometry(0.038, 6, 5), fur);
       p.scale.set(1.1, 0.5, 1.25);
-      p.position.set(x, 0.03, z);
+      p.position.set(x, 0.025, z);
       return p;
     };
     return [
       body, head, earL, earR, innerL, innerR, tail,
       eye(-0.038), eye(0.038), nose,
-      paw(-0.08, 0.13), paw(0.08, 0.13), paw(-0.1, -0.08), paw(0.1, -0.08),
+      paw(-0.06, 0.08), paw(0.06, 0.08), paw(-0.07, -0.05), paw(0.07, -0.05),
     ];
   },
   teapot: () => {
@@ -178,6 +201,78 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
     const top = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.02, 8), mat(0xe8dbc2));
     top.position.set(0, 0.085, 0);
     return [pillow, top];
+  },
+  console: () => [
+    box(0.5, 0.08, 0.32, 0x6f737a),
+    box(0.42, 0.03, 0.22, 0x2b2b2e, 0, 0.08, 0),
+    box(0.08, 0.02, 0.08, 0xc0463b, -0.16, 0.08, 0.08),
+    box(0.08, 0.02, 0.08, 0x3a6ea5, -0.05, 0.08, 0.08),
+    cyl(0.02, 0.02, 0.03, 0xd8d4c8, 0.16, 0.08, 0.06),
+  ],
+  cartridge: () => [
+    box(0.28, 0.08, 0.2, 0x3d6b3a),
+    box(0.22, 0.02, 0.14, 0xe8dbc2, 0, 0.08, 0),
+    box(0.18, 0.04, 0.04, 0x2b2b2e, 0, 0.02, 0.1),
+  ],
+  vhs: () => [
+    box(0.42, 0.06, 0.24, 0x1e1e22),
+    box(0.3, 0.02, 0.16, 0xf1e6cf, 0, 0.06, 0),
+    box(0.08, 0.03, 0.08, 0xc0463b, 0.14, 0.015, 0.08),
+  ],
+  recordSleeve: () => [
+    box(0.42, 0.42, 0.04, 0xf1e6cf, 0, 0, 0.02),
+    box(0.34, 0.34, 0.02, 0xc0463b, 0, 0.04, 0.04),
+    cyl(0.12, 0.12, 0.01, 0x1b1b1f, 0, 0.08, -0.03),
+  ],
+  spoon: () => {
+    const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0xc9c4b8));
+    bowl.scale.set(1.4, 0.45, 1);
+    bowl.position.set(0.12, 0.03, 0);
+    bowl.rotation.z = -0.2;
+    return [
+      box(0.22, 0.02, 0.03, 0xc9c4b8, -0.04, 0.02, 0),
+      bowl,
+    ];
+  },
+  robot: () => [
+    box(0.22, 0.22, 0.18, 0x8a8d93, 0, 0.12, 0),
+    box(0.16, 0.12, 0.16, 0x6f737a, 0, 0.34, 0),
+    cyl(0.025, 0.025, 0.08, 0xc9c4b8, -0.05, 0.42, 0.04),
+    cyl(0.025, 0.025, 0.08, 0xc9c4b8, 0.05, 0.42, 0.04),
+    box(0.05, 0.16, 0.05, 0x8a8d93, -0.16, 0.16, 0),
+    box(0.05, 0.16, 0.05, 0x8a8d93, 0.16, 0.16, 0),
+    box(0.05, 0.12, 0.05, 0x6f737a, -0.06, 0, 0),
+    box(0.05, 0.12, 0.05, 0x6f737a, 0.06, 0, 0),
+  ],
+  telescope: () => {
+    const tube = cyl(0.04, 0.06, 0.46, 0x3a3a40, 0, 0.22, 0);
+    tube.rotation.z = Math.PI / 2.4;
+    const stand = box(0.04, 0.22, 0.04, 0x6f4e37);
+    return [
+      stand,
+      box(0.22, 0.03, 0.16, 0x5c4033, 0, 0, 0),
+      tube,
+      cyl(0.07, 0.07, 0.04, 0x8a8d93, 0.16, 0.34, 0),
+    ];
+  },
+  car: () => [
+    box(0.5, 0.12, 0.24, 0xc0463b, 0, 0.06, 0),
+    box(0.28, 0.1, 0.22, 0x9fc7cf, -0.02, 0.18, 0),
+    cyl(0.05, 0.05, 0.04, 0x1e1e22, -0.16, 0, 0.12),
+    cyl(0.05, 0.05, 0.04, 0x1e1e22, 0.16, 0, 0.12),
+    cyl(0.05, 0.05, 0.04, 0x1e1e22, -0.16, 0, -0.12),
+    cyl(0.05, 0.05, 0.04, 0x1e1e22, 0.16, 0, -0.12),
+  ],
+  motorcycle: () => {
+    const wheel = (x: number) => {
+      const w = cyl(0.08, 0.08, 0.04, 0x1e1e22, x, 0, 0);
+      w.rotation.z = Math.PI / 2;
+      return w;
+    };
+    const tank = box(0.22, 0.08, 0.08, 0x3a6ea5, 0, 0.14, 0);
+    const seat = box(0.12, 0.04, 0.08, 0x2b2b2e, -0.12, 0.16, 0);
+    const bars = box(0.16, 0.02, 0.02, 0x8a8d93, 0.12, 0.22, 0);
+    return [wheel(-0.16), wheel(0.16), tank, seat, bars, box(0.28, 0.04, 0.05, 0x6f737a, 0, 0.1, 0)];
   },
 };
 

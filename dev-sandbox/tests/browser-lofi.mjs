@@ -10,7 +10,7 @@ try {
   await page.waitForFunction(()=>window.store, {timeout:5000});
   await page.getByRole('button', { name: 'Edit room', exact: true }).click();
   const kinds=await page.evaluate(async()=> (await import('/src/core/types.ts')).OBJECT_KINDS);
-  for (const kind of ['cat','teapot','lantern','headphones','cassette','cushion']) {
+  for (const kind of ['cat','teapot','lantern','headphones','cassette','cushion','console','cartridge','vhs','recordSleeve','spoon','robot','telescope','car','motorcycle']) {
     assert.ok(kinds.includes(kind), `${kind} missing from catalog`);
     assert.equal(await page.locator(`#new-object-kind option[value="${kind}"]`).count(), 1);
   }
@@ -27,12 +27,15 @@ try {
     return {x:r.left+(p.x+1)*r.width/2,y:r.top+(1-p.y)*r.height/2};
   },{slot,y});
   const clickSlot=async slot=>{const p=await project(slot);await page.mouse.click(p.x,p.y);await page.waitForTimeout(250);};
-  const slots=['floor-4','loft-3','floor-2','floor-3','floor-5','loft-1'];
-  const imported=['cat','teapot','lantern','headphones','cassette','cushion'];
+  const slots=['floor-4','loft-3','floor-2','floor-3','floor-5','loft-1','floor-1','loft-2','floor-6'];
+  const imported=['cat','teapot','lantern','headphones','cassette','cushion','console','cartridge','vhs'];
   for (const kind of imported) {
+    await page.locator('.sheet-backdrop').click({ force: true }).catch(() => {});
+    await page.getByRole('button', { name: 'Edit room', exact: true }).click();
+    await page.getByPlaceholder('Title (optional)').waitFor({ state: 'visible' });
     await page.getByPlaceholder('Title (optional)').fill(`Test ${kind}`);
     await page.getByPlaceholder('Paste a link, or a file name').fill(`https://example.com/${kind}`);
-    await page.getByLabel('Object representation').selectOption(kind);
+    await page.locator('#new-object-kind').selectOption(kind);
     await page.getByRole('button',{name:'Add to room',exact:true}).click();
     const row=page.locator('.list .row').filter({has:page.locator('.title',{hasText:`Test ${kind}`})});
     const rep=await page.evaluate(title=>window.store.repFor(window.store.state.contentItems.find(c=>c.title===title).id),`Test ${kind}`);

@@ -43,6 +43,54 @@ export class SoundtrackPlayer {
   private last: RoomTrack | undefined;
   private wanted: RoomTrack | undefined;
   private away = false;
+  private blocked = false;
+  private muted = false;
+  private gestureVersion = 0;
+  private listeners = new Set<() => void>();
+
+  get soundState(): 'off' | 'muted' | 'playing' {
+    if (!currentTrack(this.store.state)) return 'off';
+    return this.muted || this.blocked || this.away || this.audio.paused ? 'muted' : 'playing';
+  }
+
+  subscribe(listener: () => void): void {
+    this.listeners.add(listener);
+    listener();
+  }
+
+  private notify(): void {
+    for (const listener of this.listeners) listener();
+  }
+
+  toggleSound(): void {
+    const track = currentTrack(this.store.state);
+    if (!track || this.away) return;
+    this.gestureVersion++;
+    if (this.soundState === 'playing') {
+      this.muted = true;
+      this.audio.pause();
+      this.notify();
+      return;
+    }
+    this.muted = false;
+    this.wanted = track;
+    if (this.last !== track) this.audio.src = trackUrl(track);
+    this.last = track;
+    this.playFromGesture();
+  }
+
+  private playFromGesture(): void {
+    const version = ++this.gestureVersion;
+    this.blocked = false;
+    this.audio.volume = 1;
+    // Keep play() on the trusted click/tap stack, before any promise or fade.
+    void this.audio.play().then(() => this.notify(), () => {
+      if (version !== this.gestureVersion) return;
+      this.blocked = true;
+      this.notify();
+    });
+    this.notify();
+  }
   private chain: Promise<void> = Promise.resolve();
 
   constructor(
@@ -55,8 +103,10 @@ export class SoundtrackPlayer {
     this.audio.preload = 'none';
     this.audio.volume = 1;
     this.audio.addEventListener('error', () => {
-      /* Missing files stay silent; licensed tracks live in public/audio/. */
+      this.blocked = true;
+      this.notify();
     });
+    for (const event of ['playing', 'pause', 'ended']) this.audio.addEventListener(event, () => this.notify());
     store.subscribe(() => this.sync());
     if (options.listen !== false) this.listen();
     this.sync();
@@ -68,8 +118,12 @@ export class SoundtrackPlayer {
 
   leave(): void {
     this.away = true;
+    this.notify();
     this.wanted = undefined;
-    this.enqueue(() => this.stop(true));
+    const version = this.gestureVersion;
+    this.enqueue(async () => {
+      if (version === this.gestureVersion) await this.stop(true);
+    });
   }
 
   return(): void {
@@ -78,6 +132,16 @@ export class SoundtrackPlayer {
   }
 
   private listen(): void {
+    // Call play in the gesture handler itself, not after a queued fade/await.
+    // Safari requires this direct gesture path to unlock audible playback.
+    const retry = () => {
+      if (!this.blocked || this.muted || this.away || !this.wanted ||
+          this.last !== this.wanted || !this.audio.paused) return;
+      this.playFromGesture();
+    };
+    document.addEventListener('touchend', retry);
+    document.addEventListener('click', retry);
+    document.addEventListener('keydown', retry);
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) this.leave();
       else this.return();
@@ -97,6 +161,7 @@ export class SoundtrackPlayer {
 
   private sync(): void {
     const track = this.away ? undefined : currentTrack(this.store.state);
+    this.notify();
     if (track === this.wanted) return;
     this.wanted = track;
     this.enqueue(() => this.apply(track));
@@ -107,40 +172,53 @@ export class SoundtrackPlayer {
   }
 
   private async apply(track: RoomTrack | undefined): Promise<void> {
+    const version = this.gestureVersion;
     if (track !== this.wanted) return;
     if (this.last && this.last !== track) await this.stop(true);
-    if (track !== this.wanted) return;
+    if (track !== this.wanted || version !== this.gestureVersion) return;
     if (!track) {
       if (this.last) await this.stop(true);
       return;
     }
+    if (this.muted) return;
     if (this.last === track && !this.audio.paused) return;
     this.audio.src = trackUrl(track);
     this.audio.volume = 0;
     this.last = track;
+    this.blocked = false;
     try {
       await this.audio.play();
     } catch {
-      /* Browser autoplay policy: user gesture required. Controls still work after the first click. */
+      if (version !== this.gestureVersion) return;
+      this.blocked = true;
+      this.notify();
+      return;
     }
-    if (track !== this.wanted || this.away) {
+    if (version !== this.gestureVersion) return;
+    this.notify();
+    if (track !== this.wanted || this.away || this.muted) {
       await this.stop(false);
       return;
     }
     await this.fade(0, 1, 400, (value) => {
+      if (version !== this.gestureVersion) return;
       this.audio.volume = Math.min(1, Math.max(0, value));
     });
   }
 
   private async stop(doFade: boolean): Promise<void> {
+    const version = this.gestureVersion;
     if (doFade && !this.audio.paused) {
       await this.fade(this.audio.volume, 0, 350, (value) => {
+        if (version !== this.gestureVersion) return;
         this.audio.volume = Math.min(1, Math.max(0, value));
       });
     }
+    if (version !== this.gestureVersion) return;
     this.audio.pause();
     this.audio.removeAttribute('src');
     this.audio.volume = 1;
     this.last = undefined;
+    this.notify();
   }
 }

@@ -90,6 +90,24 @@ export class RoomView {
     this.renderer.setAnimationLoop((t) => this.tick(t / 1000));
   }
 
+  /** Render and copy synchronously before WebGL discards its drawing buffer. */
+  capturePhoto(): Promise<Blob> {
+    const visible = this.markerGroup.visible;
+    this.markerGroup.visible = false;
+    const copy = document.createElement('canvas');
+    try {
+      this.renderer.render(this.scene, this.camera);
+      copy.width = this.renderer.domElement.width;
+      copy.height = this.renderer.domElement.height;
+      const context = copy.getContext('2d');
+      if (!context) throw new Error('PNG capture is unavailable.');
+      context.drawImage(this.renderer.domElement, 0, 0);
+    } finally {
+      this.markerGroup.visible = visible;
+    }
+    return new Promise((resolve, reject) => copy.toBlob(blob => blob ? resolve(blob) : reject(new Error('PNG encoding failed.')), 'image/png'));
+  }
+
   // ---- scene setup ------------------------------------------------------
   private addLights(): void {
     this.scene.add(this.hemi, this.lamp);

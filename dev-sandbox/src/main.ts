@@ -4,6 +4,8 @@ import type { RoomState } from './core/types';
 import { MenuView, type RepoRoom } from './views/menu';
 import { RoomView } from './views/room';
 import { SoundtrackPlayer } from './views/soundtrack';
+import { createRoomCapture } from './views/room-capture';
+import { createSoundtrackControl } from './views/soundtrack-control';
 
 // Every rooms/*.json committed to the repo shows up in the "Load repo room" dropdown.
 const modules = import.meta.glob('../rooms/*.json', { eager: true, import: 'default' });
@@ -47,8 +49,10 @@ try {
 if (initial) {
   const store = new Store(initial);
   new MenuView(document.getElementById('menu')!, store, repoRooms);
-  new RoomView(document.getElementById('room')!, store);
-  new SoundtrackPlayer(store);
+  const room = new RoomView(document.getElementById('room')!, store);
+  document.body.append(createRoomCapture(() => room.capturePhoto()));
+  const soundtrack = new SoundtrackPlayer(store);
+  document.body.append(createSoundtrackControl(soundtrack));
 
   // Handy for poking at things from the browser console while developing.
   (window as unknown as { store: Store }).store = store;
