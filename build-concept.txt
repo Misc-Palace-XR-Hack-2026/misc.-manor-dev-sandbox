@@ -1,5 +1,5 @@
 Build Off:
-- 90 minute video (commercial) presentation
+- 90 second video (commercial) presentation
 - usable prototype
 
 Project: Misc. Palace
