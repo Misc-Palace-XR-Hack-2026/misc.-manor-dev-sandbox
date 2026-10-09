@@ -2,10 +2,12 @@ import { SURFACE_PRESETS, type SurfaceTarget } from '../core/surfaces';
 import { ROOM_TRACKS, TRACK_LABELS, type RoomTrack, type Soundtrack } from '../core/soundtrack';
 import { LIGHTING_PRESETS, type Lighting } from '../core/appearance';
 import { parseBookmarksHtml } from '../core/bookmarks';
+import { openContentEditor } from './content-editor';
 import { preparePhoto } from './photo-upload';
 import { safeUrl } from '../core/content';
 import type { Store } from '../core/store';
 import { CONTENT_TYPES, OBJECT_KINDS, OBJECT_LABELS, type ContentType, type ObjectKind } from '../core/types';
+import { buildKindInventory } from './kind-picker';
 
 // 2D fallback view: always works, even if the 3D room is broken. Built with DOM nodes + textContent only,
 // so imported titles and URLs can never inject markup.
@@ -249,9 +251,17 @@ export class MenuView {
     type.append(el('option', { value: 'link', textContent: 'type: link' }));
     for (const t of CONTENT_TYPES.filter((value) => value !== 'link')) type.append(el('option', { value: t, textContent: t }));
     type.append(el('option', { value: 'auto', textContent: 'type: auto' }));
-    const kind = el('select', { id: 'new-object-kind' });
+    const kind = el('select', { id: 'new-object-kind', class: 'kind-select' });
     kind.append(el('option', {value:'',textContent:'Automatic by content type'}));
     for (const k of OBJECT_KINDS) kind.append(el('option', {value:k,textContent:OBJECT_LABELS[k]}));
+    const picker = buildKindInventory({
+      value: '',
+      allowEmpty: true,
+      onChange: (next) => {
+        kind.value = next;
+        kind.dispatchEvent(new Event('change', { bubbles: true }));
+      },
+    });
     const add = el('button', { textContent: 'Add to room' });
     const submit = () => {
       if (!ref.value.trim() && !title.value.trim()) return;
@@ -272,7 +282,7 @@ export class MenuView {
       } catch(e) {this.flash(`Photo not added: ${e instanceof Error ? e.message : String(e)}`);}
       finally {photo.disabled=false;photo.value='';}
     });
-    return el('div', { class: 'add' }, ref, title, el('label', {htmlFor:'new-object-kind',textContent:'Object representation'}), kind, el('div', { class: 'row-inline' }, type, add),
+    return el('div', { class: 'add' }, ref, title, el('label', {htmlFor:'new-object-kind',textContent:'Object representation'}), kind, picker, el('div', { class: 'row-inline' }, type, add),
       el('label',{htmlFor:'local-photo',textContent:'Upload local photo'}),photo,
       el('small',{textContent:'PNG / JPEG · up to 12 MB · resized to 1024 px. No upload to a server.'}));
   }
@@ -395,12 +405,17 @@ export class MenuView {
       });
       actions.append(b);
     };
+    act('Edit', () => openContentEditor(store, c.id));
     if (rep) {
-      const kind = el('select', { title: 'Which object shows this media' });
+      const kind = el('select', { class: 'kind-select', title: 'Which object shows this media' });
       for (const k of OBJECT_KINDS) kind.append(el('option', { value: k, textContent: OBJECT_LABELS[k], selected: k === rep.objectKind }));
       kind.addEventListener('click', (e) => e.stopPropagation());
       kind.addEventListener('change', () => store.setKind(rep.id, kind.value as ObjectKind));
-      actions.append(kind);
+      const picker = buildKindInventory({
+        value: rep.objectKind,
+        onChange: (next) => store.setKind(rep.id, next),
+      });
+      actions.append(kind, picker);
       if (slotId) act('Pick up', () => {
         this.placing = true;
         store.unplace(rep.id);

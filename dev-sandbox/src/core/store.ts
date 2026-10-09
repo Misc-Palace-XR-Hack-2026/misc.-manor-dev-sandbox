@@ -2,7 +2,7 @@ import { validSurface, validSurfaces, type SurfaceTarget, type SurfaceSelection 
 import { validPhotoData } from './photos';
 import { soundtrackFromUnknown, validSoundtrack, type Soundtrack } from './soundtrack';
 import { lightingFromUnknown, validLighting, type Lighting } from './appearance';
-import { guessType, normalizeRef } from './content';
+import { guessType, normalizeRef, safeUrl } from './content';
 import type { BookmarkEntry } from './bookmarks';
 import { DEFAULT_LAYOUT_ID, getLayout, type RoomLayout } from './layout';
 import {
@@ -175,6 +175,22 @@ export class Store {
       this.placeInFreeSlot(s, repId);
     });
     return repId;
+  }
+
+  updateContent(contentId: string, input: { title: string; sourceRef: string; imageData?: string }): void {
+    const current = this.content(contentId);
+    if (!current) throw new Error('Item no longer exists.');
+    if (typeof input.title !== 'string' || !input.title.trim() || typeof input.sourceRef !== 'string') throw new Error('A title and content are required.');
+    const sourceRef = current.type === 'note' ? input.sourceRef : current.sourceKind === 'url' ? safeUrl(input.sourceRef) : input.sourceRef.trim();
+    if (sourceRef === null) throw new Error('Enter a valid http or https URL.');
+    if (input.imageData !== undefined && (current.type !== 'image' || !validPhotoData(input.imageData))) throw new Error('Invalid photo image data.');
+    this.commit(s => {
+      const c = s.contentItems.find(c => c.id === contentId)!;
+      c.title = input.title.trim();
+      c.sourceRef = sourceRef;
+      if (c.type === 'note') c.sourceKind = 'note';
+      if (input.imageData !== undefined) c.imageData = input.imageData;
+    });
   }
 
   renameItem(contentId: string, title: string): void {
