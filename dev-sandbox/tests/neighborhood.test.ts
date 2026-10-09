@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { Store, newRoom, validateRoom } from '../src/core/store';
 import { OBJECT_KINDS } from '../src/core/types';
 
-const roomsDir = '/home/dvgpro/Projects/misc.-palace-dev-sandbox/dev-sandbox/rooms';
+const roomsDir = join(process.cwd(), 'rooms');
 const files = readdirSync(roomsDir).filter((f) => f.endsWith('.json'));
 const rooms = Object.fromEntries(files.map((f) => [f.replace(/\.json$/, ''), JSON.parse(readFileSync(join(roomsDir, f), 'utf8'))]));
 

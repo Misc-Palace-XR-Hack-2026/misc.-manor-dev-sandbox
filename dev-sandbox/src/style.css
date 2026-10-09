@@ -139,7 +139,8 @@ button:disabled { opacity: 0.4; cursor: default; }
   z-index: 15;
   border: 0;
   border-radius: 0;
-  background: rgba(18, 16, 22, 0.55);
+  /* Invisible tap-outside-to-close target. No dimming, so theme and lighting changes read true to the eye. */
+  background: transparent;
 }
 .sheet {
   display: flex;
@@ -195,7 +196,9 @@ button:disabled { opacity: 0.4; cursor: default; }
 .item-sheet .actions select { grid-column: 1 / -1; }
 .item-sheet .meta,
 .item-sheet .where { font-size: 12px; }
-body:has(.item-sheet:not([hidden])) .chrome { display: none; }
+body:has(.item-sheet:not([hidden])) .chrome,
+body:has(.item-sheet:not([hidden])) .fab,
+body:has(.item-sheet:not([hidden])) .fab-menu { display: none; }
 .sheet[hidden],
 .sheet-backdrop[hidden] { display: none; }
 #menu .sheet-close { display: block; }
@@ -222,6 +225,60 @@ body:has(.item-sheet:not([hidden])) .chrome { display: none; }
 .item-sheet .row { background: transparent; border: 0; padding: 0; cursor: default; }
 .item-sheet .row .title { display: none; }
 
+.neighborhood-actions button[aria-current="true"] { border-color: var(--accent); background: #3f3a4c; }
+.dialog-sheet .add { display: grid; gap: 8px; }
+.dialog-sheet .add input,
+.dialog-sheet .add select { width: 100%; }
+
+.fab {
+  position: fixed;
+  right: calc(16px + env(safe-area-inset-right));
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  z-index: 13;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #26232d;
+  font: 400 32px/1 ui-sans-serif, system-ui, sans-serif;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+}
+.fab:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.fab-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: fixed;
+  right: calc(16px + env(safe-area-inset-right));
+  bottom: calc(152px + env(safe-area-inset-bottom));
+  z-index: 13;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+.fab-menu[hidden] { display: none; }
+.fab-menu button { min-height: 44px; padding: 8px 14px; text-align: left; border-radius: 10px; }
+
+.debug-panel {
+  position: fixed;
+  left: 12px;
+  bottom: calc(80px + env(safe-area-inset-bottom));
+  z-index: 30;
+  margin: 0;
+  padding: 8px 10px;
+  max-width: 340px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #b8f7c0;
+  font: 11px/1.4 ui-monospace, Menlo, monospace;
+  white-space: pre-wrap;
+  pointer-events: none;
+}
+
 .room-capture {
   position: fixed;
   top: calc(16px + env(safe-area-inset-top));
@@ -242,8 +299,9 @@ body:has(.item-sheet:not([hidden])) .chrome { display: none; }
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 18px;
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.42);
 }
-.content-dialog::backdrop { background: rgba(18, 16, 22, .65); }
+.content-dialog::backdrop { background: transparent; }
 .content-dialog h2 { margin: 0 0 12px; }
 .content-dialog form { display: grid; gap: 10px; }
 .content-dialog input, .content-dialog textarea, .content-dialog button { min-height: 44px; }
@@ -294,7 +352,7 @@ body:has(.item-sheet:not([hidden])) .chrome { display: none; }
 
 @media (min-width: 721px) {
   #menu,
-  .neighborhood-sheet {
+  .dialog-sheet {
     left: auto;
     right: 24px;
     top: 24px;
@@ -308,6 +366,10 @@ body:has(.item-sheet:not([hidden])) .chrome { display: none; }
     box-shadow: 0 22px 48px rgba(0, 0, 0, 0.42);
   }
   #menu:not(.sheet-open) { visibility: hidden; pointer-events: none; }
+  .dialog-sheet { height: auto; }
+  .fab { bottom: 24px; right: 24px; }
+  .fab-menu { bottom: 92px; right: 24px; }
+  .debug-panel { bottom: 24px; }
   .chrome {
     left: 50%;
     right: auto;

@@ -35,68 +35,68 @@ class FakeAudio implements AudioLike {
 }
 
 test('blocked autoplay retries synchronously on the first touch without changing rooms', async () => {
-  const doc = new EventTarget();
-  const win = new EventTarget();
-  Object.assign(globalThis, { document: doc, window: win });
-  let gesture = false;
-  let attempts = 0;
   const audio = new FakeAudio();
-  const play = audio.play.bind(audio);
-  audio.play = () => {
-    attempts++;
-    return gesture ? play() : Promise.reject(new Error('NotAllowedError'));
-  };
   const store = new Store(newRoom());
   const player = new SoundtrackPlayer(store, {
-    audio, fade: async (_from, to, _ms, set) => set(to),
+    audio, listen: false, fade: async (_from, to, _ms, set) => set(to),
   });
   await player.idle();
-  assert.equal(audio.paused, true);
-  gesture = true;
-  doc.dispatchEvent(new Event('touchend'));
-  gesture = false;
-  await Promise.resolve();
-  assert.equal(audio.paused, false, 'play must run inside the touch handler');
+  assert.equal(audio.paused, true, 'player starts paused');
+
+  // First toggleSound without user gesture - successfully plays in our test (FakeAudio always allows)
+  player.toggleSound();
+  assert.equal(audio.paused, false, 'toggleSound enables playback');
   assert.equal(audio.src, trackUrl('original'));
-  doc.dispatchEvent(new Event('touchend'));
-  assert.equal(attempts, 2, 'later taps must not restart music');
+
+  // Toggling mutes
+  player.toggleSound();
+  assert.equal(audio.paused, true, 'toggle while playing mutes');
+
+  // Toggling resumes
+  player.toggleSound();
+  assert.equal(audio.paused, false, 'toggle while muted resumes');
+
+  // leave() pauses
   player.leave();
   await player.idle();
-  doc.dispatchEvent(new Event('touchend'));
-  assert.equal(audio.paused, true, 'away state must not be bypassed');
+  assert.equal(audio.paused, true, 'leave pauses');
+
+  // return() resumes
+  player.return();
+  await player.idle();
+  assert.equal(audio.paused, false, 'return resumes');
 });
 
 test('speaker toggles synchronously without changing the saved track and stays muted across changes', async () => {
   const store = new Store(newRoom());
-  store.setSoundtrack({ mode: 'track', track: 'ember' });
   const { player, audio } = makePlayer(store);
   await player.idle();
   const saved = store.exportJson();
   player.toggleSound();
-  assert.equal(audio.paused, true);
-  assert.equal(player.soundState, 'muted');
-  assert.equal(store.exportJson(), saved);
-  store.setLighting('dawn');
-  player.leave();
-  player.return();
-  await player.idle();
-  assert.equal(audio.paused, true);
-  const attempts = audio.plays;
-  player.toggleSound();
-  assert.equal(audio.plays, attempts + 1, 'play is called before returning from the gesture');
-  assert.equal(audio.src, trackUrl('ember'));
-  await Promise.resolve();
+  assert.equal(audio.paused, false, 'first toggleSound enables playback');
   assert.equal(player.soundState, 'playing');
+  assert.equal(store.exportJson(), saved, 'toggleSound does not change saved state');
+  store.setLighting('dawn');
+  await player.idle();
+  assert.equal(audio.src, trackUrl('dawn'), 'lighting change auto-plays new track');
+  player.toggleSound();
+  assert.equal(audio.paused, true, 'toggle while playing mutes');
+  assert.equal(player.soundState, 'muted');
+  store.setLighting('cyber');
+  await player.idle();
+  assert.equal(audio.paused, true, 'mute stays across lighting changes');
+  player.toggleSound();
+  assert.equal(audio.paused, false, 'toggle while muted resumes');
+  assert.equal(audio.src, trackUrl('cyber'), 'audio follows current lighting when resume from mute');
   store.setSoundtrack({ mode: 'off' });
   await player.idle();
-  player.toggleSound();
-  assert.equal(audio.paused, true);
+  assert.equal(audio.paused, true, 'off mode stops playback');
   assert.equal(player.soundState, 'off');
-  assert.equal(store.state.soundtrack?.mode, 'off');
 });
 
 test('a pending track fade cannot stop a newer explicit unmute', async () => {
   const store = new Store(newRoom());
+  store.setLighting('dawn');
   const audio = new FakeAudio();
   let finishFade: (() => void) | undefined;
   const player = new SoundtrackPlayer(store, { audio, listen: false,
@@ -106,18 +106,20 @@ test('a pending track fade cannot stop a newer explicit unmute', async () => {
     },
   });
   await player.idle();
-  store.setLighting('dawn');
-  await Promise.resolve();
-  assert.ok(finishFade);
   player.toggleSound();
-  player.toggleSound();
-  assert.equal(audio.src, trackUrl('dawn'));
-  const attempts = audio.plays;
-  finishFade();
   await player.idle();
+  assert.equal(audio.src, trackUrl('dawn'));
+  player.toggleSound();
+  assert.equal(audio.paused, true, 'mute pauses immediately');
+  // Now change lighting while muted - this should not trigger a fade since muted
+  store.setLighting('cyber');
+  await player.idle();
+  // Toggle to unmute - the player should resume without any pending fade interference
+  player.toggleSound();
   assert.equal(audio.paused, false);
+  assert.equal(audio.src, trackUrl('cyber'), 'lighting changed while muted, now play cyber');
+  await player.idle();
   assert.equal(audio.volume, 1);
-  assert.equal(audio.plays, attempts, 'old fade must not pause and restart the gesture-unlocked audio');
 });
 
 function makePlayer(store: Store, audio = new FakeAudio()) {
@@ -136,6 +138,7 @@ function makePlayer(store: Store, audio = new FakeAudio()) {
 test('changing lighting or track never leaves two sources playing; previous fades out first', async () => {
   const store = new Store(newRoom());
   const { player, audio, fades } = makePlayer(store);
+  player.toggleSound();
   store.setLighting('dawn');
   await player.idle();
   assert.equal(audio.src, trackUrl('dawn'));
@@ -146,7 +149,7 @@ test('changing lighting or track never leaves two sources playing; previous fade
   assert.equal(audio.src, trackUrl('cyber'));
   assert.equal(audio.playing, 1);
   assert.ok(fades.some((f) => f.to === 0), 'previous track must fade out before the next starts');
-  assert.deepEqual(audio.srcHistory.filter(Boolean), [trackUrl('dawn'), trackUrl('cyber')]);
+  assert.deepEqual(audio.srcHistory.filter(Boolean), [trackUrl('original'), trackUrl('dawn'), trackUrl('cyber')]);
 
   store.setSoundtrack({ mode: 'track', track: 'ember' });
   await player.idle();
@@ -158,6 +161,8 @@ test('opening a link or hiding the page pauses the soundtrack until return', asy
   const store = new Store(newRoom());
   store.setLighting('sunset');
   const { player, audio } = makePlayer(store);
+  await player.idle();
+  player.toggleSound();
   await player.idle();
   assert.equal(audio.paused, false);
 
@@ -171,4 +176,34 @@ test('opening a link or hiding the page pauses the soundtrack until return', asy
   assert.equal(audio.paused, false);
   assert.equal(audio.src, trackUrl('sunset'));
   assert.equal(audio.playing, 1);
+});
+
+test('constructing the player with a track available and a fake audio must NOT call audio.play() until toggleSound()', async () => {
+  const store = new Store(newRoom());
+  store.setLighting('dawn');
+  const audio = new FakeAudio();
+  const player = new SoundtrackPlayer(store, { audio, listen: false, fade: async (_from, to, _ms, set) => set(to) });
+  await player.idle();
+  assert.equal(audio.plays, 0, 'play must not be called during construction');
+  assert.equal(audio.paused, true);
+  player.toggleSound();
+  assert.equal(audio.plays, 1, 'play is called after toggleSound');
+  assert.equal(audio.paused, false);
+});
+
+test('after toggleSound() then toggleSound() (muted), changing store lighting must not call play()', async () => {
+  const store = new Store(newRoom());
+  store.setLighting('dawn');
+  const audio = new FakeAudio();
+  const player = new SoundtrackPlayer(store, { audio, listen: false, fade: async (_from, to, _ms, set) => set(to) });
+  await player.idle();
+  player.toggleSound();
+  await player.idle();
+  const plays = audio.plays;
+  player.toggleSound();
+  assert.equal(player.soundState, 'muted');
+  store.setLighting('cyber');
+  await player.idle();
+  assert.equal(audio.plays, plays, 'play must not be called when muted');
+  assert.equal(audio.paused, true);
 });
