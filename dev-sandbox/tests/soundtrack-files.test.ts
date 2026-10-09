@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { currentTrack, ROOM_TRACKS, trackUrl } from '../src/core/soundtrack';
 
-const audioDir = '/home/dvgpro/Projects/misc.-palace-dev-sandbox/dev-sandbox/public/audio';
+const audioDir = join(process.cwd(), 'public/audio');
 
 test('licensed room tracks are present MPEG files named for each soundtrack id', () => {
   for (const track of ROOM_TRACKS) {

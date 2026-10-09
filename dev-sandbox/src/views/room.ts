@@ -3,6 +3,7 @@ import { surfaceTexture, surfaceGeometry } from './surface-textures';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { Store } from '../core/store';
 import type { ObjectKind } from '../core/types';
+import type { RoomLayout } from '../core/layout';
 import { buildObject } from './objects';
 import { disposeGroup } from './resources';
 import { LIGHTING_PRESETS } from '../core/appearance';
@@ -10,8 +11,8 @@ import { LIGHTING_PRESETS } from '../core/appearance';
 // Thin 3D adapter: draws store.state and sends clicks back as store commands. Holds no truth of its own.
 // Replaceable later (IWSDK, Babylon) as long as the store contract stays the same.
 
-const VIEW_HEIGHT = 11; // orthographic frustum height, world units
 const YAW = Math.PI / 4; // objects face the isometric camera
+const HOVER_DWELL_MS = 400; // tooltip appears only after the pointer rests on an object
 
 interface Entry {
   group: THREE.Group;
@@ -44,6 +45,10 @@ export class RoomView {
   private inspectHome: { target: THREE.Vector3; offset: THREE.Vector3; zoom: number } | null = null;
   private inspectGoal = new THREE.Vector3();
   private inspectZoom = 1;
+  private viewHeight = 11; // orthographic frustum height, world units; set per layout
+  private ground!: THREE.Mesh;
+  private hoverTimer: number | undefined;
+  private hoverRep: string | null = null;
 
   constructor(private container: HTMLElement, private store: Store) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -80,7 +85,14 @@ export class RoomView {
     el.addEventListener('pointerdown', (e) => (this.downAt = { x: e.clientX, y: e.clientY }));
     el.addEventListener('pointerup', (e) => this.onPointerUp(e));
     el.addEventListener('pointermove', (e) => this.onHover(e));
-    el.addEventListener('pointerleave', () => (this.tooltip.hidden = true));
+    el.addEventListener('pointerleave', () => this.hideTooltip());
+    // Esc backs out of whatever is in hand; a held object returns to where it came from.
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || this.store.selectedId === null) return;
+      const t = e.target;
+      if (t instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+      this.store.select(null);
+    });
 
     new ResizeObserver(() => this.resize()).observe(container);
     this.resize();
@@ -111,14 +123,11 @@ export class RoomView {
   // ---- scene setup ------------------------------------------------------
   private addLights(): void {
     this.scene.add(this.hemi, this.lamp);
-    this.lamp.position.set(5.6, 1.4, 3.7);
     const sun = this.sun;
-    sun.position.set(8, 13, -7); // from behind the right wall so the window frames throw shadows into the room
-    sun.target.position.set(3, 0, 3);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
     const c = sun.shadow.camera;
-    c.left = -11; c.right = 11; c.top = 11; c.bottom = -11; c.near = 1; c.far = 50;
+    c.left = -14; c.right = 14; c.top = 14; c.bottom = -14; c.near = 1; c.far = 60;
     sun.shadow.bias = -0.0004;
     sun.shadow.normalBias = 0.03;
     this.scene.add(sun, sun.target);
@@ -126,13 +135,33 @@ export class RoomView {
     // Invisible ground that only shows the room's shadow, like the reference render.
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.ShadowMaterial({ opacity: 0.22 }));
     ground.rotation.x = -Math.PI / 2;
-    ground.position.set(3, -1.4, 3);
     ground.receiveShadow = true;
+    this.ground = ground;
     this.scene.add(ground);
+  }
+
+  /** Aim camera, lights and shadow ground at a layout's focus point and size the frustum to its room. */
+  private frameLayout(layout: RoomLayout): void {
+    const [fx, fy, fz] = layout.focus;
+    const focus = new THREE.Vector3(fx, fy, fz);
+    this.viewHeight = layout.viewHeight;
+    this.inspectHome = null;
+    this.camera.zoom = 1;
+    this.controls.target.copy(focus);
+    this.camera.position.copy(focus).add(this.isoOffset);
+    this.camera.updateProjectionMatrix();
+    this.controls.update();
+    this.lamp.distance = 10;
+    this.lamp.position.set(fx + 1, 1.4, fz);
+    this.sun.position.set(fx + 5, 13, fz - 10); // from behind the right wall so window frames throw shadows into the room
+    this.sun.target.position.set(fx, 0, fz);
+    this.ground.position.set(fx, -1.4, fz);
+    this.resize();
   }
 
   private buildLayout(): void {
     const layout = this.store.layout;
+    if (this.layoutId !== layout.id) this.frameLayout(layout);
     this.layoutId = layout.id;
     const palette = layout.palette;
     if (this.scene.background instanceof THREE.Texture) this.scene.background.dispose();
@@ -193,10 +222,10 @@ export class RoomView {
     const h = this.container.clientHeight || 1;
     this.renderer.setSize(w, h);
     const aspect = w / h;
-    this.camera.left = (-VIEW_HEIGHT * aspect) / 2;
-    this.camera.right = (VIEW_HEIGHT * aspect) / 2;
-    this.camera.top = VIEW_HEIGHT / 2;
-    this.camera.bottom = -VIEW_HEIGHT / 2;
+    this.camera.left = (-this.viewHeight * aspect) / 2;
+    this.camera.right = (this.viewHeight * aspect) / 2;
+    this.camera.top = this.viewHeight / 2;
+    this.camera.bottom = -this.viewHeight / 2;
     this.camera.updateProjectionMatrix();
   }
 
@@ -251,7 +280,8 @@ export class RoomView {
       }
     }
 
-    this.markerGroup.visible = this.store.selectedId !== null && !this.objects.has(this.store.selectedId);
+    const held = this.store.holding !== null;
+    this.markerGroup.visible = held || (this.store.selectedId !== null && !this.objects.has(this.store.selectedId));
     for (const [slotId, m] of this.markers) {
       const occupant = this.store.repAt(slotId);
       const color = !occupant ? 0xfff2b0 : occupant === this.store.selectedId ? 0x9be39b : 0xff9ec4;
@@ -372,18 +402,36 @@ export class RoomView {
   private onHover(e: PointerEvent): void {
     if (this.downAt) return;
     const repId = this.repIdAt(e);
-    const rep = repId ? this.store.state.representations.find((r) => r.id === repId) : undefined;
-    const content = rep ? this.store.content(rep.contentItemId) : undefined;
     const slotOver = this.store.selectedId ? this.slotIdAt(e) : null;
     this.renderer.domElement.style.cursor = repId || slotOver ? 'pointer' : 'grab';
-    if (!content) {
-      this.tooltip.hidden = true;
+    if (!repId || this.store.selectedId) {
+      this.hideTooltip();
       return;
     }
     const r = this.container.getBoundingClientRect();
-    this.tooltip.textContent = `${content.title}  (${content.type})`;
-    this.tooltip.style.left = `${e.clientX - r.left + 14}px`;
-    this.tooltip.style.top = `${e.clientY - r.top + 14}px`;
-    this.tooltip.hidden = false;
+    const x = e.clientX - r.left + 14;
+    const y = e.clientY - r.top + 14;
+    if (this.hoverRep === repId) {
+      // Already resting on this object: follow the pointer once the tip is showing.
+      if (!this.tooltip.hidden) { this.tooltip.style.left = `${x}px`; this.tooltip.style.top = `${y}px`; }
+      return;
+    }
+    this.hideTooltip();
+    this.hoverRep = repId;
+    this.hoverTimer = window.setTimeout(() => {
+      const rep = this.store.state.representations.find((o) => o.id === repId);
+      const content = rep ? this.store.content(rep.contentItemId) : undefined;
+      if (!content || this.hoverRep !== repId) return;
+      this.tooltip.textContent = `${content.title}  (${content.type})`;
+      this.tooltip.style.left = `${x}px`;
+      this.tooltip.style.top = `${y}px`;
+      this.tooltip.hidden = false;
+    }, HOVER_DWELL_MS);
+  }
+
+  private hideTooltip(): void {
+    window.clearTimeout(this.hoverTimer);
+    this.hoverRep = null;
+    this.tooltip.hidden = true;
   }
 }

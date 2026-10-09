@@ -45,6 +45,11 @@ export class SoundtrackPlayer {
   private away = false;
   private blocked = false;
   private muted = false;
+  /**
+   * Music never starts on its own. It stays silent until the user presses the speaker once; after that it follows
+   * room/lighting changes, and an explicit mute stays muted across room switches.
+   */
+  private enabled = false;
   private gestureVersion = 0;
   private listeners = new Set<() => void>();
 
@@ -73,6 +78,7 @@ export class SoundtrackPlayer {
       return;
     }
     this.muted = false;
+    this.enabled = true;
     this.wanted = track;
     if (this.last !== track) this.audio.src = trackUrl(track);
     this.last = track;
@@ -180,7 +186,7 @@ export class SoundtrackPlayer {
       if (this.last) await this.stop(true);
       return;
     }
-    if (this.muted) return;
+    if (this.muted || !this.enabled) return;
     if (this.last === track && !this.audio.paused) return;
     this.audio.src = trackUrl(track);
     this.audio.volume = 0;

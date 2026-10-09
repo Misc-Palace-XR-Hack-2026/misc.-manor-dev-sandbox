@@ -6,6 +6,8 @@ export function guessType(ref: string): ContentType {
   if (/\.(png|jpe?g|gif|webp|svg|avif)(\?|#|$)/.test(r)) return 'image';
   if (/(youtube\.com|youtu\.be|vimeo\.com|twitch\.tv)/.test(r)) return 'video';
   if (/(spotify\.com|soundcloud\.com|bandcamp\.com|music\.apple\.com)/.test(r)) return 'music';
+  if (/\.(mp3|wav|flac|m4a|ogg|aac)(\?|#|$)/.test(r)) return 'music';
+  if (/\.(mp4|mov|webm|mkv|avi)(\?|#|$)/.test(r)) return 'video';
   if (/\.(md|pdf|docx?|txt)(\?|#|$)/.test(r)) return 'doc';
   if (/(medium\.com|substack\.com|wikipedia\.org)/.test(r)) return 'article';
   return 'link';
