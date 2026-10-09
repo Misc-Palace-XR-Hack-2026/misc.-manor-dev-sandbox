@@ -110,7 +110,9 @@ export class MenuView {
       this.status,
       this.list,
     );
-    document.body.append(this.chrome, this.fab, this.fabMenu, this.backdrop, this.roomsSheet, this.addSheet, this.importSheet, this.itemSheet);
+    document.body.append(this.chrome, this.fab, this.fabMenu, this.backdrop, this.roomsSheet, this.addSheet, this.importSheet,
+      // The preview card joins this dock (see RoomView) and stacks above the sheet by plain layout, so they can't overlap.
+      el('div', { class: 'item-dock' }, this.itemSheet));
     this.ownerInput.title = 'Room name';
     this.ownerInput.addEventListener('change', () => store.setOwner(this.ownerInput.value));
     store.subscribe(() => this.render());

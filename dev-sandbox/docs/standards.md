@@ -23,10 +23,11 @@ A room belongs to one person. The fixed set of room slots:
 All three are **independent per-room selections** tied to the room only, never to who owns it.
 
 ### Theme
-A preset bundle: floor/wall/background surfaces + lighting. Applying a theme is one undo step (`Store.applyLook`); each part can be changed after. Five themes:
+A preset bundle: floor/wall/background surfaces + lighting. Applying a theme is one undo step (`Store.applyLook`); each part can be changed after. Six themes. `default` is the look a new Guest room starts with (original finishes, original lighting), so it can be picked to return to that look:
 
 | Theme ID | Label |
 |----------|-------|
+| default | Default |
 | curious-web | Curious web |
 | garden-notebook | Garden notebook |
 | greenhouse-conservatory | Greenhouse conservatory |
@@ -63,6 +64,19 @@ Use these terms consistently in UI and code:
 
 New objects (Add object, import, bookmarks) go to first free slot. If room is full, they remain in inbox list.
 
+### Preview card
+Every selected object shows a card. It docks above the item sheet (bottom-right of the screen); with no sheet open it floats above the object, anchored to its slot so it stays steady while the object bobs. `buildPreview()` (core/preview.ts) maps a ContentItem to one of four shapes:
+- **embed**: a sandboxed iframe, for hosts known to allow framing: YouTube (privacy-enhanced player), Vimeo, Spotify, SoundCloud, and Wikipedia articles. Embeds are interactive, so a video can be played in the card.
+- **image**: thumbnail for a local photo or a direct image URL.
+- **note**: title plus an excerpt.
+- **card**: favicon + domain + title for any other link, or the stored name for files.
+
+**Why an allow-list:** a browser can't read another site's `X-Frame-Options` / `frame-ancestors`, so framability can't be detected per URL (GitHub and MDN both send `X-Frame-Options: deny`). To add a host, confirm with `curl -I` that it sends no frame-blocking header (or has a documented embed URL), then add it to `embedFor()` with a test. Embed URLs are always rebuilt from parsed ids on the provider host, never passed through from user input.
+
+**Fallback art:** when there is no embed or thumbnail (plain links, files, notes, or an image that fails to load), the card shows a "hero": an icon for the MEDIA (never the room object), captioned with what it is, tinted per media type. `mediaArt()` (core/media-art.ts) picks it from the content type, refined by file extension (PDF, archive, code...) or well-known host (video, music, repository...), e.g. "Video · youtube.com". The card and item sheet share one flex column (`.item-dock`, bottom-right) with the card first, so layout stacks them and they cannot overlap; there are no measured positions to go stale. Whole sites confirmed framable go in `FRAMABLE_SITES` (core/preview.ts); `gungo.dev` is the first.
+
+Only http(s) URLs are used. Images load with `referrerPolicy=no-referrer`, favicons come from the site's own origin (no third-party favicon service), and the card is built with `textContent` only.
+
 ## 5. Audio
 
 - Music never starts on its own; silent until the user presses the speaker once.
@@ -92,8 +106,8 @@ The **+** button (bottom right) shows:
 | Decision | Context |
 |----------|---------|
 | Glued action popup & click-hold-drag | Omari's idea; needs formal interaction spec. |
-| Preview/thumbnail card above selected object | Photos/videos straightforward; arbitrary links blocked by iframe/CORS (fallback card: favicon + domain + title). |
-| Thumbnail caching | Background cache strategy for seamless perf. |
+| Previews for arbitrary pages | Only allow-listed hosts get an iframe, and generic links get an info card, because most sites forbid framing. A real page thumbnail/og:image needs a server-side screenshot/metadata service (CORS blocks fetching it from the browser). |
+| Thumbnail caching | Not built (deliberately skipped). Previews are built on selection; revisit if remote thumbnails feel slow. |
 | Local file access | File System Access API (Chromium only, handles in IndexedDB, permission re-prompt per session) vs. name-only storage. |
 | Photo storage scaling | localStorage ~5 MB limit; IndexedDB likely needed for growth. |
 | More layouts | Iconic pop-culture rooms (Drake & Josh, Scarface desk, etc.); inspiration-only, no logos/copied assets. |

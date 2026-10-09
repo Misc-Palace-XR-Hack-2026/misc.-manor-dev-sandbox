@@ -7,6 +7,9 @@ import type { RoomLayout } from '../core/layout';
 import { buildObject } from './objects';
 import { disposeGroup } from './resources';
 import { LIGHTING_PRESETS } from '../core/appearance';
+import { buildPreview, type Preview } from '../core/preview';
+import { PreviewCardView } from './preview-card';
+import { mediaArt, type MediaArt } from '../core/media-art';
 
 // Thin 3D adapter: draws store.state and sends clicks back as store commands. Holds no truth of its own.
 // Replaceable later (IWSDK, Babylon) as long as the store contract stays the same.
@@ -49,6 +52,11 @@ export class RoomView {
   private ground!: THREE.Mesh;
   private hoverTimer: number | undefined;
   private hoverRep: string | null = null;
+  private card: PreviewCardView;
+  private cardAnchor = new THREE.Vector3();
+  private cardKey = '';
+  private cardPreview: Preview | null = null;
+  private cardArt: MediaArt | null = null;
 
   constructor(private container: HTMLElement, private store: Store) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -65,6 +73,9 @@ export class RoomView {
     this.tooltip.className = 'tooltip';
     this.tooltip.hidden = true;
     container.appendChild(this.tooltip);
+    // On the body, not inside the room: the item sheet and menus are body-level siblings of the room and would
+    // otherwise paint over the card. The room fills the viewport, so room pixels and viewport pixels are the same.
+    this.card = new PreviewCardView(document.body);
 
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 120);
     const target = new THREE.Vector3(3, 1.6, 3);
@@ -100,6 +111,13 @@ export class RoomView {
     this.store.subscribe(() => this.sync());
     this.sync();
     this.renderer.setAnimationLoop((t) => this.tick(t / 1000));
+    // The card follows the item sheet on its own frame loop, not the 3D one. The sheet's size changes as its content
+    // fills in, and a hiccup in rendering must never leave the card stuck at a stale spot over the sheet.
+    const followSheet = () => {
+      try { this.updatePreviewCard(); } catch (err) { console.error('preview card', err); }
+      requestAnimationFrame(followSheet);
+    };
+    requestAnimationFrame(followSheet);
   }
 
   /** Render and copy synchronously before WebGL discards its drawing buffer. */
@@ -308,6 +326,45 @@ export class RoomView {
     this.frameSelection();
     this.fitBackground();
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /**
+   * Floating preview above the selected object. It is anchored to the object's slot, not its animated position,
+   * so it stays steady while the object bobs and turns. Needs the camera matrices from this frame's render.
+   */
+  private updatePreviewCard(): void {
+    const id = this.store.selectedId;
+    const entry = id ? this.objects.get(id) : undefined;
+    const rep = id ? this.store.state.representations.find((r) => r.id === id) : undefined;
+    const content = rep ? this.store.content(rep.contentItemId) : undefined;
+    // Every preview kind docks above the item sheet (bottom right) so it sits still and is easy to reach. Without the
+    // sheet it floats over the object. An object that is selected but not placed yet has nowhere to float, so it
+    // only shows when the sheet is there.
+    const sheet = document.querySelector<HTMLElement>('.item-sheet:not([hidden])');
+    if (!content || (!entry && !sheet)) { this.card.show(null); return; }
+    // Rebuild the preview only when the content changed. The card swaps DOM on a new preview object, and an iframe
+    // must not reload every frame.
+    const key = [content.id, content.type, content.title, content.sourceKind, content.sourceRef,
+      content.imageData?.length ?? 0, content.imageData?.slice(-32) ?? ''].join('\u0001');
+    if (key !== this.cardKey || !this.cardPreview || !this.cardArt) {
+      this.cardKey = key;
+      this.cardPreview = buildPreview(content);
+      this.cardArt = mediaArt(content);
+    }
+    this.card.show(this.cardPreview, this.cardArt);
+    if (sheet) {
+      // The card lives in the same flex column as the sheet, directly above it. Layout does the stacking, so there is
+      // no measured position that could go stale.
+      const dock = sheet.parentElement;
+      if (dock && this.card.root.parentElement !== dock) dock.insertBefore(this.card.root, sheet);
+      this.card.dock();
+      return;
+    }
+    // Floating mode: back to a plain fixed-position card. It stays in the dock (moving it would reload an iframe).
+    this.cardAnchor.copy(entry!.target).y += 2;
+    this.camera.updateMatrixWorld();
+    const ndc = this.cardAnchor.project(this.camera);
+    this.card.moveTo(((ndc.x + 1) / 2) * this.container.clientWidth, ((1 - ndc.y) / 2) * this.container.clientHeight);
   }
 
   private frameSelection(): void {
