@@ -32,9 +32,12 @@ try {
  const clickSlot=async slot=>{const p=await project(slot);await page.mouse.click(p.x,p.y);await page.waitForTimeout(350);};
  const imported=['armchair','sideTable','turntable','rug','plant'];
  for(const kind of imported){
+   await page.locator('.sheet-backdrop').click({ force: true }).catch(() => {});
+   await page.getByRole('button', { name: 'Edit room', exact: true }).click();
+   await page.getByPlaceholder('Title (optional)').waitFor({ state: 'visible' });
    await page.getByPlaceholder('Title (optional)').fill(`Test ${kind}`);
    await page.getByPlaceholder('Paste a link, or a file name').fill(`https://example.com/${kind}`);
-   await page.getByLabel('Object representation').selectOption(kind);
+   await page.locator('#new-object-kind').selectOption(kind);
    await page.getByRole('button',{name:'Add to room',exact:true}).click();
    const row=page.locator('.list .row').filter({has:page.locator('.title',{hasText:`Test ${kind}`})});
    const selector=row.locator('select');
@@ -81,7 +84,7 @@ try {
  await photoRow.getByRole('button',{name:'Pick up',exact:true}).click();await clickSlot('loft-1');
  await page.getByPlaceholder('Title (optional)').fill('A visible book title');
  await page.getByPlaceholder('Paste a link, or a file name').fill('https://example.org/book');
- await page.getByLabel('Object representation').selectOption('book');await page.getByRole('button',{name:'Add to room',exact:true}).click();
+ await page.locator('#new-object-kind').selectOption('book');await page.getByRole('button',{name:'Add to room',exact:true}).click();
  await page.locator('.row').filter({hasText:'A visible book title'}).getByRole('button',{name:'Pick up',exact:true}).click();await clickSlot('loft-2');
  // Real download, re-import, reload: photos, IDs, kinds, slots and lighting survive.
  const before=await page.evaluate(()=>window.store.state);

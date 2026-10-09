@@ -34,6 +34,92 @@ class FakeAudio implements AudioLike {
   }
 }
 
+test('blocked autoplay retries synchronously on the first touch without changing rooms', async () => {
+  const doc = new EventTarget();
+  const win = new EventTarget();
+  Object.assign(globalThis, { document: doc, window: win });
+  let gesture = false;
+  let attempts = 0;
+  const audio = new FakeAudio();
+  const play = audio.play.bind(audio);
+  audio.play = () => {
+    attempts++;
+    return gesture ? play() : Promise.reject(new Error('NotAllowedError'));
+  };
+  const store = new Store(newRoom());
+  const player = new SoundtrackPlayer(store, {
+    audio, fade: async (_from, to, _ms, set) => set(to),
+  });
+  await player.idle();
+  assert.equal(audio.paused, true);
+  gesture = true;
+  doc.dispatchEvent(new Event('touchend'));
+  gesture = false;
+  await Promise.resolve();
+  assert.equal(audio.paused, false, 'play must run inside the touch handler');
+  assert.equal(audio.src, trackUrl('original'));
+  doc.dispatchEvent(new Event('touchend'));
+  assert.equal(attempts, 2, 'later taps must not restart music');
+  player.leave();
+  await player.idle();
+  doc.dispatchEvent(new Event('touchend'));
+  assert.equal(audio.paused, true, 'away state must not be bypassed');
+});
+
+test('speaker toggles synchronously without changing the saved track and stays muted across changes', async () => {
+  const store = new Store(newRoom());
+  store.setSoundtrack({ mode: 'track', track: 'ember' });
+  const { player, audio } = makePlayer(store);
+  await player.idle();
+  const saved = store.exportJson();
+  player.toggleSound();
+  assert.equal(audio.paused, true);
+  assert.equal(player.soundState, 'muted');
+  assert.equal(store.exportJson(), saved);
+  store.setLighting('dawn');
+  player.leave();
+  player.return();
+  await player.idle();
+  assert.equal(audio.paused, true);
+  const attempts = audio.plays;
+  player.toggleSound();
+  assert.equal(audio.plays, attempts + 1, 'play is called before returning from the gesture');
+  assert.equal(audio.src, trackUrl('ember'));
+  await Promise.resolve();
+  assert.equal(player.soundState, 'playing');
+  store.setSoundtrack({ mode: 'off' });
+  await player.idle();
+  player.toggleSound();
+  assert.equal(audio.paused, true);
+  assert.equal(player.soundState, 'off');
+  assert.equal(store.state.soundtrack?.mode, 'off');
+});
+
+test('a pending track fade cannot stop a newer explicit unmute', async () => {
+  const store = new Store(newRoom());
+  const audio = new FakeAudio();
+  let finishFade: (() => void) | undefined;
+  const player = new SoundtrackPlayer(store, { audio, listen: false,
+    fade: async (_from, to, _ms, set) => {
+      if (to === 0) await new Promise<void>(resolve => { finishFade = resolve; });
+      set(to);
+    },
+  });
+  await player.idle();
+  store.setLighting('dawn');
+  await Promise.resolve();
+  assert.ok(finishFade);
+  player.toggleSound();
+  player.toggleSound();
+  assert.equal(audio.src, trackUrl('dawn'));
+  const attempts = audio.plays;
+  finishFade();
+  await player.idle();
+  assert.equal(audio.paused, false);
+  assert.equal(audio.volume, 1);
+  assert.equal(audio.plays, attempts, 'old fade must not pause and restart the gesture-unlocked audio');
+});
+
 function makePlayer(store: Store, audio = new FakeAudio()) {
   const fades: Array<{ from: number; to: number }> = [];
   const player = new SoundtrackPlayer(store, {
