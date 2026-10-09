@@ -128,3 +128,14 @@ could be some components of rooms that we define, also maybe shelves as componen
 - scarface room (no cocaine)
 - room from in the mood for love?
 - dumbledore's office room?
+
+// cleanup pt.2
+- click on object shouldnt change view to face that object, the view should not change and the object 
+should "face" us and maybe even just move forward towards  us w a shadow ish around it to distinguish anything  "behind" it in this state, and the preview and all that stays at the bottom right etc. but yea no more jumping to a view for each object
+the object selected still glows and moves a bit as it does but we dont move the view to face it it faces us and gets enlarged maybe, from wherever we may be viewing it (obv if we can click it its somewhere)
+this is to not shock the viewer w each move and stylistic
+
+// bugs
+- objects sometimes swap w each other when i click? idk if symptom of view change, 
+- moving object pick up ot location of another object deletes the object that was there, should just swap
+- also when i let go while mvng the room ,the room inertai stays too long it keeps movig for a while, i like the idea but it should be way more subtle
