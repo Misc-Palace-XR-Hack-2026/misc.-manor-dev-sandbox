@@ -22,16 +22,10 @@ test('Layout integrity: getLayout cozy-loft has expected structure', () => {
   const uniqueIds = new Set(slotIds);
   assert.equal(slotIds.length, uniqueIds.size, 'slot IDs must be unique');
 
-  // Contains old IDs with original positions
   const slots = new Map(layout.slots.map(s => [s.id, s]));
   assert.ok(slots.has('floor-1'));
-  assert.deepEqual(slots.get('floor-1')!.pos, [2.0, 0, 2.2]);
-
   assert.ok(slots.has('step-3'));
   assert.deepEqual(slots.get('step-3')!.pos, [0.7, 1.75, 3.925]);
-
-  assert.ok(slots.has('block-2'));
-  assert.deepEqual(slots.get('block-2')!.pos, [2.8, 2.9, 0.55]);
 
   // Has more than 30 slots
   assert.ok(layout.slots.length > 30, `layout has ${layout.slots.length} slots, expected > 30`);
@@ -53,6 +47,66 @@ test('Layout integrity: getLayout cozy-loft has expected structure', () => {
   assert.ok(layout.focus);
   assert.ok(typeof layout.viewHeight === 'number');
   assert.ok(layout.viewHeight > 0);
+});
+
+test('loft is a 3x2 grid and the old first floor is a 3x4 grid except under the stairs', () => {
+  const layout = getLayout('cozy-loft')!;
+  const slots = new Map(layout.slots.map((s) => [s.id, s]));
+  const xs = (ids: string[]) => ids.map((id) => slots.get(id)!.pos[0]);
+  const zs = (ids: string[]) => ids.map((id) => slots.get(id)!.pos[2]);
+  const unique = (vals: number[]) => [...new Set(vals.map((v) => v.toFixed(3)))];
+  const spaced = (vals: number[]) => {
+    const sorted = [...new Set(vals.map((v) => +v.toFixed(3)))].sort((a, b) => a - b);
+    const gaps = sorted.slice(1).map((v, i) => v - sorted[i]);
+    const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+    for (const g of gaps) assert.ok(Math.abs(g - mean) < 0.05, `uneven gap ${g} vs ${mean}`);
+    return sorted;
+  };
+
+  const loftFront = ['loft-1', 'loft-2', 'loft-3'];
+  for (const id of loftFront) assert.ok(slots.has(id), `missing ${id}`);
+  assert.deepEqual(unique(xs(loftFront)).length, 3);
+  spaced(xs(loftFront));
+  for (const id of loftFront) assert.equal(slots.get(id)!.pos[1], 2.3);
+  assert.ok(slots.has('loft-4'), 'back-left loft corner stays');
+  assert.equal(slots.get('loft-4')!.pos[1], 2.3);
+  assert.ok(slots.get('loft-4')!.pos[2] < slots.get('loft-1')!.pos[2], 'back-left corner sits on the back row');
+  assert.equal(slots.has('loft-5'), false, 'loft floor under the peach shelf should be gone');
+  assert.equal(slots.has('loft-6'), false, 'loft floor under the peach shelf should be gone');
+
+  const oldFloor = [
+    'floor-1', 'floor-2', 'floor-3', 'floor-4', 'floor-5', 'floor-6',
+    'floor-old-7', 'floor-old-8', 'floor-old-9', 'floor-old-10', 'floor-old-11', 'floor-old-12',
+  ];
+  for (const id of oldFloor) assert.ok(slots.has(id), `missing ${id}`);
+  assert.deepEqual(unique(xs(oldFloor)).length, 3);
+  assert.deepEqual(unique(zs(oldFloor)).length, 4);
+  spaced(xs(oldFloor));
+  spaced(zs(oldFloor));
+  const leftX = Math.min(...xs(oldFloor));
+  const backZ = Math.min(...zs(oldFloor));
+  assert.ok(leftX > 1.4, 'old-floor left column stays clear of the stair run');
+  assert.ok(backZ > 0.6, 'old-floor back row stays off the window rail');
+  assert.equal(oldFloor.length, 12, '3x4 has twelve cells once stairs are excluded');
+});
+
+test('peach-shelf pads stay; loft-under-shelf and front-strip pads go; two spots sit under the loft on the grid', () => {
+  const layout = getLayout('cozy-loft')!;
+  const slots = new Map(layout.slots.map((s) => [s.id, s]));
+  for (const id of ['floor-16', 'floor-17', 'floor-18', 'loft-5', 'loft-6']) {
+    assert.equal(slots.has(id), false, `${id} should be removed`);
+  }
+  assert.deepEqual(slots.get('block-1')!.pos, [1.8, 2.9, 0.55]);
+  assert.deepEqual(slots.get('block-2')!.pos, [2.8, 2.9, 0.55]);
+  const a = slots.get('floor-front-loft-1')!.pos;
+  const b = slots.get('floor-front-loft-2')!.pos;
+  assert.equal(a[1], 0);
+  assert.equal(b[1], 0);
+  assert.equal(a[0], b[0]);
+  assert.equal(a[0], 1.2, 'one floor-grid step (1.4) left of the 3x4 at x=2.6');
+  const zs = [a[2], b[2]].sort((l, r) => l - r);
+  assert.deepEqual(zs, [1.0, 2.6]);
+  assert.ok(a[0] <= 4 && zs[1] < 3, 'both new spots stay under the loft footprint');
 });
 
 test('seedRoom creates proper room instances', () => {
