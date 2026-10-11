@@ -3,9 +3,10 @@ import { mkdirSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import os from 'node:os';
 
 const root = dirname(fileURLToPath(import.meta.url));
-const outDir = '/home/dvgpro/.hermes/cache/scratch/misc-palace-tests';
+const outDir = process.env.MP_TEST_OUT ?? join(os.tmpdir(), 'misc-palace-tests');
 mkdirSync(outDir, { recursive: true });
 const files = readdirSync(root).filter((f) => f.endsWith('.test.ts'));
 const bundled = [];

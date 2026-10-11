@@ -5,7 +5,9 @@ import { parseBookmarksHtml } from '../core/bookmarks';
 import { openContentEditor } from './content-editor';
 import { preparePhoto } from './photo-upload';
 import { safeUrl } from '../core/content';
-import type { Store } from '../core/store';
+import { Store } from '../core/store';
+import { ROOM_DIRECTORY, seedRoom } from '../core/rooms';
+import { THEMES } from '../core/themes';
 import { CONTENT_TYPES, OBJECT_KINDS, OBJECT_LABELS, type ContentType, type ObjectKind } from '../core/types';
 import { buildKindInventory } from './kind-picker';
 
@@ -47,16 +49,20 @@ export class MenuView {
   private surfaceSelects = new Map<SurfaceTarget, HTMLSelectElement>();
   private lighting = el('select', { id: 'lighting-preset' });
   private soundtrack = el('select', { id: 'room-soundtrack' });
-  private homeBtn = el('button', { textContent: 'Return home', hidden: true });
-  private homeBtnSheet = el('button', { textContent: 'Return home', hidden: true });
+  private theme = el('select', { id: 'room-theme' });
   private chrome = el('nav', { class: 'chrome', ariaLabel: 'Room actions' });
   private editBtn = el('button', { type: 'button', textContent: 'Edit room' });
-  private neighborhoodBtn = el('button', { type: 'button', textContent: 'Visit neighborhood' });
+  private roomsBtn = el('button', { type: 'button', textContent: 'Rooms', title: 'Switch room' });
   private editorClose = el('button', { type: 'button', class: 'sheet-close', textContent: 'Close editor' });
-  private neighborhoodClose = el('button', { type: 'button', class: 'sheet-close', textContent: 'Close neighborhood' });
   private itemClose = el('button', { type: 'button', class: 'sheet-close icon-close', textContent: '×', ariaLabel: 'Close' });
   private backdrop = el('button', { type: 'button', class: 'sheet-backdrop', hidden: true, ariaLabel: 'Close sheet' });
-  private neighborhoodSheet = el('div', { class: 'sheet neighborhood-sheet', hidden: true });
+  private roomsSheet = el('div', { class: 'sheet dialog-sheet', hidden: true });
+  private addSheet = el('div', { class: 'sheet dialog-sheet', hidden: true });
+  private importSheet = el('div', { class: 'sheet dialog-sheet', hidden: true });
+  private roomList = el('div', { class: 'neighborhood-actions' });
+  private fab = el('button', { type: 'button', class: 'fab', textContent: '+', ariaLabel: 'Add to room', title: 'Add to room' });
+  private fabMenu = el('div', { class: 'fab-menu', hidden: true });
+  private repo: Record<string, unknown>;
   private itemSheet = el('div', { class: 'sheet item-sheet', hidden: true });
   private itemTitle = el('h2', { textContent: 'Item' });
   private itemBody = el('div', { class: 'item-body' });
@@ -64,8 +70,8 @@ export class MenuView {
   private itemKey = '';
 
   constructor(private root: HTMLElement, private store: Store, repoRooms: RepoRoom[]) {
+    this.repo = Object.fromEntries(repoRooms.map((r) => [r.name, r.data]));
     this.editorClose.addEventListener('click', () => this.closeSheets());
-    this.neighborhoodClose.addEventListener('click', () => this.closeSheets());
     this.itemClose.addEventListener('click', () => {
       this.placing = false;
       this.store.select(null);
@@ -76,27 +82,23 @@ export class MenuView {
       this.closeSheets();
     });
     this.editBtn.addEventListener('click', () => this.openEditor());
-    this.neighborhoodBtn.addEventListener('click', () => this.openNeighborhood());
-    this.chrome.append(this.editBtn, this.neighborhoodBtn);
-    this.neighborhoodSheet.setAttribute('role', 'dialog');
-    this.neighborhoodSheet.setAttribute('aria-label', 'Neighborhood');
+    this.roomsBtn.addEventListener('click', () => {
+      this.refreshRooms();
+      this.openDialog(this.roomsSheet);
+    });
+    this.chrome.append(this.editBtn, this.roomsBtn);
     this.itemSheet.setAttribute('role', 'dialog');
     this.itemSheet.setAttribute('aria-label', 'Item');
-    this.neighborhoodSheet.append(
-      el('header', { class: 'sheet-head' }, el('h2', { textContent: 'Neighborhood' }), this.neighborhoodClose),
-      el('p', { class: 'sheet-copy', textContent: 'Visit example rooms. Visiting does not overwrite your saved room.' }),
-      this.homeBtnSheet,
-      this.buildNeighborhoodButtons(repoRooms),
-    );
     this.itemSheet.append(
       el('header', { class: 'sheet-head' }, this.itemTitle, this.itemClose),
       this.itemBody,
     );
-    this.homeBtnSheet.addEventListener('click', () => {
-      this.store.returnHome();
-      this.flash('Back in your room.');
-      this.closeSheets();
-    });
+    this.fillDialog(this.roomsSheet, 'Rooms',
+      el('p', { class: 'sheet-copy', textContent: 'Each room saves on its own in this browser. Guest room starts empty.' }),
+      this.roomList);
+    this.fillDialog(this.addSheet, 'Add object', this.buildAddForm());
+    this.fillDialog(this.importSheet, 'Import', this.buildImport());
+    this.buildFab();
 
     root.append(
       this.editorClose,
@@ -104,13 +106,12 @@ export class MenuView {
       this.ownerInput,
       this.buildLighting(),
       this.buildSurfaces(),
-      this.buildNeighborhood(repoRooms),
-      this.buildAddForm(),
       this.buildToolbar(repoRooms),
       this.status,
       this.list,
     );
-    document.body.append(this.chrome, this.backdrop, this.neighborhoodSheet, this.itemSheet);
+    document.body.append(this.chrome, this.fab, this.fabMenu, this.backdrop, this.roomsSheet, this.addSheet, this.importSheet, this.itemSheet);
+    this.ownerInput.title = 'Room name';
     this.ownerInput.addEventListener('change', () => store.setOwner(this.ownerInput.value));
     store.subscribe(() => this.render());
     this.render();
@@ -120,41 +121,131 @@ export class MenuView {
     return true;
   }
 
+  private dialogs(): HTMLElement[] {
+    return [this.roomsSheet, this.addSheet, this.importSheet];
+  }
+
+  private fillDialog(sheet: HTMLElement, title: string, ...body: Node[]): void {
+    const close = el('button', { type: 'button', class: 'sheet-close', textContent: 'Close' });
+    close.addEventListener('click', () => this.closeSheets());
+    sheet.setAttribute('role', 'dialog');
+    sheet.setAttribute('aria-label', title);
+    sheet.append(el('header', { class: 'sheet-head' }, el('h2', { textContent: title }), close), ...body);
+  }
+
+  private openDialog(sheet: HTMLElement): void {
+    this.closeSheets();
+    sheet.hidden = false;
+    this.backdrop.hidden = false;
+  }
+
   private openEditor(): void {
     this.closeSheets();
     this.root.classList.add('sheet-open');
     this.backdrop.hidden = false;
   }
 
-  private openNeighborhood(): void {
-    this.closeSheets();
-    this.neighborhoodSheet.hidden = false;
-    this.backdrop.hidden = false;
-  }
-
   private closeSheets(): void {
     this.root.classList.remove('sheet-open');
-    this.neighborhoodSheet.hidden = true;
+    for (const d of this.dialogs()) d.hidden = true;
+    this.fabMenu.hidden = true;
     if (!this.placing) this.itemSheet.hidden = true;
-    this.backdrop.hidden = this.itemSheet.hidden && !this.root.classList.contains('sheet-open') && this.neighborhoodSheet.hidden;
+    this.backdrop.hidden = this.itemSheet.hidden && !this.root.classList.contains('sheet-open');
   }
 
-  private buildNeighborhoodButtons(repoRooms: RepoRoom[]): HTMLElement {
-    const wrap = el('div', { class: 'neighborhood-actions' });
-    for (const room of repoRooms.filter((r) => r.neighborhood)) {
-      const b = el('button', { type: 'button', textContent: `Visit ${room.name.replace(/-/g, ' ')}` });
-      b.addEventListener('click', () => {
-        try {
-          this.store.visit(room.data, room.name);
-          this.flash(`Visiting ${room.name}. Return home keeps your personal save.`);
-          this.closeSheets();
-        } catch (e) {
-          this.flash(`Could not visit ${room.name}: ${e instanceof Error ? e.message : String(e)}`);
-        }
-      });
-      wrap.append(b);
+  private anyDialogOpen(): boolean {
+    return this.dialogs().some((d) => !d.hidden);
+  }
+
+  // ---- rooms ------------------------------------------------------------
+  /** Rebuilt on open (not every render) because reading other rooms' names touches localStorage. */
+  private refreshRooms(): void {
+    const current = this.store.roomId;
+    this.roomList.replaceChildren(...ROOM_DIRECTORY.map((slot) => {
+      const label = slot.id === current ? this.store.state.owner : (Store.savedName(slot.id) ?? slot.defaultName);
+      const b = el('button', { type: 'button', textContent: label });
+      b.setAttribute('aria-current', String(slot.id === current));
+      b.addEventListener('click', () => this.switchTo(slot.id, label));
+      return b;
+    }));
+  }
+
+  private switchTo(id: string, label: string): void {
+    if (id === this.store.roomId) { this.closeSheets(); return; }
+    try {
+      this.store.switchRoom(id, seedRoom(id, this.repo));
+      this.flash(`Switched to ${label}.`);
+      this.closeSheets();
+    } catch (e) {
+      this.flash(`Could not open ${label}: ${e instanceof Error ? e.message : String(e)}`);
     }
-    return wrap;
+  }
+
+  // ---- + button ---------------------------------------------------------
+  private buildFab(): void {
+    const item = (label: string, fn: () => void) => {
+      const b = el('button', { type: 'button', textContent: label });
+      b.addEventListener('click', fn);
+      return b;
+    };
+    this.fabMenu.append(
+      item('Add object', () => { this.openDialog(this.addSheet); }),
+      item('Import from bookmarks / files', () => { this.openDialog(this.importSheet); }),
+    );
+    this.fab.addEventListener('click', () => {
+      const open = this.fabMenu.hidden;
+      this.closeSheets();
+      this.fabMenu.hidden = !open;
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (!this.fabMenu.hidden || this.anyDialogOpen()) this.closeSheets();
+    });
+  }
+
+  private buildImport(): HTMLElement {
+    const input = (accept: string, multiple: boolean, folder: boolean, onFiles: (files: File[]) => void) => {
+      const i = el('input', { type: 'file', accept, multiple, hidden: true });
+      if (folder) i.setAttribute('webkitdirectory', '');
+      i.addEventListener('change', () => {
+        const files = Array.from(i.files ?? []);
+        i.value = '';
+        if (files.length) onFiles(files);
+      });
+      return i;
+    };
+    const entries = (files: File[]) => files
+      .filter((f) => !f.name.startsWith('.'))
+      .map((f) => ({ title: f.name.replace(/\.[^.]+$/, ''), ref: f.webkitRelativePath || f.name }));
+    const done = (msg: string) => { this.flash(msg); this.closeSheets(); };
+
+    const bookmarks = input('.html,text/html', false, false, async ([file]) => {
+      try {
+        const { added, placed } = this.store.importBookmarks(parseBookmarksHtml(await file.text()));
+        done(`Imported ${added} bookmarks (${placed} placed in the room, the rest are in the inbox).`);
+      } catch (e) {
+        this.flash(`Could not import bookmarks: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    });
+    const files = input('', true, false, (list) => {
+      const { added, placed } = this.store.importFiles(entries(list));
+      done(`Added ${added} files by name (${placed} placed in the room, the rest are in the inbox).`);
+    });
+    const folder = input('', true, true, (list) => {
+      const { added, placed } = this.store.importFiles(entries(list));
+      done(`Added ${added} files from the folder by name (${placed} placed, the rest in the inbox).`);
+    });
+    const button = (label: string, target: HTMLInputElement) => {
+      const b = el('button', { type: 'button', textContent: label });
+      b.addEventListener('click', () => target.click());
+      return b;
+    };
+    return el('div', { class: 'neighborhood-actions' },
+      button('Bookmarks file (.html)', bookmarks),
+      button('Files…', files),
+      button('Folder…', folder),
+      el('small', { class: 'sheet-copy', textContent: 'Files and folders are saved by name only (browsers hide real paths), up to 200 at a time, and nothing is uploaded. Opening the original file is a later step.' }),
+      bookmarks, files, folder);
   }
 
   private flash(msg: string): void {
@@ -178,34 +269,18 @@ export class MenuView {
         { mode: 'track', track: value as RoomTrack };
       this.store.setSoundtrack(soundtrack);
     });
+    this.theme.append(el('option', {value:'', textContent:'Apply a theme…'}));
+    for (const [value,t] of Object.entries(THEMES)) this.theme.append(el('option',{value,textContent:t.label}));
+    this.theme.addEventListener('change', () => {
+      const t = THEMES[this.theme.value];
+      this.theme.value = '';
+      if (t) { this.store.applyLook({ surfaces: t.surfaces, lighting: t.lighting }); this.flash(`Applied ${t.label}. Undo brings the old look back.`); }
+    });
     return el('section',{class:'appearance'},el('h2',{textContent:'Room atmosphere'}),
+      el('label',{htmlFor:'room-theme',textContent:'Theme (floor, wall, background, lighting)'}),this.theme,
       el('label',{htmlFor:'lighting-preset',textContent:'Lighting preset'}),this.lighting,
       el('label',{htmlFor:'room-soundtrack',textContent:'Room music'}),this.soundtrack,
       el('small',{textContent:'Follow lighting uses the matching mood track, or the cozy trailer on Original lighting. Pick a track to keep it when lighting changes, or choose no music.'}));
-  }
-
-  private buildNeighborhood(repoRooms: RepoRoom[]): HTMLElement {
-    const examples = repoRooms.filter((r) => r.neighborhood);
-    const section = el('details', { class: 'appearance neighborhood' }, el('summary', { textContent: 'Neighborhood' }));
-    section.append(el('small', { textContent: 'Visit example rooms. Each is a JSON file in rooms/ that developers can edit. Visiting does not overwrite your saved room.' }));
-    this.homeBtn.addEventListener('click', () => {
-      this.store.returnHome();
-      this.flash('Back in your room.');
-    });
-    section.append(this.homeBtn);
-    for (const room of examples) {
-      const b = el('button', { textContent: `Visit ${room.name.replace(/-/g, ' ')}` });
-      b.addEventListener('click', () => {
-        try {
-          this.store.visit(room.data, room.name);
-          this.flash(`Visiting ${room.name}. Return home keeps your personal save.`);
-        } catch (e) {
-          this.flash(`Could not visit ${room.name}: ${e instanceof Error ? e.message : String(e)}`);
-        }
-      });
-      section.append(b);
-    }
-    return section;
   }
 
   private buildSurfaces(): HTMLElement {
@@ -267,7 +342,8 @@ export class MenuView {
       if (!ref.value.trim() && !title.value.trim()) return;
       this.store.addItem({ title: title.value, sourceRef: ref.value, type: type.value as ContentType | 'auto', kind: (kind.value || undefined) as ObjectKind | undefined });
       title.value = ref.value = '';
-      ref.focus();
+      this.flash('Added to the room.');
+      this.closeSheets();
     };
     add.addEventListener('click', submit);
     for (const i of [title, ref]) i.addEventListener('keydown', (e) => e.key === 'Enter' && submit());
@@ -279,6 +355,7 @@ export class MenuView {
         const data=await preparePhoto(file);
         this.store.addPhoto(title.value.trim() || file.name.replace(/\.[^.]+$/, ''), data);
         this.flash(this.store.saveError ? 'Photo added in memory only. Export your room before leaving.' : 'Photo added. Stored on this device and included in room exports.');
+        this.closeSheets();
       } catch(e) {this.flash(`Photo not added: ${e instanceof Error ? e.message : String(e)}`);}
       finally {photo.disabled=false;photo.value='';}
     });
@@ -304,10 +381,6 @@ export class MenuView {
       } catch (e) {
         this.flash(`Could not load room: ${e instanceof Error ? e.message : String(e)}`);
       }
-    });
-    const bookmarkFile = pick('.html,text/html', (text) => {
-      const { added, placed } = this.store.importBookmarks(parseBookmarksHtml(text));
-      this.flash(`Imported ${added} bookmarks (${placed} placed in the room, the rest are in the inbox).`);
     });
 
     const button = (label: string, fn: () => void, title = '') => {
@@ -339,8 +412,7 @@ export class MenuView {
       button('Auto-organize', () => this.flash(`Placed ${this.store.autoOrganize()} objects.`), 'Magic cleanup (stub)'),
       button('Export room', () => download(`${this.store.state.owner.toLowerCase().replace(/\W+/g, '-')}.json`, this.store.exportJson()), 'Save a JSON file to commit under rooms/'),
       button('Import room', () => roomFile.click()),
-      button('Import bookmarks', () => bookmarkFile.click(), 'Chrome / browser bookmarks export (.html)'),
-      repo, roomFile, bookmarkFile,
+      repo, roomFile,
     );
   }
 
@@ -353,8 +425,7 @@ export class MenuView {
     this.soundtrack.value = !soundtrack || soundtrack.mode === 'follow' ? 'follow' : soundtrack.mode === 'off' ? 'off' : soundtrack.track;
     for(const [target,select] of this.surfaceSelects) select.value = state.surfaces?.[target]?.preset ?? '';
     this.undoBtn.disabled = !this.store.canUndo;
-    this.homeBtn.hidden = !this.store.visiting;
-    this.homeBtnSheet.hidden = !this.store.visiting;
+    this.roomsBtn.textContent = state.owner || 'Rooms';
     this.syncItemSheet(selectedId);
     this.renderStatus();
 
@@ -417,9 +488,9 @@ export class MenuView {
       });
       actions.append(kind, picker);
       if (slotId) act('Pick up', () => {
+        // pickUp remembers the spot, so a missed click or Esc puts it back instead of losing it.
         this.placing = true;
-        store.unplace(rep.id);
-        store.select(rep.id);
+        store.pickUp(rep.id);
       });
       act('Stash', () => store.stash(rep.id));
     } else {
@@ -435,15 +506,13 @@ export class MenuView {
   }
 
   private syncItemSheet(selectedId: string | null): void {
-    if (this.placing) {
-      const held = selectedId ? !this.store.slotOf(selectedId) : false;
-      if (!held) this.placing = false;
-    }
+    // Placing = the object is in hand (store.holding), however it got there, so the sheet stays out of the way.
+    this.placing = selectedId !== null && this.store.holding === selectedId;
     if (!this.overlayChrome() || !selectedId) {
       this.placing = false;
       this.itemSheet.hidden = true;
       this.itemKey = '';
-      if (this.neighborhoodSheet.hidden && !this.root.classList.contains('sheet-open')) this.backdrop.hidden = true;
+      if (!this.anyDialogOpen() && !this.root.classList.contains('sheet-open')) this.backdrop.hidden = true;
       return;
     }
     if (this.placing) {
@@ -452,7 +521,8 @@ export class MenuView {
       return;
     }
     this.root.classList.remove('sheet-open');
-    this.neighborhoodSheet.hidden = true;
+    for (const d of this.dialogs()) d.hidden = true;
+    this.fabMenu.hidden = true;
     this.itemSheet.hidden = false;
     this.backdrop.hidden = true;
     const key = `${selectedId}:${this.store.exportJson()}`;
