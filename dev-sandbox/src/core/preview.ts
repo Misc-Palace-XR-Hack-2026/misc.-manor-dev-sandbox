@@ -11,8 +11,19 @@ import { validPhotoData } from './photos';
 
 export type EmbedProvider = 'youtube' | 'vimeo' | 'spotify' | 'soundcloud' | 'wikipedia' | 'page';
 
-/** Hosts (without www) whose pages allow framing. Add one only after checking its headers; see docs/standards.md. */
-const FRAMABLE_SITES: ReadonlySet<string> = new Set(['gungo.dev']);
+/** Hosts (without www) known to block framing. These are skipped to avoid wasted iframe attempts. */
+const BLOCKED_SITES: ReadonlySet<string> = new Set([
+  'github.com', 'gitlab.com', 'codeberg.org', 'bitbucket.org',
+  'developer.mozilla.org', 'news.ycombinator.com', 'reddit.com',
+  'twitter.com', 'x.com', 'facebook.com', 'instagram.com',
+  'linkedin.com', 'discord.com',
+]);
+
+/** Hosts (without www) known to allow framing. Expanded list of sites that send no X-Frame-Options. */
+const FRAMABLE_SITES: ReadonlySet<string> = new Set([
+  'gungo.dev', 'medium.com', 'substack.com', 'codepen.io', 'jsfiddle.net', 'glitch.com',
+  'trinket.io', 'replit.com', 'codesandbox.io',
+]);
 
 export type Preview =
   | { kind: 'embed'; title: string; src: string; provider: EmbedProvider; height: number }
@@ -63,7 +74,10 @@ export function embedFor(url: URL): { src: string; provider: EmbedProvider; heig
     return { provider: 'wikipedia', src: `https://${url.hostname}${url.pathname}`, height: 220 };
   }
 
-  // Whole sites we have confirmed (curl -I) send no X-Frame-Options / frame-ancestors. The page is framed as given.
+  // Skip known frame-blockers.
+  if (BLOCKED_SITES.has(host)) return null;
+
+  // Whole sites we have confirmed send no X-Frame-Options / frame-ancestors. The page is framed as given.
   if (FRAMABLE_SITES.has(host)) return { provider: 'page', src: `https://${host}${url.pathname}${url.search}`, height: 220 };
 
   return null;

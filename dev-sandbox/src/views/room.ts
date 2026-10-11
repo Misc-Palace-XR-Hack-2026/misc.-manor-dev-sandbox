@@ -22,6 +22,7 @@ interface Entry {
   kind: ObjectKind;
   contentKey: string;
   target: THREE.Vector3;
+  selectedState?: { originalPos: THREE.Vector3; targetRotation: number };
 }
 
 export class RoomView {
@@ -45,9 +46,6 @@ export class RoomView {
   private lamp = new THREE.PointLight(0xffd8a8, 0, 6, 2);
   private roomGroup = new THREE.Group();
   private isoOffset = new THREE.Vector3(14, 14, 14);
-  private inspectHome: { target: THREE.Vector3; offset: THREE.Vector3; zoom: number } | null = null;
-  private inspectGoal = new THREE.Vector3();
-  private inspectZoom = 1;
   private viewHeight = 11; // orthographic frustum height, world units; set per layout
   private ground!: THREE.Mesh;
   private hoverTimer: number | undefined;
@@ -87,6 +85,7 @@ export class RoomView {
     this.controls.minZoom = 0.6;
     this.controls.maxZoom = 3;
     this.controls.maxPolarAngle = Math.PI * 0.49;
+    this.controls.dampingFactor = 0.15; // Higher damping = stops faster after drag
     this.controls.update();
 
     this.scene.add(this.roomGroup, this.objectsGroup, this.markerGroup);
@@ -163,7 +162,6 @@ export class RoomView {
     const [fx, fy, fz] = layout.focus;
     const focus = new THREE.Vector3(fx, fy, fz);
     this.viewHeight = layout.viewHeight;
-    this.inspectHome = null;
     this.camera.zoom = 1;
     this.controls.target.copy(focus);
     this.camera.position.copy(focus).add(this.isoOffset);
@@ -311,11 +309,80 @@ export class RoomView {
     const selected = this.store.selectedId;
     for (const [id, e] of this.objects) {
       const bob = id === selected ? 0.2 + Math.sin(t * 4) * 0.05 : 0;
+
+      // On selection: save original position and calculate minimal clockwise rotation to face camera
+      if (id === selected && !e.selectedState) {
+        e.selectedState = {
+          originalPos: e.target.clone(),
+          targetRotation: this.minimalClockwiseRotation(e.group.rotation.y, YAW),
+        };
+      }
+      if (id !== selected && e.selectedState) {
+        delete e.selectedState;
+      }
+
+      // Animate position: adaptive to zoom level and camera angle
+      // When selected: pull toward center (varies per object), and push toward camera to prevent clipping
+      const targetPos = (() => {
+        if (id !== selected || !e.selectedState) return e.target;
+
+        const originalPos = e.selectedState.originalPos;
+        const roomCenter = this.controls.target;
+        const zoom = this.camera.zoom;
+        const isSuperZoomed = zoom >= 2.5;
+
+        // 1. Pull toward room center: scales with zoom, applied to all axes
+        // At zoom 0.6: ~0.23, at zoom 1.0: ~0.25, at zoom 2.0: ~0.30, at zoom 3.0: ~0.35
+        const centerLerpAmount = 0.20 + zoom * 0.05;
+        const centerPull = originalPos.clone().lerp(roomCenter, centerLerpAmount).sub(originalPos);
+
+        // 2. Push toward camera: prevents clipping with walls/furniture, scales at higher zoom
+        let cameraPush = new THREE.Vector3(0, 0, 0);
+        if (zoom >= 1.5) {
+          const distToCamera = this.camera.position.distanceTo(originalPos);
+          if (distToCamera > 0.5) {
+            const dirToCamera = this.camera.position.clone().sub(originalPos).normalize();
+            // At super zoom (>= 2.5), increase push multiplier to ensure visibility
+            const pushMultiplier = isSuperZoomed ? 1.25 : 1.0;
+            const pushDistance = Math.min(distToCamera * 0.1, 1.5) * (zoom - 1.0) * pushMultiplier;
+            cameraPush = dirToCamera.multiplyScalar(pushDistance);
+          }
+        }
+
+        // 3. Additional vertical boost: scales with zoom, ensures clearance above ground/low positions
+        // This is ADAPTIVE: objects already high up get less boost, objects low get more
+        const objectHeightAboveGround = originalPos.y - roomCenter.y;
+        const heightNormalized = Math.max(0, objectHeightAboveGround / 3.0); // normalize to 0-1 range
+        const boostFactor = Math.max(0.4, 1.0 - heightNormalized * 0.3); // high objects boost less
+        const verticalBoost = Math.max(0.5, (zoom - 0.6) * 0.6) * boostFactor;
+
+        // 4. Combine all forces
+        const offset = centerPull.add(cameraPush).add(new THREE.Vector3(0, verticalBoost, 0));
+        return originalPos.clone().add(offset);
+      })();
+
       const p = e.group.position;
-      p.x += (e.target.x - p.x) * 0.22;
-      p.z += (e.target.z - p.z) * 0.22;
-      p.y += (e.target.y + bob - p.y) * 0.22;
-      e.group.rotation.y = YAW + (id === selected ? Math.sin(t * 2) * 0.25 : 0);
+      p.x += (targetPos.x - p.x) * 0.22;
+      p.z += (targetPos.z - p.z) * 0.22;
+      p.y += (targetPos.y + bob - p.y) * 0.22;
+
+      // Animate rotation: face camera with minimal clockwise rotation when selected
+      if (id === selected && e.selectedState) {
+        const targetRot = e.selectedState.targetRotation + Math.sin(t * 2) * 0.25;
+        e.group.rotation.y += (targetRot - e.group.rotation.y) * 0.18;
+        // Scale up 25% from original (1.6 → 2.0)
+        const targetScale = 1.6 * 1.25; // OBJECT_SCALE * 1.25
+        e.group.scale.x += (targetScale - e.group.scale.x) * 0.15;
+        e.group.scale.y += (targetScale - e.group.scale.y) * 0.15;
+        e.group.scale.z += (targetScale - e.group.scale.z) * 0.15;
+      } else {
+        // Return to rest state: face isometric camera (YAW), scale to original 1.6
+        e.group.rotation.y = YAW;
+        const restScale = 1.6; // OBJECT_SCALE
+        e.group.scale.x += (restScale - e.group.scale.x) * 0.15;
+        e.group.scale.y += (restScale - e.group.scale.y) * 0.15;
+        e.group.scale.z += (restScale - e.group.scale.z) * 0.15;
+      }
     }
     if (this.markerGroup.visible) {
       const pulse = 0.4 + Math.sin(t * 5) * 0.12;
@@ -353,14 +420,13 @@ export class RoomView {
     }
     this.card.show(this.cardPreview, this.cardArt);
     if (sheet) {
-      // The card lives in the same flex column as the sheet, directly above it. Layout does the stacking, so there is
-      // no measured position that could go stale.
-      const dock = sheet.parentElement;
-      if (dock && this.card.root.parentElement !== dock) dock.insertBefore(this.card.root, sheet);
-      this.card.dock();
+      // Position the card with its bottom-right corner 10px above and aligned with the sheet's top-right.
+      // dockBottomRight handles viewport clamping so the card never goes off-page.
+      const s = sheet.getBoundingClientRect();
+      this.card.dockBottomRight(s.right, s.top - 10);
       return;
     }
-    // Floating mode: back to a plain fixed-position card. It stays in the dock (moving it would reload an iframe).
+    // Floating mode: anchor the card above the selected object, projected through the camera.
     this.cardAnchor.copy(entry!.target).y += 2;
     this.camera.updateMatrixWorld();
     const ndc = this.cardAnchor.project(this.camera);
@@ -368,54 +434,28 @@ export class RoomView {
   }
 
   private frameSelection(): void {
-    const roomEl = this.container;
-    const selected = this.store.selectedId;
-    const entry = selected ? this.objects.get(selected) : undefined;
-    const inspecting = Boolean(entry);
-    if (!inspecting || !entry) {
-      delete roomEl.dataset.inspectX;
-      delete roomEl.dataset.inspectY;
-      if (this.inspectHome) {
-        this.controls.target.lerp(this.inspectHome.target, 0.18);
-        this.camera.position.lerp(this.inspectHome.target.clone().add(this.inspectHome.offset), 0.18);
-        this.camera.zoom += (this.inspectHome.zoom - this.camera.zoom) * 0.18;
-        this.camera.updateProjectionMatrix();
-        if (this.controls.target.distanceTo(this.inspectHome.target) < 0.04) {
-          this.controls.target.copy(this.inspectHome.target);
-          this.camera.position.copy(this.inspectHome.target).add(this.inspectHome.offset);
-          this.camera.zoom = this.inspectHome.zoom;
-          this.camera.updateProjectionMatrix();
-          this.inspectHome = null;
-        }
-      }
-      this.controls.enabled = true;
-      return;
-    }
+    // Camera no longer moves to face selected objects. Objects instead rotate to face the camera and scale up,
+    // avoiding jarring view jumps. Camera stays enabled for free panning/orbiting at all times.
+    this.controls.enabled = true;
+  }
 
-    if (!this.inspectHome) {
-      this.inspectHome = {
-        target: this.controls.target.clone(),
-        offset: this.camera.position.clone().sub(this.controls.target),
-        zoom: this.camera.zoom,
-      };
-    }
-
-    const zoom = 1.7;
-    this.inspectGoal.copy(entry.group.position);
-    this.inspectZoom = zoom;
-    this.controls.target.lerp(this.inspectGoal, 0.22);
-    this.camera.position.lerp(this.inspectGoal.clone().add(this.isoOffset), 0.22);
-    this.camera.zoom += (this.inspectZoom - this.camera.zoom) * 0.22;
-    this.camera.updateProjectionMatrix();
-    // OrbitControls is suspended during inspection, so explicitly orient the
-    // camera toward the animated target after a prior user orbit/pan.
-    this.camera.lookAt(this.controls.target);
-    this.camera.updateMatrixWorld();
-    this.controls.enabled = false;
-
-    const ndc = entry.group.position.clone().project(this.camera);
-    roomEl.dataset.inspectX = String((ndc.x + 1) / 2);
-    roomEl.dataset.inspectY = String((1 - ndc.y) / 2);
+  /**
+   * Calculate the target rotation angle for an object to face the camera viewer directly.
+   * Takes the current rotation and finds the shortest clockwise rotation to reach the target.
+   * Returns a normalized angle in [-PI, PI].
+   */
+  private minimalClockwiseRotation(current: number, target: number): number {
+    let diff = target - current;
+    // Normalize to [-PI, PI]
+    while (diff > Math.PI) diff -= 2 * Math.PI;
+    while (diff < -Math.PI) diff += 2 * Math.PI;
+    // If diff is negative (counterclockwise), go the long way around (clockwise)
+    if (diff < 0) diff += 2 * Math.PI;
+    // Return the target angle, normalized to [-PI, PI]
+    let result = current + diff;
+    while (result > Math.PI) result -= 2 * Math.PI;
+    while (result < -Math.PI) result += 2 * Math.PI;
+    return result;
   }
 
   // ---- input ------------------------------------------------------------
@@ -443,7 +483,17 @@ export class RoomView {
     const d = this.downAt;
     this.downAt = null;
     if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 5) return; // it was an orbit drag
+
     const selected = this.store.selectedId;
+    const repId = this.repIdAt(e); // What object did we click on?
+
+    // If we clicked on an object, select it. This takes priority over placement.
+    if (repId) {
+      this.store.select(repId !== selected ? repId : null);
+      return;
+    }
+
+    // We didn't click on an object. If we have a selected object and clicked on a slot, try to place it.
     if (selected) {
       const slotId = this.slotIdAt(e);
       if (slotId) {
@@ -452,8 +502,9 @@ export class RoomView {
         return;
       }
     }
-    const repId = this.repIdAt(e);
-    this.store.select(repId && repId !== selected ? repId : null);
+
+    // Clicked on empty space: deselect
+    this.store.select(null);
   }
 
   private onHover(e: PointerEvent): void {

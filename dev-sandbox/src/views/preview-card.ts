@@ -52,16 +52,25 @@ export class PreviewCardView {
     if (preview) this.root.append(this.render(preview, art));
   }
 
-  /** Float the card with its bottom-centre at a point in viewport pixels. */
-  moveTo(x: number, y: number): void {
-    this.root.classList.remove('preview-docked');
-    this.root.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -100%)`;
+  /** Dock the card with its bottom-right corner at (x, y) in viewport pixels. Clamps to stay in viewport. */
+  dockBottomRight(x: number, y: number): void {
+    const rect = this.root.getBoundingClientRect();
+    const cardWidth = rect.width || 240; // fallback to default width
+    const cardHeight = rect.height || 200;
+    // Clamp x so the card's right edge doesn't exceed viewport, leaving 12px margin
+    const viewportWidth = window.innerWidth;
+    const clampedX = Math.min(x, viewportWidth - 12);
+    const clampedX2 = Math.max(clampedX - cardWidth, 12);
+    // Clamp y so card's bottom edge stays in viewport
+    const viewportHeight = window.innerHeight;
+    const clampedY = Math.min(y, viewportHeight - 12);
+    // Position with bottom-right corner at the clamped point
+    this.root.style.transform = `translate(${Math.round(clampedX2)}px, ${Math.round(clampedY - cardHeight)}px)`;
   }
 
-  /** Dock the card in normal flow, directly above the item sheet. Layout (not measuring) keeps it from overlapping. */
-  dock(): void {
-    this.root.classList.add('preview-docked');
-    this.root.style.transform = '';
+  /** Float the card with its bottom-centre at a point in viewport pixels (for floating above objects). */
+  moveTo(x: number, y: number): void {
+    this.root.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -100%)`;
   }
 
   private render(p: Preview, art: PreviewArt | null): HTMLElement {

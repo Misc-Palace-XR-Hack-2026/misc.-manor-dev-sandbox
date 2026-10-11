@@ -324,19 +324,35 @@ export class Store {
     });
   }
 
-  /** Move an object to a slot. If the slot is taken the two swap (or the other one is put down). */
+  /** Move an object to a slot. If the slot is taken, the two swap (or the target is unplaced if source is being held). */
   place(repId: string, slotId: string): void {
     if (!this.layout.slots.some((sl) => sl.id === slotId)) return;
     if (this.slotOf(repId) === slotId) return;
     this.commit((s) => {
       const mine = s.placements.find((p) => p.representationId === repId);
       const other = s.placements.find((p) => p.slotId === slotId);
-      if (other) {
-        if (mine) other.slotId = mine.slotId;
-        else s.placements = s.placements.filter((p) => p !== other);
+      const wasHeld = this.pickup?.repId === repId;
+      const heldFrom = this.pickup?.slotId;
+
+      if (other && mine) {
+        // Both placed: swap their slots
+        other.slotId = mine.slotId;
+        mine.slotId = slotId;
+      } else if (other && !mine && wasHeld && heldFrom) {
+        // Held object placed on occupied slot: swap using the pickup info
+        other.slotId = heldFrom;
+        s.placements.push({ representationId: repId, slotId });
+      } else if (other && !mine) {
+        // Held object placed on occupied slot (pickup info not available): unplace target and place ours
+        s.placements = s.placements.filter((p) => p !== other);
+        s.placements.push({ representationId: repId, slotId });
+      } else if (!other && mine) {
+        // We're placed: just move to the slot
+        mine.slotId = slotId;
+      } else if (!other && !mine) {
+        // Neither placed: place ours
+        s.placements.push({ representationId: repId, slotId });
       }
-      if (mine) mine.slotId = slotId;
-      else s.placements.push({ representationId: repId, slotId });
     });
   }
 
