@@ -42,9 +42,12 @@ const D = 7.3;
 
 // Four cantilevered stair steps climbing the left wall toward the loft.
 const STEP_TOPS = [0.6, 1.2, 1.75, 2.3];
-const steps: Box[] = STEP_TOPS.map((top, i) =>
-  box(`step-${i + 1}`, [0, top - 0.3, 5.05 - 0.75 * i], [1.4, 0.3, 0.75], 'accent'),
-);
+const steps: Box[] = STEP_TOPS.map((top, i) => {
+  const front = 5.8 - 0.75 * i;
+  // The landing starts at the loft edge, not 0.2m inside its coplanar top.
+  const back = i === 3 ? 3.0 : front - 0.75;
+  return box(`step-${i + 1}`, [0, top - 0.3, back], [1.4, 0.3, front - back], 'accent');
+});
 
 // New floor area added beyond the original 6.3 x 6.3 footprint: a grid along the right wall plus a front strip.
 const extraFloor = (): Slot[] => {

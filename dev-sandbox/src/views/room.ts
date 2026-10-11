@@ -10,6 +10,8 @@ import { LIGHTING_PRESETS } from '../core/appearance';
 import { buildPreview, type Preview } from '../core/preview';
 import { PreviewCardView } from './preview-card';
 import { mediaArt, type MediaArt } from '../core/media-art';
+import { canEnterVr, enterReason, type NeighborhoodRoom } from '../xr/interaction';
+import { XrSession } from '../xr/session';
 
 // Thin 3D adapter: draws store.state and sends clicks back as store commands. Holds no truth of its own.
 // Replaceable later (IWSDK, Babylon) as long as the store contract stays the same.
@@ -55,8 +57,10 @@ export class RoomView {
   private cardKey = '';
   private cardPreview: Preview | null = null;
   private cardArt: MediaArt | null = null;
+  private xr: XrSession | null = null;
+  private vrButton = document.createElement('button');
 
-  constructor(private container: HTMLElement, private store: Store) {
+  constructor(private container: HTMLElement, private store: Store, rooms: NeighborhoodRoom[] = []) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
@@ -109,6 +113,13 @@ export class RoomView {
 
     this.store.subscribe(() => this.sync());
     this.sync();
+    this.xr = new XrSession(this.renderer, this.scene, this.store, this.objectsGroup, this.markerGroup, this.roomGroup, rooms);
+    this.vrButton.type = 'button';
+    this.vrButton.className = 'vr-enter';
+    this.vrButton.textContent = 'Enter VR';
+    container.appendChild(this.vrButton);
+    this.vrButton.addEventListener('click', () => void this.enterVr());
+    void this.refreshVrButton();
     this.renderer.setAnimationLoop((t) => this.tick(t / 1000));
     // The card follows the item sheet on its own frame loop, not the 3D one. The sheet's size changes as its content
     // fills in, and a hiccup in rendering must never leave the card stuck at a stale spot over the sheet.
@@ -308,7 +319,8 @@ export class RoomView {
   private tick(t: number): void {
     const selected = this.store.selectedId;
     for (const [id, e] of this.objects) {
-      const bob = id === selected ? 0.2 + Math.sin(t * 4) * 0.05 : 0;
+      const presenting = Boolean(this.xr?.presenting);
+      const bob = presenting || id !== selected ? 0 : 0.2 + Math.sin(t * 4) * 0.05;
 
       // On selection: save original position and calculate minimal clockwise rotation to face camera
       if (id === selected && !e.selectedState) {
@@ -324,7 +336,7 @@ export class RoomView {
       // Animate position: adaptive to zoom level and camera angle
       // When selected: pull toward center (varies per object), and push toward camera to prevent clipping
       const targetPos = (() => {
-        if (id !== selected || !e.selectedState) return e.target;
+        if (presenting || id !== selected || !e.selectedState) return e.target;
 
         const originalPos = e.selectedState.originalPos;
         const roomCenter = this.controls.target;
@@ -367,7 +379,7 @@ export class RoomView {
       p.y += (targetPos.y + bob - p.y) * 0.22;
 
       // Animate rotation: face camera with minimal clockwise rotation when selected
-      if (id === selected && e.selectedState) {
+      if (!presenting && id === selected && e.selectedState) {
         const targetRot = e.selectedState.targetRotation + Math.sin(t * 2) * 0.25;
         e.group.rotation.y += (targetRot - e.group.rotation.y) * 0.18;
         // Scale up 25% from original (1.6 → 2.0)
@@ -387,6 +399,12 @@ export class RoomView {
     if (this.markerGroup.visible) {
       const pulse = 0.4 + Math.sin(t * 5) * 0.12;
       for (const m of this.markers.values()) (m.material as THREE.MeshBasicMaterial).opacity = pulse;
+    }
+    const xrCamera = this.xr?.tick() ?? null;
+    if (xrCamera) {
+      this.controls.enabled = false;
+      this.renderer.render(this.scene, xrCamera);
+      return;
     }
     const inspecting = Boolean(this.store.selectedId && this.objects.has(this.store.selectedId));
     if (!inspecting) this.controls.update();
@@ -459,6 +477,24 @@ export class RoomView {
   }
 
   // ---- input ------------------------------------------------------------
+  private async refreshVrButton(): Promise<void> {
+    const probe = { isSecureContext: globalThis.isSecureContext, xr: navigator.xr ?? null };
+    const reason = enterReason(probe);
+    const supported = await canEnterVr(probe);
+    this.vrButton.disabled = !supported;
+    this.vrButton.title = reason || (supported ? 'Enter the room in VR' : 'Immersive VR is not supported here.');
+    if (reason) this.vrButton.textContent = reason;
+    else this.vrButton.textContent = supported ? 'Enter VR' : 'VR not supported';
+  }
+
+  private async enterVr(): Promise<void> {
+    try {
+      await this.xr?.enter();
+    } catch (error) {
+      this.vrButton.textContent = error instanceof Error ? error.message : String(error);
+    }
+  }
+
   private ray(e: PointerEvent): void {
     const r = this.renderer.domElement.getBoundingClientRect();
     const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);

@@ -48,7 +48,7 @@ try {
 if (initial) {
   const store = new Store(initial, roomId);
   new MenuView(document.getElementById('menu')!, store, repoRooms);
-  const room = new RoomView(document.getElementById('room')!, store);
+  const room = new RoomView(document.getElementById('room')!, store, repoRooms);
   document.body.append(createRoomCapture(() => room.capturePhoto()));
   const soundtrack = new SoundtrackPlayer(store);
   document.body.append(createSoundtrackControl(soundtrack));

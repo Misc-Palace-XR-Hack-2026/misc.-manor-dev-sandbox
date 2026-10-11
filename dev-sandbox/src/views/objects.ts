@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { cozyBuilders } from './cozy-objects';
 import { buildArmchair, buildSideTable, buildTurntable, buildRug, buildLeafyPlant } from './study-decor';
 import type { ObjectKind, ContentItem } from '../core/types';
 import { validPhotoData, photoDimensions } from '../core/photos';
@@ -20,7 +21,23 @@ function cyl(rTop: number, rBottom: number, h: number, color: number, x = 0, y =
   return m;
 }
 
+// Assembly helpers use explicit centers/endpoints: rotating a base-offset cyl()
+// does not rotate its position, which can detach optics, wheels, and face details.
+function named<T extends THREE.Object3D>(name: string, part: T): T {
+  part.name = name;
+  return part;
+}
+
+function rod(name: string, from: [number, number, number], to: [number, number, number], radius: number, color: number): THREE.Mesh {
+  const a = new THREE.Vector3(...from), b = new THREE.Vector3(...to);
+  const part = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, a.distanceTo(b), 12), mat(color));
+  part.position.copy(a).add(b).multiplyScalar(0.5);
+  part.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.sub(a).normalize());
+  return named(name, part);
+}
+
 const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
+  ...cozyBuilders,
   // Standing book, cover toward the camera, with a cream page block behind it.
   book: () => [
     box(0.34, 0.46, 0.07, 0xc0463b, 0, 0, 0.06),
@@ -30,7 +47,7 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
   photoFrame: () => {
     const back = box(0.5, 0.6, 0.05, 0xb8793f);
     const photo = box(0.38, 0.48, 0.02, 0x7fb0c9, 0, 0.06, 0.03);
-    const stand = box(0.3, 0.04, 0.2, 0x9a6232, 0, 0, -0.08);
+    const stand = box(0.3, 0.04, 0.2, 0x9a6232, 0, 0.002, -0.08);
     return [back, photo, stand];
   },
   record: () => [
@@ -77,14 +94,21 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
   plant: () => [buildLeafyPlant()],
   armchair: () => [buildArmchair()],
   sideTable: () => [buildSideTable()],
-  turntable: () => [buildTurntable()],
+  turntable: () => {
+    const table = buildTurntable();
+    table.scale.setScalar(0.8);
+    return [table];
+  },
   rug: () => [buildRug()],
   mug: () => {
     const handle = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.012, 8, 14), mat(0xf3efe6));
     handle.position.set(0.09, 0.07, 0);
-    return [cyl(0.075, 0.075, 0.14, 0xf3efe6), handle, cyl(0.065, 0.065, 0.005, 0x5b3a29, 0, 0.135, 0)];
+    // A hollow cup, not a solid cap competing with the coffee surface.
+    const profile = [[0, 0], [0.075, 0], [0.075, 0.14], [0.065, 0.14], [0.065, 0.01], [0, 0.01]];
+    const cup = new THREE.Mesh(new THREE.LatheGeometry(profile.map(([r, y]) => new THREE.Vector2(r, y)), 20), mat(0xf3efe6));
+    return [cup, handle, cyl(0.065, 0.065, 0.005, 0x5b3a29, 0, 0.13, 0)];
   },
-  notebook: () => [box(0.34, 0.05, 0.44, 0xc9a96e), box(0.03, 0.052, 0.44, 0x7e5b36, -0.15, 0, 0), box(0.04, 0.054, 0.44, 0xd1584a, 0.1, 0, 0)],
+  notebook: () => [box(0.34, 0.05, 0.44, 0xc9a96e), box(0.03, 0.052, 0.446, 0x7e5b36, -0.15, 0.001, 0), box(0.04, 0.054, 0.448, 0xd1584a, 0.1, 0.001, 0)],
   trophy: () => [
     box(0.22, 0.06, 0.22, 0x2b2b2e),
     cyl(0.025, 0.04, 0.16, 0xe6b73c, 0, 0.06, 0),
@@ -147,8 +171,8 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
     spout.position.set(0.12, 0.12, 0);
     spout.rotation.z = -Math.PI / 2.6;
     const handle = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.012, 6, 10), mat(ceramic));
-    handle.position.set(-0.1, 0.12, 0);
-    handle.rotation.y = Math.PI / 2;
+    // Torus defaults to XY: keep its opening in the same plane as the spout.
+    handle.position.set(-0.1, 0.10, 0);
     return [
       cyl(0.09, 0.07, 0.14, ceramic, 0, 0.02, 0),
       cyl(0.04, 0.04, 0.03, lid, 0, 0.16, 0),
@@ -172,8 +196,8 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
   },
   headphones: () => {
     const band = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.016, 6, 12, Math.PI), mat(0x5c4033));
-    band.rotation.z = Math.PI;
-    band.position.set(0, 0.16, 0);
+    // The default half torus is an upward arch; its ends enter the cup tops.
+    band.position.set(0, 0.13, 0);
     const cup = (x: number) => {
       const c = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.04, 10), mat(0x3d2b22));
       c.rotation.z = Math.PI / 2;
@@ -207,7 +231,7 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
     box(0.42, 0.03, 0.22, 0x2b2b2e, 0, 0.08, 0),
     box(0.08, 0.02, 0.08, 0xc0463b, -0.16, 0.08, 0.08),
     box(0.08, 0.02, 0.08, 0x3a6ea5, -0.05, 0.08, 0.08),
-    cyl(0.02, 0.02, 0.03, 0xd8d4c8, 0.16, 0.08, 0.06),
+    cyl(0.02, 0.02, 0.03, 0xd8d4c8, 0.16, 0.10, 0.06),
   ],
   cartridge: () => [
     box(0.28, 0.08, 0.2, 0x3d6b3a),
@@ -217,12 +241,17 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
   vhs: () => [
     box(0.42, 0.06, 0.24, 0x1e1e22),
     box(0.3, 0.02, 0.16, 0xf1e6cf, 0, 0.06, 0),
-    box(0.08, 0.03, 0.08, 0xc0463b, 0.14, 0.015, 0.08),
+    box(0.08, 0.03, 0.08, 0xc0463b, 0.14, 0.015, 0.084),
   ],
   recordSleeve: () => [
-    box(0.42, 0.42, 0.04, 0xf1e6cf, 0, 0, 0.02),
-    box(0.34, 0.34, 0.02, 0xc0463b, 0, 0.04, 0.04),
-    cyl(0.12, 0.12, 0.01, 0x1b1b1f, 0, 0.08, -0.03),
+    named('recordSleeve-cover', box(0.42, 0.42, 0.03, 0xf1e6cf, 0, 0, 0.035)),
+    named('recordSleeve-art', box(0.34, 0.34, 0.008, 0xc0463b, 0, 0.04, 0.051)),
+    named('recordSleeve-back', box(0.42, 0.42, 0.024, 0xf1e6cf, 0, 0, -0.018)),
+    named('recordSleeve-spine', box(0.016, 0.42, 0.08, 0xc9a96e, -0.218, 0, 0.01)),
+    // A vertical record in the sleeve pocket, sliding out of the open right edge.
+    rod('recordSleeve-disc', [0.245, 0.21, -0.006], [0.245, 0.21, 0.006], 0.18, 0x1b1b1f),
+    rod('recordSleeve-label', [0.245, 0.21, 0.005], [0.245, 0.21, 0.009], 0.052, 0xe9a23b),
+    rod('recordSleeve-spindle', [0.245, 0.21, 0.008], [0.245, 0.21, 0.011], 0.008, 0x1b1b1f),
   ],
   spoon: () => {
     const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0xc9c4b8));
@@ -236,43 +265,76 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
   },
   robot: () => [
     box(0.22, 0.22, 0.18, 0x8a8d93, 0, 0.12, 0),
-    box(0.16, 0.12, 0.16, 0x6f737a, 0, 0.34, 0),
-    cyl(0.025, 0.025, 0.08, 0xc9c4b8, -0.05, 0.42, 0.04),
-    cyl(0.025, 0.025, 0.08, 0xc9c4b8, 0.05, 0.42, 0.04),
+    named('robot-head', box(0.16, 0.12, 0.16, 0x6f737a, 0, 0.34, 0)),
+    rod('robot-eye-l', [-0.045, 0.405, 0.074], [-0.045, 0.405, 0.092], 0.022, 0xc9c4b8),
+    rod('robot-eye-r', [0.045, 0.405, 0.074], [0.045, 0.405, 0.092], 0.022, 0xc9c4b8),
     box(0.05, 0.16, 0.05, 0x8a8d93, -0.16, 0.16, 0),
     box(0.05, 0.16, 0.05, 0x8a8d93, 0.16, 0.16, 0),
     box(0.05, 0.12, 0.05, 0x6f737a, -0.06, 0, 0),
     box(0.05, 0.12, 0.05, 0x6f737a, 0.06, 0, 0),
   ],
   telescope: () => {
-    const tube = cyl(0.04, 0.06, 0.46, 0x3a3a40, 0, 0.22, 0);
-    tube.rotation.z = Math.PI / 2.4;
-    const stand = box(0.04, 0.22, 0.04, 0x6f4e37);
-    return [
-      stand,
-      box(0.22, 0.03, 0.16, 0x5c4033, 0, 0, 0),
-      tube,
-      cyl(0.07, 0.07, 0.04, 0x8a8d93, 0.16, 0.34, 0),
+    // Every optical part shares one local Y axis and rotates about the mount.
+    const optics = named('telescope-optics', new THREE.Group());
+    optics.position.set(0, 0.34, 0);
+    optics.rotation.z = -1.15;
+    optics.add(
+      named('telescope-tube', cyl(0.055, 0.042, 0.42, 0x3a3a40, 0, -0.21)),
+      named('telescope-rim', cyl(0.062, 0.062, 0.035, 0xb9ad98, 0, 0.19)),
+      named('telescope-lens', cyl(0.051, 0.051, 0.006, 0x7fb0c9, 0, 0.224)),
+      named('telescope-eyepiece', cyl(0.023, 0.023, 0.055, 0x6f737a, 0, -0.26)),
+      named('telescope-collar', cyl(0.058, 0.058, 0.04, 0xb9ad98, 0, -0.02)),
+    );
+    const parts: THREE.Object3D[] = [optics,
+      rod('telescope-mount', [0, 0.20, 0], [0, 0.34, 0], 0.022, 0x6f4e37),
     ];
+    for (let i = 0; i < 3; i++) {
+      const angle = i * Math.PI * 2 / 3;
+      const x = Math.cos(angle) * 0.14, z = Math.sin(angle) * 0.14;
+      parts.push(rod(`telescope-leg-${i}`, [x, 0.014, z], [0, 0.23, 0], 0.012, 0xb9ad98));
+      parts.push(named(`telescope-foot-${i}`, box(0.04, 0.016, 0.04, 0x5c4033, x, 0, z)));
+    }
+    return parts;
   },
-  car: () => [
-    box(0.5, 0.12, 0.24, 0xc0463b, 0, 0.06, 0),
-    box(0.28, 0.1, 0.22, 0x9fc7cf, -0.02, 0.18, 0),
-    cyl(0.05, 0.05, 0.04, 0x1e1e22, -0.16, 0, 0.12),
-    cyl(0.05, 0.05, 0.04, 0x1e1e22, 0.16, 0, 0.12),
-    cyl(0.05, 0.05, 0.04, 0x1e1e22, -0.16, 0, -0.12),
-    cyl(0.05, 0.05, 0.04, 0x1e1e22, 0.16, 0, -0.12),
-  ],
+  car: () => {
+    const parts: THREE.Object3D[] = [
+      named('car-body', box(0.5, 0.12, 0.24, 0xc0463b, 0, 0.06, 0)),
+      named('car-cabin', box(0.28, 0.1, 0.22, 0x9fc7cf, -0.02, 0.18, 0)),
+    ];
+    for (const [name, x, z] of [
+      ['fl', -0.16, 0.12],
+      ['fr', 0.16, 0.12],
+      ['rl', -0.16, -0.12],
+      ['rr', 0.16, -0.12],
+    ] as const) {
+      parts.push(rod(`car-wheel-${name}`, [x, 0.05, z - 0.02], [x, 0.05, z + 0.02], 0.05, 0x1e1e22));
+    }
+    return parts;
+  },
   motorcycle: () => {
-    const wheel = (x: number) => {
-      const w = cyl(0.08, 0.08, 0.04, 0x1e1e22, x, 0, 0);
-      w.rotation.z = Math.PI / 2;
-      return w;
-    };
-    const tank = box(0.22, 0.08, 0.08, 0x3a6ea5, 0, 0.14, 0);
-    const seat = box(0.12, 0.04, 0.08, 0x2b2b2e, -0.12, 0.16, 0);
-    const bars = box(0.16, 0.02, 0.02, 0x8a8d93, 0.12, 0.22, 0);
-    return [wheel(-0.16), wheel(0.16), tank, seat, bars, box(0.28, 0.04, 0.05, 0x6f737a, 0, 0.1, 0)];
+    // Wheelbase runs along X; both axles cross the width along Z.
+    const parts: THREE.Object3D[] = [];
+    for (const [end, x] of [['rear', -0.16], ['front', 0.16]] as const) {
+      parts.push(rod(`motorcycle-tire-${end}`, [x, 0.08, -0.025], [x, 0.08, 0.025], 0.08, 0x1e1e22));
+      parts.push(rod(`motorcycle-hub-${end}`, [x, 0.08, -0.027], [x, 0.08, 0.027], 0.045, 0xb9ad98));
+    }
+    parts.push(
+      named('motorcycle-tank', box(0.14, 0.07, 0.085, 0x3a6ea5, 0.015, 0.155)),
+      named('motorcycle-seat', box(0.12, 0.03, 0.09, 0x3d2b22, -0.10, 0.19)),
+      named('motorcycle-engine', box(0.09, 0.075, 0.075, 0x6f737a, -0.015, 0.07)),
+      rod('motorcycle-frame-top', [-0.14, 0.19, 0], [0.09, 0.195, 0], 0.013, 0x6f737a),
+      rod('motorcycle-frame-down', [0.09, 0.195, 0], [0.015, 0.085, 0], 0.012, 0x6f737a),
+      rod('motorcycle-frame-rear', [-0.11, 0.19, 0], [0.015, 0.085, 0], 0.012, 0x6f737a),
+      rod('motorcycle-handlebar', [0.075, 0.255, -0.075], [0.075, 0.255, 0.075], 0.009, 0xb9ad98),
+    );
+    for (const z of [-0.032, 0.032]) {
+      parts.push(
+        rod(`motorcycle-fork-${z}`, [0.16, 0.08, z], [0.075, 0.255, z], 0.01, 0xb9ad98),
+        rod(`motorcycle-swingarm-${z}`, [-0.16, 0.08, z], [0.015, 0.085, z], 0.012, 0x6f737a),
+        rod(`motorcycle-shock-${z}`, [-0.16, 0.08, z], [-0.10, 0.195, z], 0.01, 0xb9ad98),
+      );
+    }
+    return parts;
   },
 };
 
