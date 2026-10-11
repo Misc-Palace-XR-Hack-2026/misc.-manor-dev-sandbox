@@ -78,7 +78,7 @@ export function buildArmchair(): THREE.Group {
     block(0.048, 0.05, 0.048, brass, lx, 0.025, lz, decor);
   }
   block(0.72, 0.08, 0.70, walnut, 0, 0.26, 0, decor);
-  block(0.68, 0.16, 0.64, chairFabric, 0, 0.38, 0, decor);
+  block(0.68, 0.16, 0.62, chairFabric, 0, 0.38, 0, decor);
   const back = block(0.68, 0.54, 0.12, chairFabric, 0, 0.68, -0.28, decor);
   back.rotation.x = -0.16;
   block(0.12, 0.24, 0.64, chairFabric, -0.34, 0.50, 0, decor);
@@ -87,7 +87,12 @@ export function buildArmchair(): THREE.Group {
   block(0.13, 0.02, 0.65, walnut, 0.34, 0.625, 0, decor);
   for (const bx of [-0.18, 0, 0.18]) {
     for (const by of [0.58, 0.74, 0.88]) {
-      mesh(new THREE.SphereGeometry(0.015, 8, 6), brass, bx, by, -0.21, decor);
+      // Tufts belong to the tilted backrest's local frame, not a fixed Z plane.
+      const button = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 6), brass);
+      button.name = `armchair-tuft-${bx}-${by}`;
+      button.position.set(bx, by - 0.68, 0.06);
+      button.castShadow = button.receiveShadow = true;
+      back.add(button);
     }
   }
   const pillow = block(0.26, 0.26, 0.09, pillowFabric, 0.14, 0.46, -0.16, decor);
@@ -104,7 +109,7 @@ export function buildSideTable(): THREE.Group {
  const cream=material(0xe8dbc2);
   const marbleMat = material(0xf2eee6, { roughness: 0.35, metalness: 0.05 });
   mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.032, 28), marbleMat, 0, 0.56, 0, decor);
-  mesh(new THREE.CylinderGeometry(0.246, 0.246, 0.012, 28), brass, 0, 0.55, 0, decor);
+  mesh(new THREE.CylinderGeometry(0.246, 0.246, 0.012, 28), brass, 0, 0.548, 0, decor);
   mesh(new THREE.CylinderGeometry(0.032, 0.038, 0.44, 18), walnut, 0, 0.32, 0, decor);
   mesh(new THREE.SphereGeometry(0.065, 16, 12), brass, 0, 0.22, 0, decor);
   for (let i = 0; i < 3; i++) {
@@ -141,7 +146,7 @@ export function buildTurntable(): THREE.Group {
     rod([lx, 0, lz], [lx * 0.85, 0.36, lz * 0.85], 0.018, walnut, decor);
     block(0.038, 0.045, 0.038, brass, lx, 0.022, lz, decor);
   }
-  block(0.38, 0.02, 0.38, material(0x2d3136), -0.14, 0.805, 0, decor);
+  block(0.36, 0.02, 0.38, material(0x2d3136), -0.14, 0.805, 0, decor);
   mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.012, 28), silver, -0.14, 0.82, 0, decor);
   mesh(new THREE.CylinderGeometry(0.135, 0.135, 0.005, 28), vinyl, -0.14, 0.828, 0, decor);
   mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.006, 20), material(0xd9534f), -0.14, 0.83, 0, decor);
