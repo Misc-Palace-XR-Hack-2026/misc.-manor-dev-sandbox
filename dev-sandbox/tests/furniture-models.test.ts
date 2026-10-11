@@ -26,3 +26,30 @@ test('each furniture kind builds only its own independently disposable model at 
     disposeGroup(first); disposeGroup(second);
   }
 });
+
+test('armchair tuft buttons embed in the tilted backrest at every row', () => {
+  const g = buildObject('armchair');
+  const parts: THREE.Mesh[] = [];
+  g.traverse(o => { if (o instanceof THREE.Mesh) parts.push(o); });
+  const back = parts.find(m => m.geometry instanceof THREE.BoxGeometry && m.geometry.parameters.height === .54)!;
+  const buttons = parts.filter(m => m.geometry instanceof THREE.SphereGeometry && m.geometry.parameters.radius === .015);
+  assert.equal(buttons.length, 9);
+  g.updateMatrixWorld(true);
+  for (const button of buttons) {
+    const p = back.worldToLocal(button.getWorldPosition(new THREE.Vector3()));
+    assert.ok(p.z - .015 < .06 && p.z + .015 > .06, `button must intersect front upholstery, local z=${p.z}`);
+    assert.ok(Math.abs(p.y) < .27 && Math.abs(p.x) < .34);
+  }
+});
+
+test('turntable cabinet is about TV height, not a full-size desk', () => {
+  const tv = buildObject('tv');
+  const table = buildObject('turntable');
+  const tvSize = new THREE.Box3().setFromObject(tv).getSize(new THREE.Vector3());
+  const tableSize = new THREE.Box3().setFromObject(table).getSize(new THREE.Vector3());
+  const tableMin = new THREE.Box3().setFromObject(table).min;
+  assert.ok(tableSize.y < tvSize.y * 1.2, `turntable ${tableSize.y} should be near TV ${tvSize.y}`);
+  assert.ok(tableSize.y > tvSize.y * 0.7, `turntable ${tableSize.y} should not collapse under TV ${tvSize.y}`);
+  assert.ok(tableMin.y > -0.04 && tableMin.y < 0.05, `base should sit on the slot, min.y=${tableMin.y}`);
+  disposeGroup(tv); disposeGroup(table);
+});

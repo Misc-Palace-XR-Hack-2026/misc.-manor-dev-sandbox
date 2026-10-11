@@ -1,7 +1,6 @@
 # Meta Quest VR implementation plan
 
-Status: proposal only; no VR implementation or deployment changes performed.
-Base: experiment/room-sandbox. Implement on a new feature branch from this branch; do not change main.
+Status: first VR slice on `feat/quest-webxr`. Desktop editor remains the default. Quest hardware acceptance is still pending.
 
 ## Outcome
 
