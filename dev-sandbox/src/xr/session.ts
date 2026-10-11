@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Store } from '../core/store';
-import { inspectPreview, loftBeaconVisible, spawnPosition, walkableAt, xrSelect, type NeighborhoodRoom, type PanelActionResult } from './interaction';
+import { inspectPreview, loftBeaconVisible, spawnPosition, walkableAt, walkableFloorPad, xrSelect, type NeighborhoodRoom, type PanelActionResult } from './interaction';
 import { XrPanel } from './panel';
 import { XrHoverLabel } from './hover';
 import { XrObjectMenu } from './object-menu';
@@ -106,10 +106,16 @@ export class XrSession {
   }
 
   private buildFloors(): void {
-    const mat = new THREE.MeshBasicMaterial({ color: 0x9be39b, transparent: true, opacity: 0.18, depthWrite: false });
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(5.8, 5.8), mat);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x9be39b,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    });
+    const pad = walkableFloorPad();
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(pad.width, pad.depth), mat);
     floor.rotation.x = -Math.PI / 2;
-    floor.position.set(3.3, 0.02, 3.3);
+    floor.position.set(pad.x, 0.02, pad.z);
     floor.userData.walkable = true;
     const loft = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 2.2), mat.clone());
     loft.rotation.x = -Math.PI / 2;

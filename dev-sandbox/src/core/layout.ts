@@ -59,9 +59,6 @@ const extraFloor = (): Slot[] => {
       n++;
     }
   }
-  slots.push({ id: `floor-${n}`, label: 'Floor, front left', pos: [2.2, 0, 6.6] });
-  slots.push({ id: `floor-${n + 1}`, label: 'Floor, front middle', pos: [3.8, 0, 6.5] });
-  slots.push({ id: `floor-${n + 2}`, label: 'Floor, front', pos: [5.4, 0, 6.6] });
   return slots;
 };
 
@@ -98,17 +95,28 @@ const cozyLoft: RoomLayout = {
     box('shelf', [6.6, 1.6, 0], [3.4, 0.12, 0.5], 'accent'),
   ],
   slots: [
-    { id: 'floor-1', label: 'Floor, under the loft', pos: [2.0, 0, 2.2] },
-    { id: 'floor-2', label: 'Floor, by the right wall', pos: [4.6, 0, 1.0] },
-    { id: 'floor-3', label: 'Floor, middle', pos: [4.2, 0, 3.4] },
-    { id: 'floor-4', label: 'Floor, near the stairs', pos: [2.6, 0, 4.6] },
-    { id: 'floor-5', label: 'Floor, front corner', pos: [5.2, 0, 5.2] },
-    { id: 'floor-6', label: 'Floor, under the loft (right)', pos: [3.2, 0, 2.3] },
-    { id: 'loft-1', label: 'Loft, left', pos: [0.7, 2.3, 2.2] },
-    { id: 'loft-2', label: 'Loft, middle', pos: [2.0, 2.3, 2.2] },
-    { id: 'loft-3', label: 'Loft, right', pos: [3.3, 2.3, 2.0] },
-    { id: 'block-1', label: 'Loft block, left', pos: [1.8, 2.9, 0.55] },
-    { id: 'block-2', label: 'Loft block, right', pos: [2.8, 2.9, 0.55] },
+    // Old first floor: 3x4 on the original 6.3 room, pitched to match the east grid, starting
+    // right of the stair run (x 0–1.4) instead of placing cells under the treads.
+    { id: 'floor-1', label: 'Floor, back left', pos: [2.6, 0, 1.0] },
+    { id: 'floor-2', label: 'Floor, back middle', pos: [4.0, 0, 1.0] },
+    { id: 'floor-3', label: 'Floor, back right', pos: [5.4, 0, 1.0] },
+    { id: 'floor-6', label: 'Floor, under the loft', pos: [2.6, 0, 2.6] },
+    { id: 'floor-old-7', label: 'Floor, mid left-center', pos: [4.0, 0, 2.6] },
+    { id: 'floor-old-8', label: 'Floor, mid right', pos: [5.4, 0, 2.6] },
+    { id: 'floor-4', label: 'Floor, near the stairs', pos: [2.6, 0, 4.2] },
+    { id: 'floor-old-9', label: 'Floor, center', pos: [4.0, 0, 4.2] },
+    { id: 'floor-old-10', label: 'Floor, right center', pos: [5.4, 0, 4.2] },
+    { id: 'floor-old-11', label: 'Floor, front left', pos: [2.6, 0, 5.8] },
+    { id: 'floor-old-12', label: 'Floor, front middle', pos: [4.0, 0, 5.8] },
+    { id: 'floor-5', label: 'Floor, front right', pos: [5.4, 0, 5.8] },
+    { id: 'loft-1', label: 'Loft, front left', pos: [0.7, 2.3, 2.15] },
+    { id: 'loft-2', label: 'Loft, front middle', pos: [2.0, 2.3, 2.15] },
+    { id: 'loft-3', label: 'Loft, front right', pos: [3.3, 2.3, 2.15] },
+    { id: 'loft-4', label: 'Loft, back left', pos: [0.7, 2.3, 1.15] },
+    { id: 'block-1', label: 'Loft shelf, left', pos: [1.8, 2.9, 0.55] },
+    { id: 'block-2', label: 'Loft shelf, right', pos: [2.8, 2.9, 0.55] },
+    { id: 'floor-front-loft-1', label: 'Floor, under the loft (back)', pos: [1.2, 0, 1.0] },
+    { id: 'floor-front-loft-2', label: 'Floor, under the loft', pos: [1.2, 0, 2.6] },
     { id: 'step-1', label: 'Stairs, bottom', pos: [0.7, 0.6, 5.425] },
     { id: 'step-2', label: 'Stairs, second', pos: [0.7, 1.2, 4.675] },
     { id: 'step-3', label: 'Stairs, third', pos: [0.7, 1.75, 3.925] },

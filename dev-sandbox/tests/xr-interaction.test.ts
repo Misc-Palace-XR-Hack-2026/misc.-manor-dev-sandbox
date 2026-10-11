@@ -13,6 +13,7 @@ import {
   xrSelect,
   spawnPosition,
   walkableAt,
+  walkableFloorPad,
   panelButtons,
   runPanelAction,
   inspectPreview,
@@ -57,6 +58,16 @@ test('teleport accepts any walkable floor or loft point, not only tiny pads', ()
   assert.deepEqual(loft, { x: 2.0, y: 2.3, z: 1.6 });
   assert.equal(walkableAt({ x: 0, y: 0, z: 0 }), null);
   assert.equal(walkableAt({ x: -1, y: 0, z: 3 }), null);
+});
+
+test('VR teleport covers the extended floor, not only the original 6.3 room', () => {
+  assert.deepEqual(walkableAt({ x: 8.2, y: 0.02, z: 4.2 }), { x: 8.2, y: 0, z: 4.2 });
+  assert.deepEqual(walkableAt({ x: 5.4, y: 0, z: 6.6 }), { x: 5.4, y: 0, z: 6.6 });
+  assert.deepEqual(walkableAt({ x: 9.6, y: 0, z: 5.8 }), { x: 9.6, y: 0, z: 5.8 });
+  const pad = walkableFloorPad();
+  assert.ok(pad.width > 9, `walk pad width ${pad.width} must cover the 10.3 interior`);
+  assert.ok(pad.depth > 6.4, `walk pad depth ${pad.depth} must cover the 7.3 interior`);
+  assert.ok(pad.x > 4.5, 'pad center follows the expanded room, not the old 3.3 midpoint');
 });
 
 test('loft beacon is only visible in VR while standing on the floor', () => {

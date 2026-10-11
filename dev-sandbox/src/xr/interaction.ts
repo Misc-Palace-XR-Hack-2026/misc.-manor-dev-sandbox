@@ -46,10 +46,23 @@ export function spawnPosition(): { x: number; y: number; z: number } {
   return { x: 4.2, y: 0, z: 3.4 };
 }
 
+/** Invisible VR walk mesh covering the cozy-loft interior (10.3 × 7.3), inset from the walls. */
+export function walkableFloorPad(): { x: number; z: number; width: number; depth: number } {
+  const inset = 0.3;
+  const width = 10.3 - inset * 2;
+  const depth = 7.3 - inset * 2;
+  return { x: 10.3 / 2, z: 7.3 / 2, width, depth };
+}
+
 export function walkableAt(point: { x: number; y: number; z: number }): { x: number; y: number; z: number } | null {
   const { x, y, z } = point;
   if (y >= 2.0 && y <= 3.8 && x >= 0.4 && x <= 3.6 && z >= 0.4 && z <= 2.6) return { x, y: 2.3, z };
-  if (y >= -0.2 && y <= 0.4 && x >= 0.4 && x <= 6.2 && z >= 0.4 && z <= 6.2) return { x, y: 0, z };
+  const pad = walkableFloorPad();
+  const halfW = pad.width / 2;
+  const halfD = pad.depth / 2;
+  if (y >= -0.2 && y <= 0.4 && x >= pad.x - halfW && x <= pad.x + halfW && z >= pad.z - halfD && z <= pad.z + halfD) {
+    return { x, y: 0, z };
+  }
   return null;
 }
 
