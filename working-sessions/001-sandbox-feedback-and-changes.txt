@@ -1,0 +1,141 @@
+during working session 1 we discussed:
+
+10/08/2026 Misc. Palace. Working Sesson Meeting Notes:
+
+Matt pushed changes to the dev sandbox, movable objects, lighting changes, etc. looks great
+Rn clcking on object doesn't show preview / thumbnail of the media/resource it points to and you have to go to panel on the left to open
+Interactions should be more "glued" to the objects, so click interactions appear near the object in a pop up of actions that can be done:
+move objecti in 3d space, edit (which allows users to then delete, change link, name, idk.), go to link (in new tab) that wll have a thumbnail / iframe preview of the resource, and view object (which will just focus on the object, like it will pull the object to the camera and present it, leaving that state will just put the object back where it was
+omari mentioned it could be a click and hold, and then drag to the action and let go for it to take effect
+"preview" and "room edit" modes, should have same interaction paradimes but w preview being more limited / simplified
+hover on object shows name preview text (needs to have a timer so its not constantly hovering text on everything)
+(EDIT ROOM MODE) click on object will make object bounce a lil and show the 4 action options in the edit mode
+(PREVIEW MODE) click on object will make object bounce a lil and show the go to link action and the focus object view
+user panel on the left is a bit much visually and overwhelming, can be simplified and more interactions "glued" to objected
+
+--- matt then imolemented so many of the updates what a lead
+
+Hey feel free to add me to the group chat. I was gonna text this but I don’t have your number. **Project update: Misc. Palace sandbox — PR #1 merged into main**
+
+**Room customization**
+- Added movable, content-assignable study furniture: armchair, side table, turntable cabinet, rug, and leafy plant.
+- Added cozy objects: sleeping cat, teapot, lantern, headphones, cassette, and floor cushion.
+- All objects use the existing pickup/place system—no furniture locked behind themes.
+- Added independent lighting presets.
+- Added independent floor, wall, and background finishes, including custom PNG/JPEG uploads.
+- Added local photo uploads for room content.
+
+**Desktop and mobile UX**
+- Replaced the permanent sidebar with a full-screen room and on-demand **Edit room** / **Visit neighborhood** controls.
+- Added compact, translucent floating item inspectors.
+- Selected objects move to screen center for inspection.
+- Fixed centering after the user rotates, pans, or zooms the camera.
+
+**Neighborhood examples**
+- Added five themed example rooms: Curious Web, Garden Notebook, Greenhouse Conservatory, Creative Atelier, and Vinyl Lounge.
+- Each has its own developer-editable JSON configuration with themed objects and content.
+- Visiting examples preserves the personal room save; **Return home** restores it.
+- These are local examples, not live multiplayer rooms.
+
+**Soundtracks**
+- Added 11 licensed MP3 tracks with looping playback.
+- Music can follow lighting, use a manually selected track, or be turned off.
+- Added sequential fade transitions to prevent overlapping tracks.
+- Added pause/resume handling for opening links and leaving/returning to the page.
+
+**Reliability**
+- Fixed pasted URLs so web links remain clickable instead of being misclassified.
+- Preserved undo, JSON import/export, and legacy-room compatibility.
+- Added automated coverage for furniture, saves, surfaces, photos, neighborhood visits, music, and responsive UI.
+
+**Validation and scope**
+- Before merging: **20 tests passed**, desktop/mobile browser checks passed, and production build passed. (1/2)
+
+--- then the mad lad went and did ANOTHER PR
+
+Summary
+Speaker unmute control for iOS autoplay, room PNG capture with download/share, and item editing for links, notes, and files
+TV knobs/antenna, slimmer cat, and new assignable objects: console, cartridge, VHS, vinyl jacket, spoon, robot, telescope, car, motorcycle
+Collapsed inventory picker that shows the active object until tapped
+Test Plan
+ npm test in dev-sandbox (33 tests)
+ npm run build
+ Browser checks for capture, inventory picker, and object placement
+
+ *PR #2** — [merged](https://github.com/Misc-Palace-XR-Hack-2026/misc.-palace-dev-sandbox/pull/2) (`163588b`)
+
+- Speaker mute/unmute for iOS autoplay
+- **Take photo** (PNG download / share sheet)
+- **Edit** for existing links, notes, and files
+- TV knobs/antenna, slimmer cat
+- New objects: console, cartridge, VHS, vinyl jacket, spoon, robot, telescope, car, motorcycle
+- Inventory picker: shows the current object until tapped
+
+
+--- and all of it is really good starting point and now i want to standardize some things for the rest of the sandbox experience
+
+// some bugs
+- currently when you pick up an object and try to move it to a place that doesnt have a dot, or an oinvalid location, or off the room layout it just deletes the object and its gone, needs Fixed
+- currently music plays by default when you start a room i think, and also when you swithc rooms sometimes and sometimes when you mute it'll try to play the auto music, needs Fixed
+
+
+// design tweaks
+- the concept of the neighborhood is really cool and so are the themes and lighting settings, but the rooms for this sandbox that live inthis neighborhood shouldn't dictate the themed
+each room belongs to one of us dev's, and there is also a guest room which will be the default room ( this will be the room all users first land on like that of the user new experience, it may or may not have objects in it already we discuss for now
+thats a seaparate concern) the rest of the dev's rooms will have names ( that can be edited) and the name's are "German's room" "Matt's room" "Levi's room" "Jawan's room" "Omari's room" and us devvs will just pick our rooms to tweak etc.
+- each room then can sleect from the "themes" to change the them look of the rooms but it stays been the dev or the guests room, theme is just a look and feel selection for each room
+- same with lighting that is a selection 
+- now the guest room should actually start empty, no objects on first load, obv as we add objects in the guest room they stay saved
+- the rest of the dev rooms for now sure we can populate objects in them as we have been doing.
+- later we will have a layout selection of the room so you can change and select pre defined layouts, rn we only have one layout and tbh its a little small but we will get to update the default layout later
+- an idea is for the pre selected layouts of rooms to be iconic rooms from pop culture or movies or just cool rooms, such as a voxel simplified ish version of Drake and Josh's room from drake and josh, the room of Tony Montana w the desk from Scarface (no cocaine)
+maybe some other rooms idk, but for now no layout selection we are just dicsussing ideas too for later
+- so the theme, lighting, annd eventual layout selction for each room should be editable we may just need to update how we show info in the edit room page but for now whatver we can make the basic and fundamental changes 
+
+// UI preview changes
+- one important change for objects that areselected is we want to be able to render a preview/thumbnail sort of screen above the object thatshows what the media is for quick recognition, for example when you select an object
+floating above the object but not moving side to side like the object for now it can just be tastefully above it, should be a rectangular plane and maybe for links we show an iframe of this content, for meida like photos we show a preview thumbnail, we need a wayto show any media provided or link or something 
+- another big thing is we may want to cache and store this info somewhere for quick lookup and seamless experience, maybe in the background we start aching these thumbnail images or whatever'spreviews for each object for the givenroom we are in
+- also we may want a simple debug panel for us to look at that will help trace bugs or weird things, idk maybe this is extra af rn but m thinking if we sart cahcing and doing ffancy stuff we may need a way visible into the background without hurting speed or making it complex
+
+// quick commands and add object feature
+- we should be able to add objects now, so im thinking one of the only other visible buttons is like a plus sign in the bottom right corner
+- when you click the plus sign two options pop up on top vertically from the button, "Add object" and "Import from bookmarks/files"
+- the add object will be a singular add entry, add link or the file or the media whatvever and then it appears in the room for us to organize, idk how that interaction will be, we may 
+have to think about how we pick up and add objects generically bc on first organize thatobject isnt in the room so idk somethign intuitive and seamless and that makes snese w what we have we can discuss
+- then the import bookmarks / files will have two experiences, dik how we should do the bookmarks thing, for now simple POC a user would have downloaded teir bookmarks already and then teyimport that and we auto map them to obectts for them to place in the room (TBD how tnat will be done for multiple objects and also auto feature would be nice to enhance)
+- same for files this selection users can select entire folders, slect multiple files, or a zip folder or something
+
+// future state- along w the layout changes, we may want to predefine more "furniture" in the room thatisnt like selectable objects, such as the stairs we have or the loft looking bed, those structures defaukt in the room provide space and visual intrigue. maybe concepts like large bookshaleves imbedded in the walls so they dont look like objects just features in the roomc
+could be some components of rooms that we define, also maybe shelves as components or concepts, or other things like that
+- then later we could consider procedural generation for the a layout option or something but each procedural gen should incorporate soeof th estarirs,, windows, shelves, bookshelf thing, etc. in each one in cool ways
+- the reason this i simportant is later we may want objects to visually be organized together in containers and shelves and things like that are maybe good for that, so prep design and feelig of organiation intruced by the layout itself and the space lets consider that
+- the layour of rooms then would impact the experience, layout rooms for example drake and josh one w doors that lead elsewhere doors should just not be considered we can just have rectangular holes in the walls we can see through like we show windows, doors arent necessary rn 
+- when layout changes in rooms, naturally theobjects cant just be mapped to where they were in space so when layout changes a cool fetuare would be thatall objects get dropped in the middle of the room fromX feet up when teh layout switches, hence showing we have to organize it now
+- organizing objects could then ahev an auto mode, where we hit a button and all objects magically get sorted somewhere in the room, they fly one by one in nice fashion but not too slwo or fast like magic and swish into place, not just fly vstriaght to the spot they will land, like magic
+
+
+
+
+
+// layout room ideas 
+(all voxelified, colors can be kept or furniture of the room can have the same colors as walls so ppl dont mistake as objetcs?)
+- hey arnold's room
+- andy's room toy story
+- the futuristic white room w the glowy floor panels and the big back obelisk thing in 2001 space odyssey
+- drake and josh's room
+- sid's room toy story?
+- scarface room (no cocaine)
+- room from in the mood for love?
+- dumbledore's office room?
+
+// cleanup pt.2
+- click on object shouldnt change view to face that object, the view should not change and the object 
+should "face" us and maybe even just move forward towards  us w a shadow ish around it to distinguish anything  "behind" it in this state, and the preview and all that stays at the bottom right etc. but yea no more jumping to a view for each object
+the object selected still glows and moves a bit as it does but we dont move the view to face it it faces us and gets enlarged maybe, from wherever we may be viewing it (obv if we can click it its somewhere)
+this is to not shock the viewer w each move and stylistic
+
+// bugs
+- objects sometimes swap w each other when i click? idk if symptom of view change, 
+- moving object pick up ot location of another object deletes the object that was there, should just swap
+- also when i let go while mvng the room ,the room inertai stays too long it keeps movig for a while, i like the idea but it should be way more subtle

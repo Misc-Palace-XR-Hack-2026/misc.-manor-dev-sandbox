@@ -1,4 +1,4 @@
-import { validSurface, validSurfaces, type SurfaceTarget, type SurfaceSelection } from './surfaces';
+import { validSurface, validSurfaces, type SurfaceTarget, type SurfaceSelection, type SurfaceSettings } from './surfaces';
 import { validPhotoData } from './photos';
 import { soundtrackFromUnknown, validSoundtrack, type Soundtrack } from './soundtrack';
 import { lightingFromUnknown, validLighting, type Lighting } from './appearance';
@@ -12,7 +12,15 @@ import {
 
 const KEY = 'mp-sandbox:room';
 const BACKUP_KEY = 'mp-sandbox:room:backup';
+const ACTIVE_KEY = 'mp-sandbox:active-room';
 const MAX_HISTORY = 60;
+
+/** Each named room saves on its own. No room id = the original single-save keys (kept for old saves and tests). */
+export function roomKeys(roomId?: string): { main: string; backup: string } {
+  return roomId
+    ? { main: `mp-sandbox:rooms:${roomId}`, backup: `mp-sandbox:rooms:${roomId}:backup` }
+    : { main: KEY, backup: BACKUP_KEY };
+}
 
 const uid = (prefix: string) => `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
@@ -93,18 +101,44 @@ export class Store {
   selectedId: string | null = null; // representation id; never saved
   saveError: string | null = null;
   visiting: string | null = null;
+  /** Which named room is open (see core/rooms.ts). Undefined = the legacy single save. */
+  roomId: string | undefined;
   private homeSnapshot: string | null = null;
   private history: string[] = [];
   private listeners = new Set<() => void>();
+  /** An object the user picked up from a slot and has not put down yet (never saved). */
+  private pickup: { repId: string; slotId: string; depth: number } | null = null;
 
-  constructor(initial: RoomState) {
+  constructor(initial: RoomState, roomId?: string) {
     this.state = normalizeRoom(initial);
+    this.roomId = roomId;
+  }
+
+  /** Last open room id, or null on first run. */
+  static activeRoomId(): string | null {
+    try {
+      return localStorage.getItem(ACTIVE_KEY);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Saved display name of a room without loading it; null if it was never saved or can't be read. */
+  static savedName(roomId: string): string | null {
+    try {
+      const raw = localStorage.getItem(roomKeys(roomId).main);
+      const owner = raw ? (JSON.parse(raw) as { owner?: unknown }).owner : null;
+      return typeof owner === 'string' && owner.trim() ? owner : null;
+    } catch {
+      return null;
+    }
   }
 
   /** Last good local save, falling back to the backup copy. */
-  static loadSaved(): RoomState | null {
+  static loadSaved(roomId?: string): RoomState | null {
     let failed = false;
-    for (const key of [KEY, BACKUP_KEY]) {
+    const keys = roomKeys(roomId);
+    for (const key of [keys.main, keys.backup]) {
       try {
         const raw = localStorage.getItem(key);
         if (raw === null) continue;
@@ -149,8 +183,45 @@ export class Store {
     return () => this.listeners.delete(fn);
   }
   select(repId: string | null): void {
+    this.cancelPickup(repId);
     this.selectedId = repId;
     this.emit();
+  }
+
+  /**
+   * Pick an object up to move it. If the user then clicks somewhere that is not a slot (or presses Esc, or selects
+   * something else) the object goes back where it was instead of being lost.
+   */
+  pickUp(repId: string): void {
+    const slotId = this.slotOf(repId);
+    if (!slotId) {
+      this.select(repId);
+      return;
+    }
+    this.unplace(repId);
+    this.pickup = { repId, slotId, depth: this.history.length };
+    this.selectedId = repId;
+    this.emit();
+  }
+
+  get holding(): string | null {
+    return this.pickup?.repId ?? null;
+  }
+
+  private cancelPickup(next: string | null): void {
+    const p = this.pickup;
+    if (!p || next === p.repId) return;
+    this.pickup = null;
+    if (!this.state.representations.some((r) => r.id === p.repId) || this.slotOf(p.repId)) return;
+    if (this.history.length === p.depth) {
+      this.undo(); // nothing happened since the pick-up, so undo is an exact restore
+    } else if (!this.repAt(p.slotId)) {
+      this.place(p.repId, p.slotId);
+    } else {
+      this.commit((s) => {
+        this.placeInFreeSlot(s, p.repId);
+      });
+    }
   }
 
   // ---- commands (every one is undoable) ---------------------------------
@@ -220,6 +291,18 @@ export class Store {
     });
   }
 
+  /** Apply a theme's look (floor, wall, background, lighting) in one undoable step. Content and layout are untouched. */
+  applyLook(look: { surfaces?: SurfaceSettings; lighting?: Lighting }): void {
+    if (look.surfaces !== undefined && !validSurfaces(look.surfaces)) throw new Error('Invalid theme surfaces.');
+    if (look.lighting !== undefined && !validLighting(look.lighting)) throw new Error('Invalid theme lighting.');
+    this.commit((s) => {
+      if (look.surfaces && Object.keys(look.surfaces).length) s.surfaces = JSON.parse(JSON.stringify(look.surfaces));
+      else delete s.surfaces;
+      if (look.lighting) s.lighting = look.lighting;
+      else delete s.lighting;
+    });
+  }
+
   setSoundtrack(soundtrack: Soundtrack | undefined): void {
     if (soundtrack !== undefined && !validSoundtrack(soundtrack)) throw new Error('Invalid room soundtrack.');
     this.commit((s) => {
@@ -241,19 +324,35 @@ export class Store {
     });
   }
 
-  /** Move an object to a slot. If the slot is taken the two swap (or the other one is put down). */
+  /** Move an object to a slot. If the slot is taken, the two swap (or the target is unplaced if source is being held). */
   place(repId: string, slotId: string): void {
     if (!this.layout.slots.some((sl) => sl.id === slotId)) return;
     if (this.slotOf(repId) === slotId) return;
     this.commit((s) => {
       const mine = s.placements.find((p) => p.representationId === repId);
       const other = s.placements.find((p) => p.slotId === slotId);
-      if (other) {
-        if (mine) other.slotId = mine.slotId;
-        else s.placements = s.placements.filter((p) => p !== other);
+      const wasHeld = this.pickup?.repId === repId;
+      const heldFrom = this.pickup?.slotId;
+
+      if (other && mine) {
+        // Both placed: swap their slots
+        other.slotId = mine.slotId;
+        mine.slotId = slotId;
+      } else if (other && !mine && wasHeld && heldFrom) {
+        // Held object placed on occupied slot: swap using the pickup info
+        other.slotId = heldFrom;
+        s.placements.push({ representationId: repId, slotId });
+      } else if (other && !mine) {
+        // Held object placed on occupied slot (pickup info not available): unplace target and place ours
+        s.placements = s.placements.filter((p) => p !== other);
+        s.placements.push({ representationId: repId, slotId });
+      } else if (!other && mine) {
+        // We're placed: just move to the slot
+        mine.slotId = slotId;
+      } else if (!other && !mine) {
+        // Neither placed: place ours
+        s.placements.push({ representationId: repId, slotId });
       }
-      if (mine) mine.slotId = slotId;
-      else s.placements.push({ representationId: repId, slotId });
     });
   }
 
@@ -337,7 +436,52 @@ export class Store {
     return { added: fresh.length, placed };
   }
 
+  /** Add picked files or folders (name or relative path only; the file itself is never copied). One undo step. */
+  importFiles(entries: { title: string; ref: string }[]): { added: number; placed: number } {
+    const known = new Set(this.state.contentItems.map((c) => c.sourceRef));
+    const fresh = entries.filter((e) => e.ref && !known.has(e.ref)).slice(0, 200);
+    let placed = 0;
+    if (!fresh.length) return { added: 0, placed: 0 };
+    this.commit((s) => {
+      for (const e of fresh) {
+        const c: ContentItem = {
+          id: uid('ci'), type: guessType(e.ref), title: e.title || e.ref, sourceKind: 'file', sourceRef: e.ref,
+          tags: [], createdAt: new Date().toISOString(),
+        };
+        s.contentItems.push(c);
+        if (this.freeSlotsIn(s).length > 0) {
+          const rep = this.createRep(s, c);
+          if (this.placeInFreeSlot(s, rep.id)) placed++;
+        }
+      }
+    });
+    return { added: fresh.length, placed };
+  }
+
+  /**
+   * Open another named room. Each room keeps its own save; a room with no save yet starts from `seed`.
+   * Throws (and changes nothing) if that room's save is unreadable.
+   */
+  switchRoom(roomId: string, seed: unknown): void {
+    const next = Store.loadSaved(roomId) ?? normalizeRoom(seed);
+    this.roomId = roomId;
+    this.state = next;
+    this.history = [];
+    this.selectedId = null;
+    this.visiting = null;
+    this.homeSnapshot = null;
+    this.pickup = null;
+    this.saveError = null;
+    try {
+      localStorage.setItem(ACTIVE_KEY, roomId);
+    } catch {
+      /* Remembering the last room is a convenience only. */
+    }
+    this.emit();
+  }
+
   undo(): void {
+    this.pickup = null;
     const prev = this.history.pop();
     if (!prev) return;
     this.state = JSON.parse(prev) as RoomState;
@@ -354,6 +498,7 @@ export class Store {
   replaceState(data: unknown): void {
     const error = validateRoom(data);
     if (error) throw new Error(error);
+    this.pickup = null;
     this.pushHistory();
     this.state = normalizeRoom(data);
     this.selectedId = null;
@@ -419,6 +564,7 @@ export class Store {
   }
 
   private commit(fn: (s: RoomState) => void): void {
+    this.pickup = null;
     this.pushHistory();
     fn(this.state);
     this.changed();
@@ -436,9 +582,10 @@ export class Store {
   /** Keep the previous save as a backup before overwriting, and surface failures instead of hiding them. */
   private save(): void {
     try {
-      const previous = localStorage.getItem(KEY);
-      if (previous) localStorage.setItem(BACKUP_KEY, previous);
-      localStorage.setItem(KEY, JSON.stringify(this.state));
+      const keys = roomKeys(this.roomId);
+      const previous = localStorage.getItem(keys.main);
+      if (previous) localStorage.setItem(keys.backup, previous);
+      localStorage.setItem(keys.main, JSON.stringify(this.state));
       this.saveError = null;
     } catch (e) {
       this.saveError = `Could not save locally: ${e instanceof Error ? e.message : String(e)}`;

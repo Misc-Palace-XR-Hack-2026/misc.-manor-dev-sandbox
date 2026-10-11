@@ -3,21 +3,26 @@ import { surfaceTexture, surfaceGeometry } from './surface-textures';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { Store } from '../core/store';
 import type { ObjectKind } from '../core/types';
+import type { RoomLayout } from '../core/layout';
 import { buildObject } from './objects';
 import { disposeGroup } from './resources';
 import { LIGHTING_PRESETS } from '../core/appearance';
+import { buildPreview, type Preview } from '../core/preview';
+import { PreviewCardView } from './preview-card';
+import { mediaArt, type MediaArt } from '../core/media-art';
 
 // Thin 3D adapter: draws store.state and sends clicks back as store commands. Holds no truth of its own.
 // Replaceable later (IWSDK, Babylon) as long as the store contract stays the same.
 
-const VIEW_HEIGHT = 11; // orthographic frustum height, world units
 const YAW = Math.PI / 4; // objects face the isometric camera
+const HOVER_DWELL_MS = 400; // tooltip appears only after the pointer rests on an object
 
 interface Entry {
   group: THREE.Group;
   kind: ObjectKind;
   contentKey: string;
   target: THREE.Vector3;
+  selectedState?: { originalPos: THREE.Vector3; targetRotation: number };
 }
 
 export class RoomView {
@@ -41,9 +46,15 @@ export class RoomView {
   private lamp = new THREE.PointLight(0xffd8a8, 0, 6, 2);
   private roomGroup = new THREE.Group();
   private isoOffset = new THREE.Vector3(14, 14, 14);
-  private inspectHome: { target: THREE.Vector3; offset: THREE.Vector3; zoom: number } | null = null;
-  private inspectGoal = new THREE.Vector3();
-  private inspectZoom = 1;
+  private viewHeight = 11; // orthographic frustum height, world units; set per layout
+  private ground!: THREE.Mesh;
+  private hoverTimer: number | undefined;
+  private hoverRep: string | null = null;
+  private card: PreviewCardView;
+  private cardAnchor = new THREE.Vector3();
+  private cardKey = '';
+  private cardPreview: Preview | null = null;
+  private cardArt: MediaArt | null = null;
 
   constructor(private container: HTMLElement, private store: Store) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -60,6 +71,9 @@ export class RoomView {
     this.tooltip.className = 'tooltip';
     this.tooltip.hidden = true;
     container.appendChild(this.tooltip);
+    // On the body, not inside the room: the item sheet and menus are body-level siblings of the room and would
+    // otherwise paint over the card. The room fills the viewport, so room pixels and viewport pixels are the same.
+    this.card = new PreviewCardView(document.body);
 
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 120);
     const target = new THREE.Vector3(3, 1.6, 3);
@@ -71,6 +85,7 @@ export class RoomView {
     this.controls.minZoom = 0.6;
     this.controls.maxZoom = 3;
     this.controls.maxPolarAngle = Math.PI * 0.49;
+    this.controls.dampingFactor = 0.15; // Higher damping = stops faster after drag
     this.controls.update();
 
     this.scene.add(this.roomGroup, this.objectsGroup, this.markerGroup);
@@ -80,7 +95,14 @@ export class RoomView {
     el.addEventListener('pointerdown', (e) => (this.downAt = { x: e.clientX, y: e.clientY }));
     el.addEventListener('pointerup', (e) => this.onPointerUp(e));
     el.addEventListener('pointermove', (e) => this.onHover(e));
-    el.addEventListener('pointerleave', () => (this.tooltip.hidden = true));
+    el.addEventListener('pointerleave', () => this.hideTooltip());
+    // Esc backs out of whatever is in hand; a held object returns to where it came from.
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || this.store.selectedId === null) return;
+      const t = e.target;
+      if (t instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+      this.store.select(null);
+    });
 
     new ResizeObserver(() => this.resize()).observe(container);
     this.resize();
@@ -88,6 +110,13 @@ export class RoomView {
     this.store.subscribe(() => this.sync());
     this.sync();
     this.renderer.setAnimationLoop((t) => this.tick(t / 1000));
+    // The card follows the item sheet on its own frame loop, not the 3D one. The sheet's size changes as its content
+    // fills in, and a hiccup in rendering must never leave the card stuck at a stale spot over the sheet.
+    const followSheet = () => {
+      try { this.updatePreviewCard(); } catch (err) { console.error('preview card', err); }
+      requestAnimationFrame(followSheet);
+    };
+    requestAnimationFrame(followSheet);
   }
 
   /** Render and copy synchronously before WebGL discards its drawing buffer. */
@@ -111,14 +140,11 @@ export class RoomView {
   // ---- scene setup ------------------------------------------------------
   private addLights(): void {
     this.scene.add(this.hemi, this.lamp);
-    this.lamp.position.set(5.6, 1.4, 3.7);
     const sun = this.sun;
-    sun.position.set(8, 13, -7); // from behind the right wall so the window frames throw shadows into the room
-    sun.target.position.set(3, 0, 3);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
     const c = sun.shadow.camera;
-    c.left = -11; c.right = 11; c.top = 11; c.bottom = -11; c.near = 1; c.far = 50;
+    c.left = -14; c.right = 14; c.top = 14; c.bottom = -14; c.near = 1; c.far = 60;
     sun.shadow.bias = -0.0004;
     sun.shadow.normalBias = 0.03;
     this.scene.add(sun, sun.target);
@@ -126,13 +152,32 @@ export class RoomView {
     // Invisible ground that only shows the room's shadow, like the reference render.
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.ShadowMaterial({ opacity: 0.22 }));
     ground.rotation.x = -Math.PI / 2;
-    ground.position.set(3, -1.4, 3);
     ground.receiveShadow = true;
+    this.ground = ground;
     this.scene.add(ground);
+  }
+
+  /** Aim camera, lights and shadow ground at a layout's focus point and size the frustum to its room. */
+  private frameLayout(layout: RoomLayout): void {
+    const [fx, fy, fz] = layout.focus;
+    const focus = new THREE.Vector3(fx, fy, fz);
+    this.viewHeight = layout.viewHeight;
+    this.camera.zoom = 1;
+    this.controls.target.copy(focus);
+    this.camera.position.copy(focus).add(this.isoOffset);
+    this.camera.updateProjectionMatrix();
+    this.controls.update();
+    this.lamp.distance = 10;
+    this.lamp.position.set(fx + 1, 1.4, fz);
+    this.sun.position.set(fx + 5, 13, fz - 10); // from behind the right wall so window frames throw shadows into the room
+    this.sun.target.position.set(fx, 0, fz);
+    this.ground.position.set(fx, -1.4, fz);
+    this.resize();
   }
 
   private buildLayout(): void {
     const layout = this.store.layout;
+    if (this.layoutId !== layout.id) this.frameLayout(layout);
     this.layoutId = layout.id;
     const palette = layout.palette;
     if (this.scene.background instanceof THREE.Texture) this.scene.background.dispose();
@@ -193,10 +238,10 @@ export class RoomView {
     const h = this.container.clientHeight || 1;
     this.renderer.setSize(w, h);
     const aspect = w / h;
-    this.camera.left = (-VIEW_HEIGHT * aspect) / 2;
-    this.camera.right = (VIEW_HEIGHT * aspect) / 2;
-    this.camera.top = VIEW_HEIGHT / 2;
-    this.camera.bottom = -VIEW_HEIGHT / 2;
+    this.camera.left = (-this.viewHeight * aspect) / 2;
+    this.camera.right = (this.viewHeight * aspect) / 2;
+    this.camera.top = this.viewHeight / 2;
+    this.camera.bottom = -this.viewHeight / 2;
     this.camera.updateProjectionMatrix();
   }
 
@@ -251,7 +296,8 @@ export class RoomView {
       }
     }
 
-    this.markerGroup.visible = this.store.selectedId !== null && !this.objects.has(this.store.selectedId);
+    const held = this.store.holding !== null;
+    this.markerGroup.visible = held || (this.store.selectedId !== null && !this.objects.has(this.store.selectedId));
     for (const [slotId, m] of this.markers) {
       const occupant = this.store.repAt(slotId);
       const color = !occupant ? 0xfff2b0 : occupant === this.store.selectedId ? 0x9be39b : 0xff9ec4;
@@ -263,11 +309,80 @@ export class RoomView {
     const selected = this.store.selectedId;
     for (const [id, e] of this.objects) {
       const bob = id === selected ? 0.2 + Math.sin(t * 4) * 0.05 : 0;
+
+      // On selection: save original position and calculate minimal clockwise rotation to face camera
+      if (id === selected && !e.selectedState) {
+        e.selectedState = {
+          originalPos: e.target.clone(),
+          targetRotation: this.minimalClockwiseRotation(e.group.rotation.y, YAW),
+        };
+      }
+      if (id !== selected && e.selectedState) {
+        delete e.selectedState;
+      }
+
+      // Animate position: adaptive to zoom level and camera angle
+      // When selected: pull toward center (varies per object), and push toward camera to prevent clipping
+      const targetPos = (() => {
+        if (id !== selected || !e.selectedState) return e.target;
+
+        const originalPos = e.selectedState.originalPos;
+        const roomCenter = this.controls.target;
+        const zoom = this.camera.zoom;
+        const isSuperZoomed = zoom >= 2.5;
+
+        // 1. Pull toward room center: scales with zoom, applied to all axes
+        // At zoom 0.6: ~0.23, at zoom 1.0: ~0.25, at zoom 2.0: ~0.30, at zoom 3.0: ~0.35
+        const centerLerpAmount = 0.20 + zoom * 0.05;
+        const centerPull = originalPos.clone().lerp(roomCenter, centerLerpAmount).sub(originalPos);
+
+        // 2. Push toward camera: prevents clipping with walls/furniture, scales at higher zoom
+        let cameraPush = new THREE.Vector3(0, 0, 0);
+        if (zoom >= 1.5) {
+          const distToCamera = this.camera.position.distanceTo(originalPos);
+          if (distToCamera > 0.5) {
+            const dirToCamera = this.camera.position.clone().sub(originalPos).normalize();
+            // At super zoom (>= 2.5), increase push multiplier to ensure visibility
+            const pushMultiplier = isSuperZoomed ? 1.25 : 1.0;
+            const pushDistance = Math.min(distToCamera * 0.1, 1.5) * (zoom - 1.0) * pushMultiplier;
+            cameraPush = dirToCamera.multiplyScalar(pushDistance);
+          }
+        }
+
+        // 3. Additional vertical boost: scales with zoom, ensures clearance above ground/low positions
+        // This is ADAPTIVE: objects already high up get less boost, objects low get more
+        const objectHeightAboveGround = originalPos.y - roomCenter.y;
+        const heightNormalized = Math.max(0, objectHeightAboveGround / 3.0); // normalize to 0-1 range
+        const boostFactor = Math.max(0.4, 1.0 - heightNormalized * 0.3); // high objects boost less
+        const verticalBoost = Math.max(0.5, (zoom - 0.6) * 0.6) * boostFactor;
+
+        // 4. Combine all forces
+        const offset = centerPull.add(cameraPush).add(new THREE.Vector3(0, verticalBoost, 0));
+        return originalPos.clone().add(offset);
+      })();
+
       const p = e.group.position;
-      p.x += (e.target.x - p.x) * 0.22;
-      p.z += (e.target.z - p.z) * 0.22;
-      p.y += (e.target.y + bob - p.y) * 0.22;
-      e.group.rotation.y = YAW + (id === selected ? Math.sin(t * 2) * 0.25 : 0);
+      p.x += (targetPos.x - p.x) * 0.22;
+      p.z += (targetPos.z - p.z) * 0.22;
+      p.y += (targetPos.y + bob - p.y) * 0.22;
+
+      // Animate rotation: face camera with minimal clockwise rotation when selected
+      if (id === selected && e.selectedState) {
+        const targetRot = e.selectedState.targetRotation + Math.sin(t * 2) * 0.25;
+        e.group.rotation.y += (targetRot - e.group.rotation.y) * 0.18;
+        // Scale up 25% from original (1.6 → 2.0)
+        const targetScale = 1.6 * 1.25; // OBJECT_SCALE * 1.25
+        e.group.scale.x += (targetScale - e.group.scale.x) * 0.15;
+        e.group.scale.y += (targetScale - e.group.scale.y) * 0.15;
+        e.group.scale.z += (targetScale - e.group.scale.z) * 0.15;
+      } else {
+        // Return to rest state: face isometric camera (YAW), scale to original 1.6
+        e.group.rotation.y = YAW;
+        const restScale = 1.6; // OBJECT_SCALE
+        e.group.scale.x += (restScale - e.group.scale.x) * 0.15;
+        e.group.scale.y += (restScale - e.group.scale.y) * 0.15;
+        e.group.scale.z += (restScale - e.group.scale.z) * 0.15;
+      }
     }
     if (this.markerGroup.visible) {
       const pulse = 0.4 + Math.sin(t * 5) * 0.12;
@@ -280,55 +395,67 @@ export class RoomView {
     this.renderer.render(this.scene, this.camera);
   }
 
-  private frameSelection(): void {
-    const roomEl = this.container;
-    const selected = this.store.selectedId;
-    const entry = selected ? this.objects.get(selected) : undefined;
-    const inspecting = Boolean(entry);
-    if (!inspecting || !entry) {
-      delete roomEl.dataset.inspectX;
-      delete roomEl.dataset.inspectY;
-      if (this.inspectHome) {
-        this.controls.target.lerp(this.inspectHome.target, 0.18);
-        this.camera.position.lerp(this.inspectHome.target.clone().add(this.inspectHome.offset), 0.18);
-        this.camera.zoom += (this.inspectHome.zoom - this.camera.zoom) * 0.18;
-        this.camera.updateProjectionMatrix();
-        if (this.controls.target.distanceTo(this.inspectHome.target) < 0.04) {
-          this.controls.target.copy(this.inspectHome.target);
-          this.camera.position.copy(this.inspectHome.target).add(this.inspectHome.offset);
-          this.camera.zoom = this.inspectHome.zoom;
-          this.camera.updateProjectionMatrix();
-          this.inspectHome = null;
-        }
-      }
-      this.controls.enabled = true;
+  /**
+   * Floating preview above the selected object. It is anchored to the object's slot, not its animated position,
+   * so it stays steady while the object bobs and turns. Needs the camera matrices from this frame's render.
+   */
+  private updatePreviewCard(): void {
+    const id = this.store.selectedId;
+    const entry = id ? this.objects.get(id) : undefined;
+    const rep = id ? this.store.state.representations.find((r) => r.id === id) : undefined;
+    const content = rep ? this.store.content(rep.contentItemId) : undefined;
+    // Every preview kind docks above the item sheet (bottom right) so it sits still and is easy to reach. Without the
+    // sheet it floats over the object. An object that is selected but not placed yet has nowhere to float, so it
+    // only shows when the sheet is there.
+    const sheet = document.querySelector<HTMLElement>('.item-sheet:not([hidden])');
+    if (!content || (!entry && !sheet)) { this.card.show(null); return; }
+    // Rebuild the preview only when the content changed. The card swaps DOM on a new preview object, and an iframe
+    // must not reload every frame.
+    const key = [content.id, content.type, content.title, content.sourceKind, content.sourceRef,
+      content.imageData?.length ?? 0, content.imageData?.slice(-32) ?? ''].join('\u0001');
+    if (key !== this.cardKey || !this.cardPreview || !this.cardArt) {
+      this.cardKey = key;
+      this.cardPreview = buildPreview(content);
+      this.cardArt = mediaArt(content);
+    }
+    this.card.show(this.cardPreview, this.cardArt);
+    if (sheet) {
+      // Position the card with its bottom-right corner 10px above and aligned with the sheet's top-right.
+      // dockBottomRight handles viewport clamping so the card never goes off-page.
+      const s = sheet.getBoundingClientRect();
+      this.card.dockBottomRight(s.right, s.top - 10);
       return;
     }
-
-    if (!this.inspectHome) {
-      this.inspectHome = {
-        target: this.controls.target.clone(),
-        offset: this.camera.position.clone().sub(this.controls.target),
-        zoom: this.camera.zoom,
-      };
-    }
-
-    const zoom = 1.7;
-    this.inspectGoal.copy(entry.group.position);
-    this.inspectZoom = zoom;
-    this.controls.target.lerp(this.inspectGoal, 0.22);
-    this.camera.position.lerp(this.inspectGoal.clone().add(this.isoOffset), 0.22);
-    this.camera.zoom += (this.inspectZoom - this.camera.zoom) * 0.22;
-    this.camera.updateProjectionMatrix();
-    // OrbitControls is suspended during inspection, so explicitly orient the
-    // camera toward the animated target after a prior user orbit/pan.
-    this.camera.lookAt(this.controls.target);
+    // Floating mode: anchor the card above the selected object, projected through the camera.
+    this.cardAnchor.copy(entry!.target).y += 2;
     this.camera.updateMatrixWorld();
-    this.controls.enabled = false;
+    const ndc = this.cardAnchor.project(this.camera);
+    this.card.moveTo(((ndc.x + 1) / 2) * this.container.clientWidth, ((1 - ndc.y) / 2) * this.container.clientHeight);
+  }
 
-    const ndc = entry.group.position.clone().project(this.camera);
-    roomEl.dataset.inspectX = String((ndc.x + 1) / 2);
-    roomEl.dataset.inspectY = String((1 - ndc.y) / 2);
+  private frameSelection(): void {
+    // Camera no longer moves to face selected objects. Objects instead rotate to face the camera and scale up,
+    // avoiding jarring view jumps. Camera stays enabled for free panning/orbiting at all times.
+    this.controls.enabled = true;
+  }
+
+  /**
+   * Calculate the target rotation angle for an object to face the camera viewer directly.
+   * Takes the current rotation and finds the shortest clockwise rotation to reach the target.
+   * Returns a normalized angle in [-PI, PI].
+   */
+  private minimalClockwiseRotation(current: number, target: number): number {
+    let diff = target - current;
+    // Normalize to [-PI, PI]
+    while (diff > Math.PI) diff -= 2 * Math.PI;
+    while (diff < -Math.PI) diff += 2 * Math.PI;
+    // If diff is negative (counterclockwise), go the long way around (clockwise)
+    if (diff < 0) diff += 2 * Math.PI;
+    // Return the target angle, normalized to [-PI, PI]
+    let result = current + diff;
+    while (result > Math.PI) result -= 2 * Math.PI;
+    while (result < -Math.PI) result += 2 * Math.PI;
+    return result;
   }
 
   // ---- input ------------------------------------------------------------
@@ -356,7 +483,17 @@ export class RoomView {
     const d = this.downAt;
     this.downAt = null;
     if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 5) return; // it was an orbit drag
+
     const selected = this.store.selectedId;
+    const repId = this.repIdAt(e); // What object did we click on?
+
+    // If we clicked on an object, select it. This takes priority over placement.
+    if (repId) {
+      this.store.select(repId !== selected ? repId : null);
+      return;
+    }
+
+    // We didn't click on an object. If we have a selected object and clicked on a slot, try to place it.
     if (selected) {
       const slotId = this.slotIdAt(e);
       if (slotId) {
@@ -365,25 +502,44 @@ export class RoomView {
         return;
       }
     }
-    const repId = this.repIdAt(e);
-    this.store.select(repId && repId !== selected ? repId : null);
+
+    // Clicked on empty space: deselect
+    this.store.select(null);
   }
 
   private onHover(e: PointerEvent): void {
     if (this.downAt) return;
     const repId = this.repIdAt(e);
-    const rep = repId ? this.store.state.representations.find((r) => r.id === repId) : undefined;
-    const content = rep ? this.store.content(rep.contentItemId) : undefined;
     const slotOver = this.store.selectedId ? this.slotIdAt(e) : null;
     this.renderer.domElement.style.cursor = repId || slotOver ? 'pointer' : 'grab';
-    if (!content) {
-      this.tooltip.hidden = true;
+    if (!repId || this.store.selectedId) {
+      this.hideTooltip();
       return;
     }
     const r = this.container.getBoundingClientRect();
-    this.tooltip.textContent = `${content.title}  (${content.type})`;
-    this.tooltip.style.left = `${e.clientX - r.left + 14}px`;
-    this.tooltip.style.top = `${e.clientY - r.top + 14}px`;
-    this.tooltip.hidden = false;
+    const x = e.clientX - r.left + 14;
+    const y = e.clientY - r.top + 14;
+    if (this.hoverRep === repId) {
+      // Already resting on this object: follow the pointer once the tip is showing.
+      if (!this.tooltip.hidden) { this.tooltip.style.left = `${x}px`; this.tooltip.style.top = `${y}px`; }
+      return;
+    }
+    this.hideTooltip();
+    this.hoverRep = repId;
+    this.hoverTimer = window.setTimeout(() => {
+      const rep = this.store.state.representations.find((o) => o.id === repId);
+      const content = rep ? this.store.content(rep.contentItemId) : undefined;
+      if (!content || this.hoverRep !== repId) return;
+      this.tooltip.textContent = `${content.title}  (${content.type})`;
+      this.tooltip.style.left = `${x}px`;
+      this.tooltip.style.top = `${y}px`;
+      this.tooltip.hidden = false;
+    }, HOVER_DWELL_MS);
+  }
+
+  private hideTooltip(): void {
+    window.clearTimeout(this.hoverTimer);
+    this.hoverRep = null;
+    this.tooltip.hidden = true;
   }
 }
