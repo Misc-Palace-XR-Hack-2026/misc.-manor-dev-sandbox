@@ -1,5 +1,6 @@
 import type { Lighting } from './appearance';
 import type { SurfaceSettings } from './surfaces';
+import { SURFACE_LOOKS } from './surface-looks';
 
 // A theme is only a look: floor, wall and background finishes plus lighting. It says nothing about who owns the
 // room or what is in it. Applying one is a single undoable edit, and each part can still be changed afterwards.
@@ -41,4 +42,9 @@ export const THEMES: Record<string, Theme> = {
     surfaces: { floor: { preset: 'wood' }, wall: { preset: 'wood' }, background: { preset: 'gradient' } },
     lighting: 'twilight',
   },
+  ...Object.fromEntries(Object.entries(SURFACE_LOOKS).map(([lighting, look]) => [`look-${lighting}`, {
+    label: look.label,
+    lighting: lighting as Lighting,
+    surfaces: {floor:{preset:look.floor.id},wall:{preset:look.wall.id},background:{preset:look.background.id}},
+  }])),
 };

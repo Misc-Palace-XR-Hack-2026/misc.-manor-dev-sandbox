@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import type { SurfaceSelection, SurfaceTarget } from '../core/surfaces';
+import { SURFACE_LOOKS } from '../core/surface-looks';
+import { paintFinish } from './procedural-finishes';
 
 /** Owned by the caller. All defaults are generated locally; no remote requests. */
 export function surfaceTexture(target: SurfaceTarget, selection: SurfaceSelection, onError: () => void): THREE.Texture {
@@ -13,11 +15,14 @@ export function surfaceTexture(target: SurfaceTarget, selection: SurfaceSelectio
   image.onerror = () => { if (!disposed) onError(); };
   image.src = selection.imageData!;
  } else {
-  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 256;
-  const c = canvas.getContext('2d')!;
+  const finish = Object.values(SURFACE_LOOKS).map(look=>look[target]).find(f=>f.id===selection.preset);
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = finish ? 512 : 256;
+  // New finishes read pixels for seeded grain; stay on one raster backend for reproducible output.
+  const c = canvas.getContext('2d', finish ? {willReadFrequently:true} : undefined)!;
   const preset = selection.preset;
   const fill = (color: string, x=0, y=0, w=256, h=256) => { c.fillStyle=color; c.fillRect(x,y,w,h); };
-  if (target === 'background') {
+  if (finish) paintFinish(c,finish,target==='background');
+  else if (target === 'background') {
    const colors = preset === 'sky' ? ['#7aafd3','#e8f0ed'] : preset === 'gradient' ? ['#403d68','#d9a38b'] : ['#b7bbb6','#e0ded5'];
    const g=c.createLinearGradient(0,0,0,256);g.addColorStop(0,colors[0]);g.addColorStop(1,colors[1]);c.fillStyle=g;c.fillRect(0,0,256,256);
   } else if (preset === 'wood') {

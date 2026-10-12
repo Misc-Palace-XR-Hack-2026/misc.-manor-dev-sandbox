@@ -1,9 +1,10 @@
 import { validPhotoData } from './photos';
+import { finishPresets } from './surface-looks';
 
 export const SURFACE_PRESETS = {
- floor: {wood:'Warm wood',stone:'Slate stone',tile:'Cream tile'},
- wall: {plaster:'Soft plaster',brick:'Terracotta brick',wood:'Wood paneling'},
- background: {neutral:'Neutral studio',sky:'Blue sky',gradient:'Dusk gradient'},
+ floor: {wood:'Warm wood',stone:'Slate stone',tile:'Cream tile',...finishPresets('floor')},
+ wall: {plaster:'Soft plaster',brick:'Terracotta brick',wood:'Wood paneling',...finishPresets('wall')},
+ background: {neutral:'Neutral studio',sky:'Blue sky',gradient:'Dusk gradient',...finishPresets('background')},
 } as const;
 export type SurfaceTarget = keyof typeof SURFACE_PRESETS;
 export interface SurfaceSelection { preset: string; imageData?: string }
