@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import type { Store } from '../core/store';
+import { XrPreview } from './preview';
 import { objectActions, objectMenuAnchor, runPanelAction, type PanelActionResult } from './interaction';
 
 export class XrObjectMenu {
   readonly group = new THREE.Group();
   private buttons: THREE.Mesh[] = [];
   private hover: THREE.Mesh | null = null;
+  private preview: XrPreview | null = null;
 
   constructor(private store: Store, private onAction: (result: PanelActionResult) => void) {
     this.group.visible = false;
@@ -48,14 +50,27 @@ export class XrObjectMenu {
   }
 
   private rebuild(): void {
+    if (this.preview) {
+      this.group.remove(this.preview.mesh);
+      this.preview.dispose();
+      this.preview = null;
+    }
     for (const button of this.buttons) {
       button.geometry.dispose();
+      (button.material as THREE.MeshBasicMaterial).map?.dispose();
       (button.material as THREE.Material).dispose();
       this.group.remove(button);
     }
     this.buttons = [];
     this.hover = null;
     const actions = objectActions(this.store);
+    const rep = this.store.state.representations.find(r => r.id === this.store.selectedId);
+    const content = rep ? this.store.content(rep.contentItemId) : undefined;
+    if (content) {
+      this.preview = new XrPreview(content);
+      this.group.add(this.preview.mesh);
+      actions.push({ id: 'cancel', label: 'Close' });
+    }
     const span = (actions.length - 1) * 0.28;
     actions.forEach((action, i) => {
       const canvas = document.createElement('canvas');

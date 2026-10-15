@@ -271,7 +271,8 @@ export class XrSession {
         this.marker.visible = true;
       }
     }
-    this.objectMenu.follow(menuAt, this.camera);
+    // Pickup keeps the destination ray clear and hides the selected preview.
+    this.objectMenu.follow(this.placing ? null : menuAt, this.camera);
   }
 
   private pick(controller: THREE.Group):
