@@ -58,7 +58,7 @@ Target: roughly 60 seconds including pauses and end card. German speaks in his o
 >
 > [Real headset footage. Let the room breathe.]
 >
-> Cozy Palace. Watch the demo.
+> Cozy Palace. Try the demo.
 
 The personal story is a proposed scene, not a claim about German's real life. Choose a song that genuinely fits him or treat it openly as a performed example. Use original or cleared content. The "step inside" line requires successful real-headset capture; it is not an unverified release or platform claim.
 
