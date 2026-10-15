@@ -232,10 +232,19 @@ export class RoomView {
     }
   }
 
-  // Screen-space cover: never stretch a photo or assume it is a panorama.
-  private fitBackground(): void {
+  private fitBackground(immersive = false): void {
     const texture = this.scene.background;
     if (!(texture instanceof THREE.Texture)) return;
+    // A UV background is a screen-space quad: it ignores even XR eye rotation.
+    // In VR wrap the image around the world; Three.js renders its cached cubemap
+    // with each eye's orientation (and no translation). Disposal follows the source.
+    texture.mapping = immersive ? THREE.EquirectangularReflectionMapping : THREE.UVMapping;
+    if (immersive) {
+      texture.repeat.set(1, 1);
+      texture.offset.set(0, 0);
+      return;
+    }
+    // Desktop remains screen-space cover, including ordinary non-panoramic photos.
     const image = texture.image as {width?:number;height?:number};
     if (!image?.width || !image?.height) return;
     const aspect = this.container.clientWidth / (this.container.clientHeight || 1);
@@ -403,6 +412,7 @@ export class RoomView {
     const xrCamera = this.xr?.tick() ?? null;
     if (xrCamera) {
       this.controls.enabled = false;
+      this.fitBackground(true);
       this.renderer.render(this.scene, xrCamera);
       return;
     }
