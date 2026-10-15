@@ -11,7 +11,7 @@ Status: tracker publication approved by the user. **10 production tasks and 5 fu
 
 ## Trailer production tasks
 
-All tasks begin in Backlog (recorded in issue bodies; no Project board exists yet). German is the evidenced narrator/presenter; this does not assign him editing, production management, a GitHub account, or an unconfirmed recording date.
+All tasks begin in Backlog on the [repository-linked Project board](https://github.com/orgs/Misc-Palace-XR-Hack-2026/projects/1). German is the evidenced narrator/presenter; this does not assign him editing, production management, a GitHub account, or an unconfirmed recording date.
 
 | ID / outcome | Owner | Due date | Dependencies | Proposed acceptance criteria | Source |
 | --- | --- | --- | --- | --- | --- |
@@ -62,15 +62,15 @@ Repository: [Misc-Palace-XR-Hack-2026/misc.-palace-dev-sandbox](https://github.c
 | F04 | [#19 — Adobe Stock workflow](https://github.com/Misc-Palace-XR-Hack-2026/misc.-palace-dev-sandbox/issues/19) | Feature request |
 | F05 | [#20 — automatic organization](https://github.com/Misc-Palace-XR-Hack-2026/misc.-palace-dev-sandbox/issues/20) | Feature request |
 
-### Project board: blocked, not created
+### Project board: verified
 
-Board URL: **unavailable — no board created or existing board verified**. The project-list prerequisite failed with the exact error `your authentication token is missing required scopes [read:project]`. The active token has `gist`, `read:org`, `repo`, and `workflow`, but not Projects scopes. No alternative secrets were retrieved and no authentication refresh was initiated.
+[Misc. Palace — Trailer Production & Feature Backlog](https://github.com/orgs/Misc-Palace-XR-Hack-2026/projects/1) is linked to this repository, with a **Backlog board** view and statuses **Backlog / Ready / In progress / Review / Done**. The user-approved authentication refresh granted Projects access; organization and repository project lists were checked before creation and contained no existing projects.
 
-An authorized interactive account refresh with Projects write scope (`gh auth refresh -s project`) is needed before retrying. Then check existing organization/repository projects for duplicates, create or reuse the appropriate board, use statuses **Backlog / Ready / In progress / Review / Done**, add these 15 issues, and verify every item/status and the board URL. All should initially be Backlog unless new evidence supports another state. Repository Projects being enabled does not mean a Project board has been configured.
+Readback verified exactly **15 distinct existing issues (#6–#20)**: **10 production tasks and 5 future requests**, all **Backlog** and still **open**. No issues were duplicated, assigned, or closed. Board setup is not evidence of task completion.
 
 ### Working rules
 
-- Keep Issues as the canonical work-item discussion and acceptance record; this document is its provenance and index. A future Project board should be a view of these same issues, not a competing list.
+- Keep Issues as the canonical work-item discussion and acceptance record; this document is its provenance and index. The Project board is a view of these same issues, not a competing list.
 - Ask people to accept ownership and confirm GitHub identity before assigning accounts. German's narrator role does not identify an account.
 - Keep W/T dates explicitly inferred and unresolved, not confirmed due dates. Future requests have no Tuesday deadline.
 - Keep actual working demo, visibly labeled staged concepts, and future product functionality distinct. V03 does not authorize unrelated application/XR changes.
