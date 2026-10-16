@@ -5,6 +5,7 @@ import type { Store } from '../core/store';
 import type { ObjectKind } from '../core/types';
 import type { RoomLayout } from '../core/layout';
 import { buildObject } from './objects';
+import { applyLampLightBudget } from './cozy-objects';
 import { disposeGroup } from './resources';
 import { LIGHTING_PRESETS } from '../core/appearance';
 import { buildPreview, type Preview } from '../core/preview';
@@ -315,6 +316,7 @@ export class RoomView {
         this.objects.delete(id);
       }
     }
+    applyLampLightBudget(this.objectsGroup);
 
     const held = this.store.holding !== null;
     this.markerGroup.visible = held || (this.store.selectedId !== null && !this.objects.has(this.store.selectedId));
