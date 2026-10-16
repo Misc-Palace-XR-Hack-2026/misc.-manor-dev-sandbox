@@ -2,6 +2,21 @@ import * as THREE from 'three';
 
 // Base-centered, +Z forward, slot-sized models. Detail offsets avoid coplanar skins.
 const wood = 0x995d38, brass = 0xc6a264, cream = 0xf4e4c3, dark = 0x292b30;
+export const LAMP_LIGHT = { intensity: 0.85, distance: 2.8, maxCount: 6, color: 0xffbe6b } as const;
+export function lampLightBudget(count: number): number {
+  return Math.min(Math.max(0, count), LAMP_LIGHT.maxCount);
+}
+
+export function applyLampLightBudget(root: THREE.Object3D): void {
+  const lights: THREE.PointLight[] = [];
+  root.traverse((o) => {
+    if (o instanceof THREE.PointLight && o.name === 'lamp-light') lights.push(o);
+  });
+  const keep = lampLightBudget(lights.length);
+  lights.forEach((light, i) => {
+    light.intensity = i < keep ? LAMP_LIGHT.intensity : 0;
+  });
+}
 const material = (color: number) => new THREE.MeshStandardMaterial({color,roughness:.72});
 function part(name:string, geometry:THREE.BufferGeometry, color:number, x:number,y:number,z:number): THREE.Mesh {
   const m = new THREE.Mesh(geometry,material(color));m.name=name;m.position.set(x,y,z);return m;
@@ -60,7 +75,11 @@ export const cozyBuilders = {
     const shade=cylinder('lamp-linen-shade',.11,.21,.23,cream,0,.465);
     (shade.material as THREE.MeshStandardMaterial).emissive.setHex(0xffbe6b);
     (shade.material as THREE.MeshStandardMaterial).emissiveIntensity=.22;
-    return [cylinder('lamp-base',.15,.16,.04,wood),cylinder('lamp-foot',.09,.11,.03,brass,0,.045),cylinder('lamp-stem',.015,.02,.39,brass,0,.25),shade,cylinder('lamp-finial',.02,.02,.025,brass,0,.588)];
+    const light=new THREE.PointLight(LAMP_LIGHT.color, LAMP_LIGHT.intensity, LAMP_LIGHT.distance, 2);
+    light.name='lamp-light';
+    light.position.set(0,.46,0);
+    light.castShadow=false;
+    return [cylinder('lamp-base',.15,.16,.04,wood),cylinder('lamp-foot',.09,.11,.03,brass,0,.045),cylinder('lamp-stem',.015,.02,.39,brass,0,.25),shade,cylinder('lamp-finial',.02,.02,.025,brass,0,.588),light];
   },
   coffeeMaker: (): THREE.Object3D[] => {
     const p:THREE.Object3D[]=[block('coffee-base',.37,.04,.32,dark),block('coffee-reservoir',.32,.46,.12,0x47756c,0,.27,-.095),block('coffee-brew-head',.33,.10,.30,0x47756c,0,.46,-.01),cylinder('coffee-hotplate',.117,.117,.014,brass,0,.047,.045),cylinder('coffee-carafe',.102,.11,.20,0x73503b,0,.151,.045),cylinder('coffee-carafe-lid',.115,.115,.023,dark,0,.262,.045),cylinder('coffee-spout',.024,.018,.06,brass,0,.390,.045),block('coffee-switch',.035,.025,.016,0xd18757,.105,.46,.140)];
