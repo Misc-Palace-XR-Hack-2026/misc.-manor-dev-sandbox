@@ -498,7 +498,9 @@ export class MenuView {
     }
     act('Delete', () => store.deleteContent(c.id));
 
-    const row = el('div', { class: 'row' }, title, meta, where, actions);
+    const row = el('div', { class: 'row' }, title, meta, where);
+    if (c.notes) row.append(el('p', { class: 'meta item-notes', textContent: c.notes }));
+    row.append(actions);
     row.classList.toggle('selected', Boolean(rep && rep.id === selectedId));
     row.classList.toggle('inbox', !rep);
     if (rep && !inspect) row.addEventListener('click', () => store.select(rep.id === selectedId ? null : rep.id));

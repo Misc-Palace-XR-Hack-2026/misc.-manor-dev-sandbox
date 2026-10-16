@@ -45,6 +45,8 @@ export const DEFAULT_OBJECT: Record<ContentType, ObjectKind> = {
 /** The media itself. Never changes when an object is moved or swapped. */
 export interface ContentItem {
   imageData?: string;
+  /** Optional researched context; the outbound URL stays in sourceRef. */
+  notes?: string;
   id: string;
   type: ContentType;
   title: string;

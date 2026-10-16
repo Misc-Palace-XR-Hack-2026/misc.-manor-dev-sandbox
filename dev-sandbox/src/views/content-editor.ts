@@ -18,11 +18,14 @@ export function openContentEditor(store: Store, contentId: string): void {
     const label = document.createElement('label'); label.htmlFor = input.id; label.textContent = name;
     form.append(label, input);
   };
+  const notes = document.createElement('textarea');
+  notes.id = 'edit-content-notes'; notes.value = content.notes ?? ''; notes.maxLength = 4000;
   field('Title', title);
   field(content.type === 'note' ? 'Note text' : content.sourceKind === 'url' ? 'URL' : 'File reference', ref);
   const help = document.createElement('small');
   help.textContent = content.type === 'note' ? 'Notes are saved locally with your room.' : content.sourceKind === 'url' ? 'Only http and https links are supported.' : 'File references are labels or paths, not uploaded files. Local PNG/JPEG photos can be replaced below.';
   form.append(help);
+  field('Notes', notes);
   let imageData: string | undefined;
   const error = document.createElement('p'); error.setAttribute('role', 'alert'); error.hidden = true;
   const save = document.createElement('button'); save.type = 'submit'; save.textContent = 'Save changes';
@@ -44,7 +47,7 @@ export function openContentEditor(store: Store, contentId: string): void {
     event.preventDefault();
     try {
       if (store.state.id !== roomId || JSON.stringify(store.content(contentId)) !== snapshot) throw new Error('This item changed while editing. Cancel and reopen it to edit the latest version.');
-      store.updateContent(contentId, {title: title.value, sourceRef: ref.value, imageData});
+      store.updateContent(contentId, {title: title.value, sourceRef: ref.value, imageData, notes: notes.value});
       if (store.saveError) {
         error.textContent = `Changes kept in memory only. Export your room before leaving. ${store.saveError}`;
         error.hidden = false; save.disabled = true; cancel.textContent = 'Close'; return;
