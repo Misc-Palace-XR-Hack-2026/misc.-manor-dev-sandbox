@@ -18,7 +18,7 @@ try {
   await page.evaluate(() => window.store.select('matt-object-clock'));
   const sheet = page.getByRole('dialog', {name:/item/i});
   await sheet.waitFor({state:'visible'});
-  assert.match(await sheet.innerText(), /family-owned grandfather/);
+  assert.equal(await sheet.locator('.item-notes').count(), 0);
   await sheet.getByRole('button', {name:'Edit',exact:true}).click();
   await page.getByLabel('Notes', {exact:true}).fill('Clock research edited locally.');
   await page.getByRole('button', {name:'Save changes',exact:true}).click();
