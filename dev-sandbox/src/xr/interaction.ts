@@ -127,7 +127,20 @@ export function xrSelect(store: Store, hit: { kind: 'object' | 'destination' | '
   }
 }
 
-export type PanelPage = 'home' | 'lighting' | 'music' | 'surfaces' | 'object' | 'inbox' | 'rooms' | 'themes';
+export type PanelPage =
+  | 'home'
+  | 'lighting'
+  | 'music'
+  | 'surfaces'
+  | 'object'
+  | 'inbox'
+  | 'rooms'
+  | 'themes'
+  | 'howto'
+  | 'howto-create'
+  | 'howto-move'
+  | 'howto-rooms'
+  | 'howto-style';
 
 export interface PanelButton {
   id: string;
@@ -259,6 +272,28 @@ export function panelButtons(store: Store, page: PanelPage, _rooms: Neighborhood
       ...Object.entries(THEMES).map(([id, theme]) => ({ id: 'theme:' + id, label: theme.label })),
     ];
   }
+  if (page === 'howto') {
+    return [
+      { id: 'page:home', label: 'Back' },
+      { id: 'howto:create', label: 'Create an item' },
+      { id: 'howto:move', label: 'Move and put away' },
+      { id: 'howto:rooms', label: 'Visit rooms' },
+      { id: 'howto:style', label: 'Change the look' },
+      { id: 'howto:skip', label: 'Skip how-to' },
+    ];
+  }
+  if (page.startsWith('howto-')) {
+    const copy: Record<string, string> = {
+      'howto-create': 'Desktop: tap + then Add object. VR: assign a kind, then place it on a pad.',
+      'howto-move': 'Select an object, choose Move, then a pad. Put away sends it to Inbox. Cancel restores it.',
+      'howto-rooms': 'Open Rooms, pick a saved room, then Return home. Visiting does not overwrite your save.',
+      'howto-style': 'Lighting, Surfaces, and Theme change this room only. Music is independent.',
+    };
+    return [
+      { id: 'page:howto', label: 'Back' },
+      { id: 'howto:copy', label: copy[page] ?? '' },
+    ];
+  }
   const home: PanelButton[] = [
     { id: 'go:loft', label: 'Go to loft' },
     { id: 'go:floor', label: 'Go to floor' },
@@ -271,6 +306,7 @@ export function panelButtons(store: Store, page: PanelPage, _rooms: Neighborhood
     { id: 'page:themes', label: 'Theme' },
     { id: 'page:object', label: 'Change object' },
     { id: 'page:rooms', label: 'Rooms' },
+    { id: 'page:howto', label: 'How-to' },
     { id: 'undo', label: store.canUndo ? 'Undo' : 'Undo (nothing yet)' },
     { id: 'cancel', label: 'Cancel selection' },
   );
@@ -289,6 +325,12 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   if (id === 'page:inbox') return { page: 'inbox' };
   if (id === 'page:rooms') return { page: 'rooms' };
   if (id === 'page:themes') return { page: 'themes' };
+  if (id === 'page:howto' || id === 'howto:skip') return { page: id === 'howto:skip' ? 'home' : 'howto' };
+  if (id === 'howto:create') return { page: 'howto-create' };
+  if (id === 'howto:move') return { page: 'howto-move' };
+  if (id === 'howto:rooms') return { page: 'howto-rooms' };
+  if (id === 'howto:style') return { page: 'howto-style' };
+  if (id === 'howto:copy') return {};
   if (id === 'go:loft') return { teleport: { x: 2.0, y: 2.3, z: 1.6 } };
   if (id === 'go:floor') return { teleport: spawnPosition() };
   if (id === 'exit') return { exit: true };
