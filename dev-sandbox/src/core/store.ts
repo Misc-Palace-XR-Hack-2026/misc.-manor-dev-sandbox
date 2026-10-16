@@ -52,6 +52,7 @@ export function validateRoom(input: unknown): string | null {
     if (!c || typeof c.id !== 'string' || typeof c.title !== 'string' || typeof c.sourceRef !== 'string') {
       return 'A saved item is missing its id, title or sourceRef.';
     }
+    if (c.notes !== undefined && (typeof c.notes !== 'string' || c.notes.length > 4000)) return 'Invalid item notes (text, max 4000 characters).';
     if (c.imageData !== undefined && (c.type !== 'image' || !validPhotoData(c.imageData))) return 'Invalid photo image data (PNG/JPEG, max 1024px and 1.5 MB encoded).';
     if (!(CONTENT_TYPES as readonly string[]).includes(c.type)) return `Unknown content type: ${String(c.type)}.`;
     if (!Array.isArray(c.tags) || c.tags.some((t) => typeof t !== 'string')) return `Item ${c.id} has bad tags.`;
@@ -248,16 +249,18 @@ export class Store {
     return repId;
   }
 
-  updateContent(contentId: string, input: { title: string; sourceRef: string; imageData?: string }): void {
+  updateContent(contentId: string, input: { title: string; sourceRef: string; imageData?: string; notes?: string }): void {
     const current = this.content(contentId);
     if (!current) throw new Error('Item no longer exists.');
     if (typeof input.title !== 'string' || !input.title.trim() || typeof input.sourceRef !== 'string') throw new Error('A title and content are required.');
     const sourceRef = current.type === 'note' ? input.sourceRef : current.sourceKind === 'url' ? safeUrl(input.sourceRef) : input.sourceRef.trim();
     if (sourceRef === null) throw new Error('Enter a valid http or https URL.');
+    if (input.notes !== undefined && (typeof input.notes !== 'string' || input.notes.length > 4000)) throw new Error('Invalid item notes (text, max 4000 characters).');
     if (input.imageData !== undefined && (current.type !== 'image' || !validPhotoData(input.imageData))) throw new Error('Invalid photo image data.');
     this.commit(s => {
       const c = s.contentItems.find(c => c.id === contentId)!;
       c.title = input.title.trim();
+      if (input.notes !== undefined) c.notes = input.notes.trim();
       c.sourceRef = sourceRef;
       if (c.type === 'note') c.sourceKind = 'note';
       if (input.imageData !== undefined) c.imageData = input.imageData;

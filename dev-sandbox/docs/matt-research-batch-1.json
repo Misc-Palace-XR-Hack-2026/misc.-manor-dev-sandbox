@@ -1,0 +1,13 @@
+{
+  "suppliedUrls": [
+    "https://distrokid.com/hyperfollow/mattdavisandhisatomicrollerskates/cyber-funk",
+    "https://distrokid.com/hyperfollow/mattdavisandhisatomicrollerskates/neon-arcade-1984",
+    "https://distrokid.com/hyperfollow/mattdavisandhisatomicrollerskates/fm1m",
+    "Https://dvgpro.com",
+    "https://youtube.com/@thescoobmeisterm?si=OhKSvxgjvCemFI3Z"
+  ],
+  "extraction": {
+    "success": false,
+    "error": "OpenAI Native Web Search (Codex Responses) is a search-only backend and cannot extract URL content. Set web.extract_backend to firecrawl, tavily, keenable, exa, or parallel."
+  }
+}
