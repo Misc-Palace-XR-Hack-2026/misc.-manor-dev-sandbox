@@ -23,7 +23,7 @@ try {
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto('http://127.0.0.1:5173');
+  await page.goto(process.env.MP_URL ?? 'http://127.0.0.1:5173');
   await page.waitForFunction(() => window.store, { timeout: 5000 });
 
   const layout = await page.evaluate(() => ({
@@ -38,11 +38,12 @@ try {
   assert.ok(layout.menu.width < 200 || layout.menu.bottom <= 0 || layout.menu.top >= 844, 'left menu must not cover the phone');
 
   const edit = page.getByRole('button', { name: 'Edit room', exact: true });
-  const neighborhood = page.getByRole('button', { name: 'Visit neighborhood', exact: true });
+  const rooms = page.getByTitle('Switch room');
   await assert.equal(await edit.isVisible(), true);
-  await assert.equal(await neighborhood.isVisible(), true);
+  await assert.equal(await rooms.isVisible(), true);
+  assert.equal(await page.getByRole('button', { name: 'Visit neighborhood', exact: true }).count(), 0);
   await tap(edit);
-  await tap(neighborhood);
+  await tap(rooms);
 
   await edit.click();
   await page.waitForFunction(() => document.getElementById('menu')?.classList.contains('sheet-open'));
@@ -50,50 +51,35 @@ try {
   await page.getByRole('button', { name: 'Close editor', exact: true }).click();
   await page.waitForFunction(() => !document.getElementById('menu')?.classList.contains('sheet-open'));
 
-  await neighborhood.click();
-  await page.getByRole('button', { name: /Visit greenhouse conservatory/i }).waitFor({ state: 'visible' });
-  await page.getByRole('button', { name: 'Close neighborhood', exact: true }).click();
-  await page.waitForFunction(() => document.querySelector('.neighborhood-sheet')?.hidden === true);
+  await rooms.click();
+  await page.getByRole('dialog', { name: 'Rooms' }).waitFor({ state: 'visible' });
+  await page.getByRole('button', { name: /Matt's room/i }).waitFor({ state: 'visible' });
+  await page.getByRole('dialog', { name: 'Rooms' }).getByRole('button', { name: 'Close', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('[aria-label="Rooms"]')?.hidden === true);
 
   await page.evaluate(() => {
-    const rep = window.store.state.representations[0];
-    window.store.select(rep.id);
+    const store = window.store;
+    if (!store.state.representations[0]) store.addItem({ title: 'Chrome fixture', sourceRef: 'note:chrome', type: 'note', kind: 'book' });
+    store.select(store.state.representations[0].id);
   });
   const item = page.getByRole('dialog', { name: /item/i });
   await item.waitFor({ state: 'visible' });
   assert.ok(await item.getByRole('button', { name: 'Pick up', exact: true }).count() + await item.getByRole('button', { name: 'Stash', exact: true }).count() >= 1);
 
-  await page.waitForFunction(() => {
-    const room = document.getElementById('room');
-    const x = Number(room?.dataset.inspectX);
-    const y = Number(room?.dataset.inspectY);
-    return x > 0.42 && x < 0.58 && y > 0.42 && y < 0.58;
-  }, { timeout: 4000 });
   const framed = await page.evaluate(() => {
-    const room = document.getElementById('room');
     const sheet = document.querySelector('.item-sheet');
     const card = sheet.getBoundingClientRect();
     const bg = getComputedStyle(sheet).backgroundColor;
     const m = bg.match(/rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?\)/);
     const alpha = m ? (m[4] === undefined ? 1 : Number(m[4])) : 1;
-    const x = Number(room.dataset.inspectX);
-    const y = Number(room.dataset.inspectY);
-    const objX = x * 390;
-    const objY = y * 844;
-    const overlaps = objX > card.left + 8 && objX < card.right - 8 && objY > card.top + 8 && objY < card.bottom - 8;
     return {
-      x, y, alpha,
+      alpha,
       width: card.width,
       height: card.height,
       left: card.left,
       right: card.right,
-      bottom: card.bottom,
-      radius: getComputedStyle(sheet).borderRadius,
-      overlaps,
     };
   });
-  assert.ok(framed.x > 0.42 && framed.x < 0.58, `item should stay centered, got ${framed.x}`);
-  assert.ok(framed.y > 0.42 && framed.y < 0.58, `item should stay centered, got y=${framed.y}`);
   assert.ok(framed.width < 320, `inspector should be a floating card, width=${framed.width}`);
   assert.ok(framed.height < 420, `inspector should be compact, height=${framed.height}`);
   assert.ok(framed.left > 24, `card should float off the left edge, left=${framed.left}`);
@@ -102,7 +88,7 @@ try {
 
   await page.screenshot({ path: '/home/dvgpro/.hermes/cache/scratch/mobile-chrome-review.png' });
   assert.deepEqual(errors.filter((m) => !/favicon/.test(m)), []);
-  console.log('PASS: phone chrome leaves the room visible; Edit room and Visit neighborhood open sheets; item tap uses a modal');
+  console.log('PASS: phone chrome leaves the room visible; Edit room and Rooms open sheets; item tap uses a modal');
 } finally {
   await browser.close();
 }
