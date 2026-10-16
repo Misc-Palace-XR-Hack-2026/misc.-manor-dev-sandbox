@@ -331,11 +331,11 @@ export class Store {
   place(repId: string, slotId: string): void {
     if (!this.layout.slots.some((sl) => sl.id === slotId)) return;
     if (this.slotOf(repId) === slotId) return;
+    const wasHeld = this.pickup?.repId === repId;
+    const heldFrom = this.pickup?.slotId;
     this.commit((s) => {
       const mine = s.placements.find((p) => p.representationId === repId);
       const other = s.placements.find((p) => p.slotId === slotId);
-      const wasHeld = this.pickup?.repId === repId;
-      const heldFrom = this.pickup?.slotId;
 
       if (other && mine) {
         // Both placed: swap their slots

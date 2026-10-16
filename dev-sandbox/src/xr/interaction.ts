@@ -354,7 +354,7 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
     return href ? { openUrl: href, exit: true } : {};
   }
   if (id === 'move' && store.selectedId) {
-    store.unplace(store.selectedId);
+    store.pickUp(store.selectedId);
     return {};
   }
   if (id === 'undo') store.undo();
