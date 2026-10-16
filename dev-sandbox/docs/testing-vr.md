@@ -78,6 +78,15 @@ node tests/browser-xr-background.mjs
 node tests/browser-xr-preview.mjs
 ```
 
+Optional overlay-chrome scripts (not part of `npm test`) exercise the current desktop/mobile chrome against Edit room / Rooms / the item inspector:
+
+```bash
+node tests/browser-desktop-chrome.mjs
+node tests/browser-mobile-chrome.mjs
+```
+
+They are not neighborhood-visit tests. `npm test` still only bundles `*.test.ts`.
+
 Options: `MP_URL` selects the Vite origin (default `http://127.0.0.1:5173`), `CHROMIUM_PATH` selects the browser executable (default `/usr/bin/chromium`), and `PLAYWRIGHT_MODULE` can point to an existing Playwright module file instead of a local install. Both scripts enable GL/WebGL and ignore the GPU blocklist. The preview check writes `xr-preview.png` under `TMPDIR` (or the OS temporary directory).
 
 The background regression uses synthetic stereo poses; the preview check invokes XR lifecycle methods with synthetic state and renders real canvas/WebGL pixels. Neither is an immersive WebXR session or a physical headset test.
