@@ -1,0 +1,12 @@
+{
+  "suppliedUrls": [
+    "https://thescoobmeisterm.github.io/TinkerWorkbench/",
+    "https://thescoobmeisterm.github.io/SparkTinkerGame/",
+    "https://theplutollc.com/",
+    "https://os.dvgpro.com/"
+  ],
+  "extraction": {
+    "success": false,
+    "error": "OpenAI Native Web Search (Codex Responses) is a search-only backend and cannot extract URL content. Set web.extract_backend to firecrawl, tavily, keenable, exa, or parallel."
+  }
+}

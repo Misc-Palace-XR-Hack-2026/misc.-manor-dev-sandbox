@@ -1,0 +1,13 @@
+{
+  "suppliedUrls": [
+    "https://davisclockservices.com/",
+    "https://apolloslearningcorner.com",
+    "https://apolloslearningcorner.com/Games/",
+    "https://amzn.to/3Snypsv",
+    "https://thescoobmeisterm.github.io/novation-bs2-worship-ambient/index.html"
+  ],
+  "extraction": {
+    "success": false,
+    "error": "OpenAI Native Web Search (Codex Responses) is a search-only backend and cannot extract URL content. Set web.extract_backend to firecrawl, tavily, keenable, exa, or parallel."
+  }
+}
