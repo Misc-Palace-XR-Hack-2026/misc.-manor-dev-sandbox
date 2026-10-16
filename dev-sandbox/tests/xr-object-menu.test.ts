@@ -63,3 +63,13 @@ test('desktop selection cannot show VR buttons, including after leaving VR', () 
   assert.equal(menu.group.visible, false, 'desktop reselection after exit stays hidden');
   assert.equal(menu.hit(new THREE.Raycaster()), null);
 });
+
+test('granted DOM overlay skips the canvas embed so the shared iframe can play', () => {
+  const store = new Store(newRoom());
+  const menu = new XrObjectMenu(store, () => {});
+  menu.useDomOverlay = true;
+  const id = store.addItem({ title: 'Song', sourceRef: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', type: 'video', kind: 'tv' });
+  store.select(id);
+  assert.equal(menu.group.getObjectByName('xr-preview'), undefined);
+  assert.ok(menu.group.children.find(o => o.userData.actionId === 'cancel'));
+});

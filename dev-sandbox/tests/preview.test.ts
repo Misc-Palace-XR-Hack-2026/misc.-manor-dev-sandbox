@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildPreview, embedFor, youtubeId } from '../src/core/preview';
+import { createEmbedFrame } from '../src/views/preview-card';
 import type { ContentItem } from '../src/core/types';
 
 // 1x1 PNG
@@ -37,6 +38,26 @@ test('page previews reject insecure, credentialed, nonstandard-port and lookalik
 test('page previews preserve the exact HTTPS destination including www and hash', () => {
   assert.equal(embedFor(new URL('https://www.dvgpro.com/a?q=1#part'))?.src, 'https://www.dvgpro.com/a?q=1#part');
 });
+if (!globalThis.document) {
+  globalThis.document = {
+    createElement: (tag: string) => {
+      const attrs: Record<string, string> = {};
+      const el = {
+        tagName: tag.toUpperCase(),
+        className: '',
+        src: '',
+        title: '',
+        height: '',
+        allow: '',
+        allowFullscreen: false,
+        referrerPolicy: '',
+        setAttribute: (name: string, value: string) => { attrs[name] = value; },
+        getAttribute: (name: string) => attrs[name] ?? null,
+      };
+      return el;
+    },
+  } as unknown as Document;
+}
 
 test('local photo previews as an image thumbnail', () => {
   const p = buildPreview(item({ type: 'image', sourceKind: 'file', sourceRef: 'me.png', imageData: PNG }));
@@ -130,6 +151,20 @@ test('unsafe URL schemes become a plain card with no favicon or embed', () => {
     assert.equal(p.kind, 'card', ref);
     assert.equal(p.kind === 'card' && p.faviconSrc, undefined, ref);
   }
+});
+
+test('desktop and VR embed iframes share the same sandbox, src and player permissions', () => {
+  const preview = buildPreview(urlItem('https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'video'));
+  assert.equal(preview.kind, 'embed');
+  if (preview.kind !== 'embed') return;
+  const frame = createEmbedFrame(preview);
+  assert.equal(frame.tagName, 'IFRAME');
+  assert.equal(frame.className, 'preview-iframe');
+  assert.equal(frame.src, preview.src);
+  assert.equal(frame.getAttribute('sandbox'), 'allow-scripts allow-same-origin allow-presentation allow-popups');
+  assert.equal(frame.allow, 'encrypted-media; picture-in-picture; fullscreen');
+  assert.equal(frame.referrerPolicy, 'strict-origin-when-cross-origin');
+  assert.equal(frame.title, 'Preview of Title');
 });
 
 test('notes show an excerpt; files show their stored name', () => {

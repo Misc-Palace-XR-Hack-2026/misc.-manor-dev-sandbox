@@ -33,6 +33,13 @@ export function enterReason(probe: XrProbe): string {
   return '';
 }
 
+export function xrSessionInit(overlayRoot: HTMLElement): XRSessionInit {
+  return {
+    optionalFeatures: ['local-floor', 'dom-overlay'],
+    domOverlay: { root: overlayRoot },
+  };
+}
+
 export function canEnterVr(probe: XrProbe): boolean | Promise<boolean> {
   if (enterReason(probe)) return false;
   return probe.xr!.isSessionSupported('immersive-vr');

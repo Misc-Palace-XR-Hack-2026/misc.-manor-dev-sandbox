@@ -17,6 +17,21 @@ const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string,
   return e;
 };
 
+/** Same sandboxed player used by desktop and by the VR DOM overlay. */
+export function createEmbedFrame(preview: Extract<Preview, { kind: 'embed' }>): HTMLIFrameElement {
+  const frame = make('iframe', 'preview-iframe');
+  frame.title = `Preview of ${preview.title}`;
+  frame.height = String(preview.height);
+  const page = preview.provider === 'page';
+  frame.setAttribute('sandbox', page ? 'allow-scripts' : 'allow-scripts allow-same-origin allow-presentation allow-popups');
+  frame.allow = page ? '' : 'encrypted-media; picture-in-picture; fullscreen';
+  frame.allowFullscreen = !page;
+  frame.referrerPolicy = 'strict-origin-when-cross-origin';
+  const destination = new URL(preview.src);
+  if (destination.protocol === 'https:' && destination.origin !== globalThis.location?.origin) frame.src = preview.src;
+  return frame;
+}
+
 /** Fallback picture: an icon for the media type, captioned with what it is. */
 function hero(art: PreviewArt): HTMLElement {
   const frame = make('div', 'preview-frame preview-hero');
@@ -76,16 +91,7 @@ export class PreviewCardView {
   private render(p: Preview, art: PreviewArt | null): HTMLElement {
     const body = make('div', `preview-body preview-${p.kind}`);
     if (p.kind === 'embed') {
-      const frame = make('iframe', 'preview-iframe');
-      frame.title = `Preview of ${p.title}`;
-      frame.height = String(p.height);
-      // Ordinary pages get an opaque origin, even if they redirect back to this app.
-      // Trusted provider players retain their existing playback permissions.
-      const page = p.provider === 'page';
-      frame.setAttribute('sandbox', page ? 'allow-scripts' : 'allow-scripts allow-same-origin allow-presentation allow-popups');
-      frame.allow = page ? '' : 'encrypted-media; picture-in-picture; fullscreen';
-      frame.allowFullscreen = !page;
-      frame.referrerPolicy = 'strict-origin-when-cross-origin';
+      const frame = createEmbedFrame(p);
       const destination = new URL(p.src);
       if (destination.protocol === 'https:' && destination.origin !== location.origin) {
         frame.src = p.src;

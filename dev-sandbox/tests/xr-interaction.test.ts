@@ -24,12 +24,20 @@ import {
   objectMenuHit,
   dedicatedRooms,
   stickForwardTeleport,
+  xrSessionInit,
 } from '../src/xr/interaction';
 import { OBJECT_KINDS } from '../src/core/types';
 import { LIGHTING_PRESETS } from '../src/core/appearance';
 import { ROOM_TRACKS } from '../src/core/soundtrack';
 
 globalThis.localStorage = { getItem: () => null, setItem: () => {} } as unknown as Storage;
+
+test('Enter VR requests a DOM overlay so browser iframe previews can play in-headset', () => {
+  const root = { id: 'xr-dom-overlay' } as HTMLElement;
+  const init = xrSessionInit(root);
+  assert.deepEqual(init.optionalFeatures, ['local-floor', 'dom-overlay']);
+  assert.equal(init.domOverlay?.root, root);
+});
 
 test('Enter VR is disabled until a secure immersive-vr session is available', async () => {
   assert.equal(canEnterVr({ isSecureContext: false, xr: null }), false);
