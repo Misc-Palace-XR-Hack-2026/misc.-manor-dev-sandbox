@@ -196,6 +196,42 @@ test('selected objects grow Edit, Move, Put away, and Open buttons', () => {
   assert.equal(store.slotOf(noteId), from);
 });
 
+test('VR Move uses pickUp so cancel, disconnect, and session end restore the original slot', () => {
+  const store = new Store(newRoom());
+  const noteId = store.addItem({ title: 'Note', sourceRef: 'just a note', type: 'note', kind: 'notebook' });
+  const from = store.slotOf(noteId);
+  assert.ok(from);
+  store.select(noteId);
+  runPanelAction(store, 'move');
+  assert.equal(store.holding, noteId, 'Move must remember pickup, not commit an unplaced object');
+  assert.equal(store.slotOf(noteId), undefined);
+  store.select(null);
+  assert.equal(store.slotOf(noteId), from, 'session end / deselect restores the source slot');
+  assert.equal(store.holding, null);
+
+  store.select(noteId);
+  runPanelAction(store, 'move');
+  store.select(noteId);
+  assert.equal(store.holding, noteId, 're-selecting the held object keeps pickup');
+  store.select(null);
+  assert.equal(store.slotOf(noteId), from);
+});
+
+test('VR Move onto an occupied slot swaps instead of unplacing the occupant', () => {
+  const store = new Store(newRoom());
+  const moving = store.addItem({ title: 'Moving', sourceRef: 'note:a', type: 'note', kind: 'notebook' });
+  const occupant = store.addItem({ title: 'Occupant', sourceRef: 'note:b', type: 'note', kind: 'book' });
+  const from = store.slotOf(moving)!;
+  const to = store.slotOf(occupant)!;
+  assert.notEqual(from, to);
+  store.select(moving);
+  runPanelAction(store, 'move');
+  xrSelect(store, { kind: 'destination', id: to });
+  assert.equal(store.slotOf(moving), to);
+  assert.equal(store.slotOf(occupant), from, 'occupant keeps a slot (the remembered source)');
+  assert.ok(store.state.representations.some((r) => r.id === occupant));
+});
+
 test('object action pills sit above the object, not on the controller ray', () => {
   const origin = { x: 1, y: 0.4, z: 2 };
   const ray = { origin: { x: 4.2, y: 1.4, z: 3.4 }, direction: { x: 0, y: 0, z: -1 } };
