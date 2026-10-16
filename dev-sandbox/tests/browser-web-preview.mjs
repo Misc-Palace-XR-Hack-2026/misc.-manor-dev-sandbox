@@ -50,5 +50,23 @@ try {
  assert.equal(await page.locator('body').getAttribute('data-escaped'),null);
  // Explicit Open stays a usable separate-tab handoff; no automatic navigation.
  const popupPromise=page.waitForEvent('popup');await page.locator('#test-preview a').click();const popup=await popupPromise;await popup.waitForLoadState('domcontentloaded');assert.equal(await popup.evaluate(()=>window.opener),null);await popup.close();
- console.log('PASS real browser sandbox, same-origin/redirect isolation, CSP/XFO refusal, network failure, provider permissions and external-open fallback');
+ if (origin.startsWith('https:')) {
+  const messages=[];page.on('console',m=>messages.push(m.text()));
+  await page.route('https://dvgpro.com/__preview-test-insecure',route=>route.fulfill({status:302,headers:{location:'http://example.com/__preview-test-insecure'}}));
+  await page.evaluate(()=>window.testCard.show({kind:'embed',provider:'page',src:'https://dvgpro.com/__preview-test-insecure',title:'Insecure redirect',height:220}));
+  await page.waitForTimeout(1000);
+  assert.ok(messages.some(m=>m.includes('Mixed Content')),'browser refuses insecure redirect');
+  assert.ok(await page.locator('#test-preview a').isVisible());
+ }
+ await page.evaluate(async()=>{
+  document.querySelector('#test-preview').remove();
+  const seed=await (await fetch('/rooms/matt.json')).json();window.store.switchRoom('matt',seed);
+ });
+ for (const id of ['matt-cyber-funk','matt-neon-arcade','matt-tree-bar','matt-youtube','matt-solar-book']) {
+  const expected=await page.evaluate(id=>{const s=window.store;s.select(s.repFor(id).id);return new URL(s.content(id).sourceRef).href;},id);
+  const open=page.locator('.item-sheet a[target="_blank"]');
+  assert.ok(await open.isVisible());assert.equal(await open.getAttribute('href'),expected);
+  assert.equal(await page.locator('.preview-card iframe').count(),0);
+ }
+ console.log('PASS real browser sandbox, same-origin/redirect isolation, CSP/XFO refusal, network failure, provider permissions and original-link fallback;', origin.startsWith('https:') ? 'HTTPS mixed-content refusal verified' : 'mixed-content check requires HTTPS MP_URL');
 }finally{await browser.close();}

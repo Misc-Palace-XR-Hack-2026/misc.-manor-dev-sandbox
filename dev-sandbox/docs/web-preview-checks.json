@@ -18,7 +18,25 @@
         "Refused to display 'https://distrokid.com/' in a frame because it set 'X-Frame-Options' to 'sameorigin'."
       ],
       "result": "site-blocked",
-      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions"
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        }
+      ]
     },
     {
       "id": "matt-neon-arcade",
@@ -36,7 +54,25 @@
         "Refused to display 'https://distrokid.com/' in a frame because it set 'X-Frame-Options' to 'sameorigin'."
       ],
       "result": "site-blocked",
-      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions"
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        }
+      ]
     },
     {
       "id": "matt-tree-bar",
@@ -54,7 +90,25 @@
         "Refused to display 'https://distrokid.com/' in a frame because it set 'X-Frame-Options' to 'sameorigin'."
       ],
       "result": "site-blocked",
-      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions"
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        }
+      ]
     },
     {
       "id": "matt-dvgpro",
@@ -69,7 +123,35 @@
       },
       "browserErrors": [],
       "result": "document-rendered",
-      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions"
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://dvgpro.com/",
+          "title": "Davis Video & Graphic Productions",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://dvgpro.com/",
+          "title": "Davis Video & Graphic Productions",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
     },
     {
       "id": "matt-youtube",
@@ -94,7 +176,25 @@
         "Refused to display 'https://www.youtube.com/' in a frame because it set 'X-Frame-Options' to 'sameorigin'."
       ],
       "result": "site-blocked",
-      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions"
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        }
+      ]
     },
     {
       "id": "matt-clock",
@@ -122,7 +222,35 @@
         "Failed to load resource: net::ERR_FAILED"
       ],
       "result": "document-rendered",
-      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions"
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://davisclockservices.com/",
+          "title": "Davis Clock Services \u2013 Providing Clock Repair For Over 45 Years",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://davisclockservices.com/",
+          "title": "Davis Clock Services \u2013 Providing Clock Repair For Over 45 Years",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
     },
     {
       "id": "matt-apollo",
@@ -144,7 +272,35 @@
         "Failed to load resource: net::ERR_FAILED"
       ],
       "result": "document-rendered",
-      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions"
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://apolloslearningcorner.com/",
+          "title": "Apollo's Learning Corner",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://apolloslearningcorner.com/",
+          "title": "Apollo's Learning Corner",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
     },
     {
       "id": "matt-arcade",
@@ -159,7 +315,35 @@
       },
       "browserErrors": [],
       "result": "document-rendered",
-      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions"
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://apolloslearningcorner.com/Games/",
+          "title": "Apollo's Learning Corner - Game Launcher",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://apolloslearningcorner.com/Games/",
+          "title": "Apollo's Learning Corner - Game Launcher",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
     },
     {
       "id": "matt-solar-book",
@@ -179,7 +363,25 @@
         "Refused to display 'https://www.amazon.com/' in a frame because it set 'X-Frame-Options' to 'sameorigin'."
       ],
       "result": "site-blocked",
-      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions"
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        }
+      ]
     },
     {
       "id": "matt-refinery",
@@ -194,7 +396,35 @@
       },
       "browserErrors": [],
       "result": "document-rendered",
-      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions"
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://thescoobmeisterm.github.io/novation-bs2-worship-ambient/index.html",
+          "title": "Refinery Creative \u2014 Novation Bass Station II Patch Manual & Synthesizer",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://thescoobmeisterm.github.io/novation-bs2-worship-ambient/index.html",
+          "title": "Refinery Creative \u2014 Novation Bass Station II Patch Manual & Synthesizer",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
     },
     {
       "id": "matt-tinker-lab",
@@ -209,7 +439,35 @@
       },
       "browserErrors": [],
       "result": "document-rendered",
-      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions"
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://thescoobmeisterm.github.io/TinkerWorkbench/",
+          "title": "Ignite \u00b7 Tinkerer's Robot Lab",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://thescoobmeisterm.github.io/TinkerWorkbench/",
+          "title": "Ignite \u00b7 Tinkerer's Robot Lab",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
     },
     {
       "id": "matt-robot-game",
@@ -224,7 +482,35 @@
       },
       "browserErrors": [],
       "result": "document-rendered",
-      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions"
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://thescoobmeisterm.github.io/SparkTinkerGame/",
+          "title": "Who's That Robot Part? \u2014 Tinkerer's Table",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://thescoobmeisterm.github.io/SparkTinkerGame/",
+          "title": "Who's That Robot Part? \u2014 Tinkerer's Table",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
     },
     {
       "id": "matt-pluto",
@@ -242,7 +528,35 @@
         "Failed to load resource: net::ERR_FAILED"
       ],
       "result": "document-rendered",
-      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions"
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://theplutollc.com/",
+          "title": "Welcome to Pluto L.L.C. - Pluto L.L.C.",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://theplutollc.com/",
+          "title": "Welcome to Pluto L.L.C. - Pluto L.L.C.",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
     },
     {
       "id": "matt-os",
@@ -262,7 +576,37 @@
         "Failed to load resource: net::ERR_FAILED"
       ],
       "result": "document-rendered",
-      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions"
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://os.dvgpro.com/",
+          "title": "DVGProOS Portal - Interconnected Business Operating System",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://os.dvgpro.com/",
+          "title": "DVGProOS Portal - Interconnected Business Operating System",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
     }
-  ]
+  ],
+  "livePreview": "https://omarchy-1.tail589b59.ts.net",
+  "browser": "Chromium 152.0.7977.82 on Arch Linux; phone viewport emulation, not physical phone"
 }
