@@ -103,6 +103,16 @@ export function objectHitFrom(
   return hit && !hit.throughWall ? hit.id : null;
 }
 
+/** Object picks lose to a closer opaque room mesh (wall, loft slab, stair). Equal distance still counts as the object. */
+export function objectIdFromRay(
+  object: { id: string; distance: number } | null,
+  occluder: { distance: number } | null,
+): string | null {
+  if (!object) return null;
+  if (occluder && occluder.distance < object.distance) return null;
+  return object.id;
+}
+
 export function destinationHitFrom(
   destinations: Array<{ id: string }>,
   query: { holding: boolean },
