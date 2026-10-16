@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Store } from '../core/store';
-import { inspectPreview, loftBeaconVisible, spawnPosition, walkableAt, walkableFloorPad, xrSelect, type NeighborhoodRoom, type PanelActionResult } from './interaction';
+import { inspectPreview, loftBeaconVisible, spawnPosition, stickForwardTeleport, walkableAt, walkableFloorPad, xrSelect, type NeighborhoodRoom, type PanelActionResult } from './interaction';
 import { XrPanel } from './panel';
 import { XrHoverLabel } from './hover';
 import { XrObjectMenu } from './object-menu';
@@ -224,26 +224,6 @@ export class XrSession {
     this.marker.visible = false;
     this.hoverLabel.hide();
     if (!this.store.selectedId) this.placing = false;
-    if (session) {
-      for (const source of session.inputSources) {
-        const gp = source.gamepad;
-        if (!gp) continue;
-        const x = gp.axes[2] ?? gp.axes[0] ?? 0;
-        const y = gp.axes[3] ?? gp.axes[1] ?? 0;
-        if (Math.abs(x) > 0.7 && Math.abs(x) >= Math.abs(y) && now - this.lastSnap > 280) {
-          this.player.rotateY(-Math.sign(x) * SNAP);
-          this.lastSnap = now;
-        } else if (y < -0.7 && now - this.lastSnap > 280 && this.hoverPoint && !this.placing) {
-          this.teleport(this.hoverPoint);
-          this.lastSnap = now;
-        }
-        const menu = gp.buttons[5] ?? gp.buttons[4] ?? gp.buttons[1];
-        if (menu?.pressed && now - this.lastSnap > 400) {
-          this.panel.toggle();
-          this.lastSnap = now;
-        }
-      }
-    }
     let menuAt: THREE.Vector3 | null = null;
     if (this.store.selectedId) {
       let selected: THREE.Object3D | undefined;
@@ -269,6 +249,29 @@ export class XrSession {
         this.marker.position.copy(hit.point);
         this.marker.position.y += 0.02;
         this.marker.visible = true;
+      }
+    }
+    if (session) {
+      for (const source of session.inputSources) {
+        const gp = source.gamepad;
+        if (!gp) continue;
+        const x = gp.axes[2] ?? gp.axes[0] ?? 0;
+        const y = gp.axes[3] ?? gp.axes[1] ?? 0;
+        if (Math.abs(x) > 0.7 && Math.abs(x) >= Math.abs(y) && now - this.lastSnap > 280) {
+          this.player.rotateY(-Math.sign(x) * SNAP);
+          this.lastSnap = now;
+        } else {
+          const landing = stickForwardTeleport(this.hoverPoint, this.placing, y);
+          if (landing && now - this.lastSnap > 280) {
+            this.teleport(new THREE.Vector3(landing.x, landing.y, landing.z));
+            this.lastSnap = now;
+          }
+        }
+        const menu = gp.buttons[5] ?? gp.buttons[4] ?? gp.buttons[1];
+        if (menu?.pressed && now - this.lastSnap > 400) {
+          this.panel.toggle();
+          this.lastSnap = now;
+        }
       }
     }
     // Pickup keeps the destination ray clear and hides the selected preview.

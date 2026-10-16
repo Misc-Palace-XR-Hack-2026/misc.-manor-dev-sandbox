@@ -22,6 +22,7 @@ import {
   objectMenuAnchor,
   objectMenuHit,
   dedicatedRooms,
+  stickForwardTeleport,
 } from '../src/xr/interaction';
 import { OBJECT_KINDS } from '../src/core/types';
 import { LIGHTING_PRESETS } from '../src/core/appearance';
@@ -68,6 +69,15 @@ test('VR teleport covers the extended floor, not only the original 6.3 room', ()
   assert.ok(pad.width > 9, `walk pad width ${pad.width} must cover the 10.3 interior`);
   assert.ok(pad.depth > 6.4, `walk pad depth ${pad.depth} must cover the 7.3 interior`);
   assert.ok(pad.x > 4.5, 'pad center follows the expanded room, not the old 3.3 midpoint');
+});
+
+test('stick-forward teleport uses same-frame floor hover and ignores placing mode', () => {
+  const hover = { x: 3.1, y: 0.02, z: 2.8 };
+  assert.deepEqual(stickForwardTeleport(hover, false, -0.8), { x: 3.1, y: 0, z: 2.8 });
+  assert.equal(stickForwardTeleport(null, false, -0.8), null, 'cleared hover never teleports');
+  assert.equal(stickForwardTeleport(hover, true, -0.8), null, 'placing must not steal the stick');
+  assert.equal(stickForwardTeleport(hover, false, -0.2), null, 'needs a forward deflection');
+  assert.deepEqual(stickForwardTeleport({ x: 2.0, y: 2.35, z: 1.6 }, false, -1), { x: 2.0, y: 2.3, z: 1.6 });
 });
 
 test('loft beacon is only visible in VR while standing on the floor', () => {
