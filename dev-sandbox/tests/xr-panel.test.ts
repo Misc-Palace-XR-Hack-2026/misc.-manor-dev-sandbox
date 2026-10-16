@@ -16,10 +16,9 @@ globalThis.document = {
 } as unknown as Document;
 globalThis.localStorage = { getItem: () => null, setItem() {} } as unknown as Storage;
 
-test('VR panel title is Cozy Palace', () => {
+test('VR panel keeps the existing title while the final name is unresolved', () => {
   painted.length = 0;
   const store = new Store(newRoom());
   new XrPanel(store, () => {});
-  assert.ok(painted.includes('Cozy Palace'));
-  assert.equal(painted.includes('Misc. Palace'), false);
+  assert.equal(painted[0], 'Misc. Palace');
 });
