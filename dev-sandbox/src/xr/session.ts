@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Store } from '../core/store';
-import { inspectPreview, loftBeaconVisible, spawnPosition, stickForwardTeleport, walkableAt, walkableFloorPad, xrSelect, type NeighborhoodRoom, type PanelActionResult } from './interaction';
+import { inspectPreview, loftBeaconVisible, objectIdFromRay, spawnPosition, stickForwardTeleport, walkableAt, walkableFloorPad, xrSelect, type NeighborhoodRoom, type PanelActionResult } from './interaction';
 import { XrPanel } from './panel';
 import { XrHoverLabel } from './hover';
 import { XrObjectMenu } from './object-menu';
@@ -34,7 +34,7 @@ export class XrSession {
     private store: Store,
     private objects: THREE.Group,
     private slots: THREE.Group,
-    _room: THREE.Group,
+    private room: THREE.Group,
     rooms: NeighborhoodRoom[] = [],
   ) {
     this.renderer.xr.enabled = true;
@@ -299,10 +299,15 @@ export class XrSession {
     }
     const object = ray.intersectObjects(this.objects.children, true)[0];
     const floor = ray.intersectObjects(this.floors.children, false)[0];
-    if (object && (!floor || object.distance <= floor.distance + 0.02)) {
+    const occluder = ray.intersectObjects(this.room.children, true)[0];
+    let objectId: string | undefined;
+    if (object) {
       let o: THREE.Object3D | null = object.object;
       while (o && !o.userData.repId) o = o.parent;
-      if (o?.userData.repId) return { kind: 'object', id: o.userData.repId, point: object.point };
+      objectId = o?.userData.repId;
+    }
+    if (objectId && objectIdFromRay({ id: objectId, distance: object.distance }, occluder ? { distance: occluder.distance } : null)) {
+      if (!floor || object.distance <= floor.distance + 0.02) return { kind: 'object', id: objectId, point: object.point };
     }
     if (floor && walkableAt(floor.point)) return { kind: 'floor', point: floor.point };
     return null;

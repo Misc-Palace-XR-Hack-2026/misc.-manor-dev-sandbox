@@ -9,6 +9,7 @@ import {
   snapTurnOffset,
   landingAt,
   objectHitFrom,
+  objectIdFromRay,
   destinationHitFrom,
   xrSelect,
   spawnPosition,
@@ -111,6 +112,11 @@ test('object and destination hits stay on separate rays; place uses Store', () =
   const destinations = [{ id: to }];
   assert.equal(objectHitFrom(objects, { throughWall: true }), null);
   assert.equal(objectHitFrom(objects, { throughWall: false }), repId);
+  assert.equal(objectIdFromRay({ id: repId, distance: 4 }, null), repId, 'unobstructed object hit');
+  assert.equal(objectIdFromRay({ id: repId, distance: 4 }, { distance: 1.2 }), null, 'closer wall blocks the object');
+  assert.equal(objectIdFromRay({ id: repId, distance: 3.4 }, { distance: 3.4 }), repId, 'equal distance still counts as the object');
+  assert.equal(objectIdFromRay({ id: repId, distance: 2.6 }, { distance: 1.8 }), null, 'loft slab from below occludes');
+  assert.equal(objectIdFromRay(null, { distance: 1 }), null);
   assert.equal(destinationHitFrom(destinations.concat([{ id: 'object-volume' }]), { holding: false }), null);
   assert.equal(destinationHitFrom([{ id: to }], { holding: true }), to);
 
