@@ -1,9 +1,12 @@
 import * as THREE from 'three';
 import type { Store } from '../core/store';
-import { inspectPreview, loftBeaconVisible, spawnPosition, walkableAt, walkableFloorPad, xrSelect, type NeighborhoodRoom, type PanelActionResult } from './interaction';
+import { inspectPreview, loftBeaconVisible, spawnPosition, walkableAt, walkableFloorPad, xrSelect, xrSessionInit, type NeighborhoodRoom, type PanelActionResult } from './interaction';
 import { XrPanel } from './panel';
 import { XrHoverLabel } from './hover';
 import { XrObjectMenu } from './object-menu';
+import { buildPreview } from '../core/preview';
+import { mediaArt } from '../core/media-art';
+import { PreviewCardView } from '../views/preview-card';
 
 const SNAP = Math.PI / 4;
 const RAY_LENGTH = 10;
@@ -23,6 +26,9 @@ export class XrSession {
   private panel: XrPanel;
   private hoverLabel = new XrHoverLabel();
   private objectMenu: XrObjectMenu;
+  private overlay: HTMLElement;
+  private overlayCard: PreviewCardView;
+  private overlayGranted = false;
   private lastSnap = 0;
   private hoverPoint: THREE.Vector3 | null = null;
   private placing = false;
@@ -53,6 +59,12 @@ export class XrSession {
     this.scene.add(this.player, this.floors, this.marker, this.hoverLabel.group);
     this.panel = new XrPanel(store, (result) => this.onPanel(result), rooms);
     this.objectMenu = new XrObjectMenu(store, (result) => this.onPanel(result));
+    this.overlay = document.createElement('div');
+    this.overlay.id = 'xr-dom-overlay';
+    this.overlay.className = 'xr-dom-overlay';
+    this.overlay.hidden = true;
+    document.body.append(this.overlay);
+    this.overlayCard = new PreviewCardView(this.overlay);
     this.player.add(this.panel.group);
     this.scene.add(this.objectMenu.group);
     this.buildFloors();
@@ -67,7 +79,9 @@ export class XrSession {
     if (!xr) throw new Error('WebXR is not available in this browser.');
     const ok = await xr.isSessionSupported('immersive-vr');
     if (!ok) throw new Error('This headset/browser does not support immersive VR.');
-    const session = await xr.requestSession('immersive-vr', { optionalFeatures: ['local-floor'] });
+    const session = await xr.requestSession('immersive-vr', xrSessionInit(this.overlay));
+    this.overlayGranted = Boolean(session.domOverlayState?.type);
+    this.objectMenu.useDomOverlay = this.overlayGranted;
     await this.renderer.xr.setSession(session);
   }
 
@@ -89,6 +103,7 @@ export class XrSession {
     this.player.position.set(spawn.x, spawn.y, spawn.z);
     this.player.rotation.set(0, 0, 0);
     this.store.select(null);
+    this.overlay.hidden = !this.overlayGranted;
     this.panel.show();
     this.syncGuides();
   }
@@ -101,6 +116,10 @@ export class XrSession {
     this.panel.hide();
     this.hoverLabel.hide();
     this.objectMenu.hide();
+    this.overlayCard.show(null);
+    this.overlay.hidden = true;
+    this.overlayGranted = false;
+    this.objectMenu.useDomOverlay = false;
     this.placing = false;
     this.syncGuides();
   }
@@ -273,6 +292,23 @@ export class XrSession {
     }
     // Pickup keeps the destination ray clear and hides the selected preview.
     this.objectMenu.follow(this.placing ? null : menuAt, this.camera);
+    this.syncOverlay();
+  }
+
+  private syncOverlay(): void {
+    if (!this.presenting || !this.overlayGranted || this.placing || !this.store.selectedId) {
+      this.overlayCard.show(null);
+      return;
+    }
+    const rep = this.store.state.representations.find((r) => r.id === this.store.selectedId);
+    const content = rep ? this.store.content(rep.contentItemId) : undefined;
+    if (!content) {
+      this.overlayCard.show(null);
+      return;
+    }
+    const preview = buildPreview(content);
+    this.overlayCard.show(preview, mediaArt(content));
+    this.overlayCard.moveTo(this.overlay.clientWidth / 2 || 160, (this.overlay.clientHeight || 240) * 0.42);
   }
 
   private pick(controller: THREE.Group):

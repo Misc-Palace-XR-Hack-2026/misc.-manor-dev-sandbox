@@ -17,6 +17,21 @@ const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string,
   return e;
 };
 
+/** Same sandboxed player used by desktop and by the VR DOM overlay. */
+export function createEmbedFrame(preview: Extract<Preview, { kind: 'embed' }>): HTMLIFrameElement {
+  const frame = make('iframe', 'preview-iframe');
+  frame.title = `Preview of ${preview.title}`;
+  frame.height = String(preview.height);
+  // Scripts + same-origin are needed by the players themselves (their own origin, not ours). No top navigation,
+  // forms or downloads. A referrer is sent because YouTube refuses to play embeds without one.
+  frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-popups');
+  frame.allow = 'encrypted-media; picture-in-picture; fullscreen';
+  frame.allowFullscreen = true;
+  frame.referrerPolicy = 'strict-origin-when-cross-origin';
+  frame.src = preview.src;
+  return frame;
+}
+
 /** Fallback picture: an icon for the media type, captioned with what it is. */
 function hero(art: PreviewArt): HTMLElement {
   const frame = make('div', 'preview-frame preview-hero');
@@ -76,17 +91,7 @@ export class PreviewCardView {
   private render(p: Preview, art: PreviewArt | null): HTMLElement {
     const body = make('div', `preview-body preview-${p.kind}`);
     if (p.kind === 'embed') {
-      const frame = make('iframe', 'preview-iframe');
-      frame.title = `Preview of ${p.title}`;
-      frame.height = String(p.height);
-      // Scripts + same-origin are needed by the players themselves (their own origin, not ours). No top navigation,
-      // forms or downloads. A referrer is sent because YouTube refuses to play embeds without one.
-      frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-popups');
-      frame.allow = 'encrypted-media; picture-in-picture; fullscreen';
-      frame.allowFullscreen = true;
-      frame.referrerPolicy = 'strict-origin-when-cross-origin';
-      frame.src = p.src;
-      body.append(frame, make('div', 'preview-title', p.title));
+      body.append(createEmbedFrame(p), make('div', 'preview-title', p.title));
     } else if (p.kind === 'image') {
       const frame = make('div', 'preview-frame');
       const img = make('img');

@@ -107,6 +107,15 @@ button:disabled { opacity: 0.4; cursor: default; }
 .preview-hero[data-type="article"], .preview-hero[data-type="doc"], .preview-hero[data-type="note"] { background: linear-gradient(135deg, #4a4535, #2a2733); }
 .preview-hero[data-type="image"] { background: linear-gradient(135deg, #35484a, #2a2733); }
 .preview-iframe { display: block; width: 100%; border: 0; border-radius: 8px; background: #2a2733; color-scheme: light; }
+
+.xr-dom-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+.xr-dom-overlay[hidden] { display: none; }
+.xr-dom-overlay .preview-card { pointer-events: auto; }
 .preview-body {
   display: grid;
   gap: 6px;

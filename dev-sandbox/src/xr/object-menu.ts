@@ -2,9 +2,11 @@ import * as THREE from 'three';
 import type { Store } from '../core/store';
 import { XrPreview } from './preview';
 import { objectActions, objectMenuAnchor, runPanelAction, type PanelActionResult } from './interaction';
+import { buildPreview } from '../core/preview';
 
 export class XrObjectMenu {
   readonly group = new THREE.Group();
+  useDomOverlay = false;
   private buttons: THREE.Mesh[] = [];
   private hover: THREE.Mesh | null = null;
   private preview: XrPreview | null = null;
@@ -66,9 +68,11 @@ export class XrObjectMenu {
     const actions = objectActions(this.store);
     const rep = this.store.state.representations.find(r => r.id === this.store.selectedId);
     const content = rep ? this.store.content(rep.contentItemId) : undefined;
-    if (content) {
+    if (content && !(this.useDomOverlay && buildPreview(content).kind === 'embed')) {
       this.preview = new XrPreview(content);
       this.group.add(this.preview.mesh);
+      actions.push({ id: 'cancel', label: 'Close' });
+    } else if (content) {
       actions.push({ id: 'cancel', label: 'Close' });
     }
     const span = (actions.length - 1) * 0.28;
