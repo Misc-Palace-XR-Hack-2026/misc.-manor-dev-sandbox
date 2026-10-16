@@ -38,12 +38,14 @@ function rod(name: string, from: [number, number, number], to: [number, number, 
 
 const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
   ...cozyBuilders,
-  // Standing book, cover toward the camera, with a cream page block behind it.
-  book: () => [
-    box(0.34, 0.46, 0.07, 0xc0463b, 0, 0, 0.06),
-    box(0.3, 0.42, 0.1, 0xf1e6cf, 0, 0.02, -0.02),
-    box(0.04, 0.44, 0.2, 0x9a2f2a, -0.17, 0.01, -0.01),
-  ],
+  // Standing book, cover toward the camera, with a cream page block and a matching back cover.
+  book: () => {
+    const front = named('book-front', box(0.34, 0.46, 0.07, 0xc0463b, 0, 0, 0.06));
+    const pages = named('book-pages', box(0.3, 0.42, 0.1, 0xf1e6cf, 0, 0.02, -0.02));
+    const spine = named('book-spine', box(0.04, 0.44, 0.2, 0x9a2f2a, -0.17, 0.01, -0.01));
+    const back = named('book-back', box(0.34, 0.46, 0.07, 0xc0463b, 0, 0, -0.10));
+    return [front, pages, spine, back];
+  },
   photoFrame: () => {
     const back = box(0.5, 0.6, 0.05, 0xb8793f);
     const photo = box(0.38, 0.48, 0.02, 0x7fb0c9, 0, 0.06, 0.03);
