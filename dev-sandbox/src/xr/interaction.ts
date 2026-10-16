@@ -70,6 +70,16 @@ export function loftBeaconVisible(presenting: boolean, playerY: number): boolean
   return presenting && playerY < 1.5;
 }
 
+/** Same-frame stick teleport: needs a walkable hover and must not run while placing. */
+export function stickForwardTeleport(
+  hover: { x: number; y: number; z: number } | null,
+  placing: boolean,
+  stickY: number,
+): { x: number; y: number; z: number } | null {
+  if (placing || !hover || stickY > -0.7) return null;
+  return walkableAt(hover);
+}
+
 export function nearestLanding(point: { x: number; y: number; z: number }, max = 0.55): Landing | null {
   let best: Landing | null = null;
   let bestDist = max;
