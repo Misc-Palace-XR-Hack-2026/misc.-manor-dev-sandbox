@@ -11,6 +11,33 @@ const item = (over: Partial<ContentItem>): ContentItem => ({
 });
 const urlItem = (sourceRef: string, type: ContentItem['type'] = 'link') => item({ sourceRef, type });
 
+test('Matt’s own HTTPS websites get page previews rather than cards', () => {
+  for (const ref of [
+    'Https://dvgpro.com', 'https://davisclockservices.com/',
+    'https://apolloslearningcorner.com', 'https://apolloslearningcorner.com/Games/',
+    'https://thescoobmeisterm.github.io/novation-bs2-worship-ambient/index.html',
+    'https://thescoobmeisterm.github.io/TinkerWorkbench/',
+    'https://thescoobmeisterm.github.io/SparkTinkerGame/',
+    'https://theplutollc.com/', 'https://os.dvgpro.com/',
+  ]) {
+    const p = buildPreview(urlItem(ref));
+    assert.equal(p.kind, 'embed', ref);
+    assert.equal(p.kind === 'embed' && p.provider, 'page');
+  }
+});
+
+test('page previews reject insecure, credentialed, nonstandard-port and lookalike URLs', () => {
+  for (const ref of [
+    'http://dvgpro.com/', 'https://user:password@dvgpro.com/', 'https://dvgpro.com:8443/',
+    'ftp://dvgpro.com/', 'javascript://dvgpro.com/', 'https://dvgpro.com.evil.example/',
+    'https://other-user.github.io/', 'https://127.0.0.1/', 'https://localhost/',
+  ]) assert.equal(embedFor(new URL(ref)), null, ref);
+});
+
+test('page previews preserve the exact HTTPS destination including www and hash', () => {
+  assert.equal(embedFor(new URL('https://www.dvgpro.com/a?q=1#part'))?.src, 'https://www.dvgpro.com/a?q=1#part');
+});
+
 test('local photo previews as an image thumbnail', () => {
   const p = buildPreview(item({ type: 'image', sourceKind: 'file', sourceRef: 'me.png', imageData: PNG }));
   assert.deepEqual(p, { kind: 'image', title: 'Title', src: PNG });
@@ -60,7 +87,7 @@ test('Vimeo, Spotify, SoundCloud and Wikipedia get embeds', () => {
 
 test('confirmed framable sites embed the page itself; lookalikes do not', () => {
   const p = buildPreview(urlItem('https://www.gungo.dev/projects?x=1#top'));
-  assert.deepEqual(p, { kind: 'embed', title: 'Title', provider: 'page', height: 220, src: 'https://gungo.dev/projects?x=1' });
+  assert.deepEqual(p, { kind: 'embed', title: 'Title', provider: 'page', height: 220, src: 'https://www.gungo.dev/projects?x=1#top' });
   assert.equal(buildPreview(urlItem('gungo.dev')).kind, 'embed', 'bare hostname');
   assert.equal(buildPreview(urlItem('https://gungo.dev.evil.example/')).kind, 'card');
   assert.equal(buildPreview(urlItem('https://notgungo.dev/')).kind, 'card');

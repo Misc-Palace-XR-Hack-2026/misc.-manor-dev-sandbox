@@ -79,14 +79,25 @@ export class PreviewCardView {
       const frame = make('iframe', 'preview-iframe');
       frame.title = `Preview of ${p.title}`;
       frame.height = String(p.height);
-      // Scripts + same-origin are needed by the players themselves (their own origin, not ours). No top navigation,
-      // forms or downloads. A referrer is sent because YouTube refuses to play embeds without one.
-      frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-popups');
-      frame.allow = 'encrypted-media; picture-in-picture; fullscreen';
-      frame.allowFullscreen = true;
+      // Ordinary pages get an opaque origin, even if they redirect back to this app.
+      // Trusted provider players retain their existing playback permissions.
+      const page = p.provider === 'page';
+      frame.setAttribute('sandbox', page ? 'allow-scripts' : 'allow-scripts allow-same-origin allow-presentation allow-popups');
+      frame.allow = page ? '' : 'encrypted-media; picture-in-picture; fullscreen';
+      frame.allowFullscreen = !page;
       frame.referrerPolicy = 'strict-origin-when-cross-origin';
-      frame.src = p.src;
-      body.append(frame, make('div', 'preview-title', p.title));
+      const destination = new URL(p.src);
+      if (destination.protocol === 'https:' && destination.origin !== location.origin) {
+        frame.src = p.src;
+        body.append(frame);
+      }
+      body.append(make('div', 'preview-title', p.title));
+      const guidance = make('div', 'preview-text', 'Loading or blank? This site may block previews or need browser features.');
+      const open = make('a', 'preview-open', 'Open in browser');
+      open.href = p.src;
+      open.target = '_blank';
+      open.rel = 'noopener noreferrer';
+      body.append(guidance, open);
     } else if (p.kind === 'image') {
       const frame = make('div', 'preview-frame');
       const img = make('img');
