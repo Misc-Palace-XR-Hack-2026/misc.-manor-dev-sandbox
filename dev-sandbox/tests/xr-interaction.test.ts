@@ -241,3 +241,25 @@ test('Change object and Edit open the object list, and dedicated rooms stay visi
   assert.equal(themed.page, undefined);
   assert.equal(store.state.lighting, 'twilight');
 });
+
+test('VR How-to menu is skippable and replayable without changing the personal save', () => {
+  const store = new Store(newRoom('Mine'), 'guest');
+  const snapshot = store.exportJson();
+  const home = panelButtons(store, 'home').map((b) => b.id);
+  assert.ok(home.includes('page:howto'));
+  assert.equal(runPanelAction(store, 'page:howto').page, 'howto');
+  const howto = panelButtons(store, 'howto').map((b) => b.id);
+  assert.deepEqual(howto, [
+    'page:home',
+    'howto:create',
+    'howto:move',
+    'howto:rooms',
+    'howto:style',
+    'howto:skip',
+  ]);
+  assert.equal(runPanelAction(store, 'howto:create').page, 'howto-create');
+  assert.ok(panelButtons(store, 'howto-create').some((b) => b.id === 'page:howto'));
+  assert.equal(runPanelAction(store, 'howto:skip').page, 'home');
+  assert.equal(runPanelAction(store, 'page:howto').page, 'howto', 'replay after skip');
+  assert.equal(store.exportJson(), snapshot, 'tutorials must not mutate the personal room');
+});
