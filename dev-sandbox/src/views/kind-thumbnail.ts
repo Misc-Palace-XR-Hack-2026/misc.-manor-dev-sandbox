@@ -1,6 +1,7 @@
 import { OBJECT_LABELS, type ObjectKind } from '../core/types';
 
 const GLYPHS: Record<ObjectKind, string> = {
+  arDevice: '👓', vrDevice: '🥽', igniteLogo: '🔥', fireplace: '🪵🔥',
   book: '📕',
   photoFrame: '🖼️',
   record: '📀',
