@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Store } from '../core/store';
-import { walkStairs, inspectPreview, loftBeaconVisible, objectIdFromRay, spawnPosition, stickForwardTeleport, walkableAt, walkableFloorPad, xrSelect, xrSessionInit, type NeighborhoodRoom, type PanelActionResult } from './interaction';
+import { walkStairs, inspectPreview, loftBeaconVisible, objectIdFromRay, overlayIsGranted, spawnPosition, stickForwardTeleport, walkableAt, walkableFloorPad, xrSelect, xrSessionInit, type NeighborhoodRoom, type PanelActionResult } from './interaction';
 import type { OnboardingState } from '../core/onboarding';
 import { XrPanel } from './panel';
 import { XrHoverLabel } from './hover';
@@ -84,8 +84,9 @@ export class XrSession {
     const ok = await xr.isSessionSupported('immersive-vr');
     if (!ok) throw new Error('This headset/browser does not support immersive VR.');
     const session = await xr.requestSession('immersive-vr', xrSessionInit(this.overlay));
-    this.overlayGranted = Boolean(session.domOverlayState?.type);
+    this.overlayGranted = overlayIsGranted(session);
     this.objectMenu.useDomOverlay = this.overlayGranted;
+    this.overlay.hidden = !this.overlayGranted;
     await this.renderer.xr.setSession(session);
   }
 
@@ -107,6 +108,8 @@ export class XrSession {
     this.player.position.set(spawn.x, spawn.y, spawn.z);
     this.player.rotation.set(0, 0, 0);
     this.store.select(null);
+    this.overlayGranted = this.overlayGranted || overlayIsGranted(this.renderer.xr.getSession());
+    this.objectMenu.useDomOverlay = this.overlayGranted;
     this.overlay.hidden = !this.overlayGranted;
     const tutorial = (globalThis as unknown as { tutorial?: { state: unknown } }).tutorial;
     this.panel.guide = (tutorial?.state as typeof this.panel.guide) ?? null;

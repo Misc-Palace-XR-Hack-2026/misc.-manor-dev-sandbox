@@ -35,6 +35,10 @@ export function enterReason(probe: XrProbe): string {
   return '';
 }
 
+export function overlayIsGranted(session: { domOverlayState?: { type?: string | null } } | null | undefined): boolean {
+  return Boolean(session?.domOverlayState?.type);
+}
+
 export function xrSessionInit(overlayRoot: HTMLElement): XRSessionInit {
   return {
     optionalFeatures: ['local-floor', 'dom-overlay'],

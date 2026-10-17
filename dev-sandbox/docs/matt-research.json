@@ -1,39 +1,42 @@
 [
   {
-    "suppliedUrl": "https://distrokid.com/hyperfollow/mattdavisandhisatomicrollerskates/cyber-funk",
-    "resolvedUrl": "https://distrokid.com/hyperfollow/mattdavisandhisatomicrollerskates/cyber-funk",
+    "suppliedUrl": "https://open.spotify.com/album/3KU38XVnDkckuekCODiTLV",
+    "resolvedUrl": "https://open.spotify.com/album/3KU38XVnDkckuekCODiTLV",
     "observedTitle": "Cyber-Funk by Matt Davis and His Atomic Roller Skates - DistroKid",
     "status": "read",
     "method": "browser navigation + wait_for_load + DOM text; web_extract backend unsupported",
-    "notes": "Matt Davis and His Atomic Roller Skates. HyperFollow links to Spotify, Apple Music, iTunes and Amazon; the page previews Stellar Improvisation. Start the loft listening corner here.",
+    "notes": "Official Spotify album destination from the HyperFollow page for Cyber-Funk (album 3KU38XVnDkckuekCODiTLV). HyperFollow itself refuses framing.",
     "objectKind": "turntable",
     "slotId": "loft-1",
     "zone": "loft listening studio",
-    "evidenceExcerpt": "Cyber-Funk\nMatt Davis and His Atomic Roller Skates\n\t\nPreview 1 of 13: Stellar Improvisation\nSpotify\nApple Music\niTunes\nAmazon\nThis is a user-generated page powered by HyperFollow."
+    "evidenceExcerpt": "Cyber-Funk\nMatt Davis and His Atomic Roller Skates\n\t\nPreview 1 of 13: Stellar Improvisation\nSpotify\nApple Music\niTunes\nAmazon\nThis is a user-generated page powered by HyperFollow.",
+    "originalSuppliedUrl": "https://distrokid.com/hyperfollow/mattdavisandhisatomicrollerskates/cyber-funk"
   },
   {
-    "suppliedUrl": "https://distrokid.com/hyperfollow/mattdavisandhisatomicrollerskates/neon-arcade-1984",
-    "resolvedUrl": "https://distrokid.com/hyperfollow/mattdavisandhisatomicrollerskates/neon-arcade-1984",
+    "suppliedUrl": "https://open.spotify.com/album/4FWcWAIGnKJfHNl4CUPYiC",
+    "resolvedUrl": "https://open.spotify.com/album/4FWcWAIGnKJfHNl4CUPYiC",
     "observedTitle": "Neon Arcade 1984 by Matt Davis and His Atomic Roller Skates - DistroKid",
     "status": "read",
     "method": "browser navigation + wait_for_load + DOM text; web_extract backend unsupported",
-    "notes": "Matt Davis and His Atomic Roller Skates. The HyperFollow page previews Neon Orbit and lists streaming destinations. A retro cassette in the listening loft matches the arcade-era title.",
+    "notes": "Official Spotify album destination from the HyperFollow page for Neon Arcade 1984 (album 4FWcWAIGnKJfHNl4CUPYiC). HyperFollow itself refuses framing.",
     "objectKind": "cassette",
     "slotId": "block-1",
     "zone": "loft listening studio",
-    "evidenceExcerpt": "Neon Arcade 1984\nMatt Davis and His Atomic Roller Skates\n\t\nPreview 1 of 7: Neon Orbit\nSpotify\nApple Music\niTunes\nAmazon\niHeartRadio\nThis is a user-generated page powered by HyperFollow."
+    "evidenceExcerpt": "Neon Arcade 1984\nMatt Davis and His Atomic Roller Skates\n\t\nPreview 1 of 7: Neon Orbit\nSpotify\nApple Music\niTunes\nAmazon\niHeartRadio\nThis is a user-generated page powered by HyperFollow.",
+    "originalSuppliedUrl": "https://distrokid.com/hyperfollow/mattdavisandhisatomicrollerskates/neon-arcade-1984"
   },
   {
-    "suppliedUrl": "https://distrokid.com/hyperfollow/mattdavisandhisatomicrollerskates/fm1m",
-    "resolvedUrl": "https://distrokid.com/hyperfollow/mattdavisandhisatomicrollerskates/fm1m",
+    "suppliedUrl": "https://open.spotify.com/album/5AQx26eGwpzwacSP3hwclU",
+    "resolvedUrl": "https://open.spotify.com/album/5AQx26eGwpzwacSP3hwclU",
     "observedTitle": "Live @ the Tree Bar by Matt Davis and His Atomic Roller Skates - DistroKid",
     "status": "read",
     "method": "browser navigation + wait_for_load + DOM text; web_extract backend unsupported",
-    "notes": "The supplied fm1m link resolves to Live @ the Tree Bar by Matt Davis and His Atomic Roller Skates, with Spotify, Apple Music and YouTube Music among its listening links.",
+    "notes": "Official Spotify album destination from the HyperFollow page for Live @ the Tree Bar / fm1m (album 5AQx26eGwpzwacSP3hwclU). HyperFollow itself refuses framing.",
     "objectKind": "guitar",
     "slotId": "loft-3",
     "zone": "loft listening studio",
-    "evidenceExcerpt": "Live @ the Tree Bar\nMatt Davis and His Atomic Roller Skates\nSpotify\nApple Music\niTunes\nYouTube Music\nAmazon\nTidal\nDeezer\niHeartRadio\nThis is a user-generated page powered by HyperFollow."
+    "evidenceExcerpt": "Live @ the Tree Bar\nMatt Davis and His Atomic Roller Skates\nSpotify\nApple Music\niTunes\nYouTube Music\nAmazon\nTidal\nDeezer\niHeartRadio\nThis is a user-generated page powered by HyperFollow.",
+    "originalSuppliedUrl": "https://distrokid.com/hyperfollow/mattdavisandhisatomicrollerskates/fm1m"
   },
   {
     "suppliedUrl": "Https://dvgpro.com",
@@ -41,31 +44,56 @@
     "observedTitle": "Davis Video & Graphic Productions",
     "status": "read",
     "method": "browser navigation + wait_for_load + DOM text; web_extract backend unsupported",
-    "notes": "Matt’s main creative-production website: video, graphics, web, print and photography, with service pages, portfolio work and articles. The frame anchors the east-side business display.",
+    "notes": "Matt\u2019s main creative-production website: video, graphics, web, print and photography, with service pages, portfolio work and articles. The frame anchors the east-side business display.",
     "objectKind": "photoFrame",
     "slotId": "bench-1",
     "zone": "east business display / front car",
     "evidenceExcerpt": "Skip to content\nDVGPro\nDavis Video & Graphic Productions\nServices\nPortfolio\nBlog\nShop\nContact\n\nVIDEO, GRAPHICS, WEB, PRINT, AND CREATIVE PRODUCTION\n\nDavis Video & Graphic Productions\n\nA cleaner, faster DVGPro.com rebuilt around services, po"
   },
   {
-    "suppliedUrl": "https://youtube.com/@thescoobmeisterm?si=OhKSvxgjvCemFI3Z",
-    "resolvedUrl": "https://www.youtube.com/@thescoobmeisterm?si=OhKSvxgjvCemFI3Z",
+    "suppliedUrl": "https://www.youtube.com/watch?v=XRu8zJWARoQ&list=PLEx-1H24sof6xUZGC_gfBDxU1JRbokv8T",
+    "resolvedUrl": "https://www.youtube.com/watch?v=XRu8zJWARoQ&list=PLEx-1H24sof6xUZGC_gfBDxU1JRbokv8T",
     "observedTitle": "Matt Davis (DVGPro) - YouTube",
     "status": "title-only",
     "method": "browser navigation + wait_for_load + DOM text; web_extract backend unsupported",
-    "notes": "Matt’s supplied YouTube channel. The page title confirms Matt Davis (DVGPro), but channel content was not readable during research; no video or subscriber claims are inferred.",
+    "notes": "Matt Davis playlist (watch URL with list=PLEx-1H24sof6xUZGC_gfBDxU1JRbokv8T). Playlist pages are not treated as playable video embeds.",
     "objectKind": "tv",
     "slotId": "floor-7",
+    "zone": null,
+    "evidenceExcerpt": "",
+    "originalSuppliedUrl": "https://youtube.com/@thescoobmeisterm?si=OhKSvxgjvCemFI3Z"
+  },
+  {
+    "suppliedUrl": "https://www.youtube.com/watch?v=nW5NKWreRR0&list=PLEx-1H24sof5Eu36zAFmasugh8DmJjzg2",
+    "resolvedUrl": "https://www.youtube.com/watch?v=nW5NKWreRR0&list=PLEx-1H24sof5Eu36zAFmasugh8DmJjzg2",
+    "observedTitle": "YouTube playlist",
+    "status": "queued-destination",
+    "method": "exact URL from Matt; not treated as a playable video embed",
+    "notes": "Matt Davis playlist (watch URL with list=PLEx-1H24sof5Eu36zAFmasugh8DmJjzg2). Playlist pages are not treated as playable video embeds.",
+    "objectKind": "tv",
+    "slotId": "floor-old-8",
+    "zone": null,
+    "evidenceExcerpt": ""
+  },
+  {
+    "suppliedUrl": "https://youtube.com/playlist?list=PL34ED3BB8F4E0FAAA&si=e55QoOxOmn6ACuQY",
+    "resolvedUrl": "https://youtube.com/playlist?list=PL34ED3BB8F4E0FAAA&si=e55QoOxOmn6ACuQY",
+    "observedTitle": "YouTube playlist",
+    "status": "queued-destination",
+    "method": "exact URL from Matt; not treated as a playable video embed",
+    "notes": "Matt Davis playlist (exact playlist URL including si token). Playlist pages are not treated as playable video embeds.",
+    "objectKind": "tv",
+    "slotId": "floor-old-9",
     "zone": null,
     "evidenceExcerpt": ""
   },
   {
     "suppliedUrl": "https://davisclockservices.com/",
     "resolvedUrl": "https://davisclockservices.com/",
-    "observedTitle": "Davis Clock Services – Providing Clock Repair For Over 45 Years",
+    "observedTitle": "Davis Clock Services \u2013 Providing Clock Repair For Over 45 Years",
     "status": "read",
     "method": "browser navigation + wait_for_load + DOM text; web_extract backend unsupported",
-    "notes": "Matt identifies this as his father’s clock business. The site describes family-owned grandfather and antique clock repair, restoration and setup, founded in 1974. The mantel clock marks the family-business corner.",
+    "notes": "Matt identifies this as his father\u2019s clock business. The site describes family-owned grandfather and antique clock repair, restoration and setup, founded in 1974. The mantel clock marks the family-business corner.",
     "objectKind": "clock",
     "slotId": "bench-3",
     "zone": "east family-business display",
@@ -77,11 +105,11 @@
     "observedTitle": "Apollo's Learning Corner",
     "status": "read",
     "method": "browser navigation + wait_for_load + DOM text; web_extract backend unsupported",
-    "notes": "Children’s learning hub with activities, videos, educational tunes and games. The site includes art, rhythm, fitness, math and nature activities; use the nearby arcade and book for deeper exploration.",
+    "notes": "Children\u2019s learning hub with activities, videos, educational tunes and games. The site includes art, rhythm, fitness, math and nature activities; use the nearby arcade and book for deeper exploration.",
     "objectKind": "notebook",
     "slotId": "shelf-1",
     "zone": "east learning corner",
-    "evidenceExcerpt": "Skip to content\nActivities\nArcade\nVideos\nParents Corner\nWelcome to Apollo’s Learning Corner,\n\nwhere curiosity leads to learning and play transforms into knowledge! Dive into our world of books, explore new ideas with our video adventures, c"
+    "evidenceExcerpt": "Skip to content\nActivities\nArcade\nVideos\nParents Corner\nWelcome to Apollo\u2019s Learning Corner,\n\nwhere curiosity leads to learning and play transforms into knowledge! Dive into our world of books, explore new ideas with our video adventures, c"
   },
   {
     "suppliedUrl": "https://apolloslearningcorner.com/Games/",
@@ -89,11 +117,11 @@
     "observedTitle": "Apollo's Learning Corner - Game Launcher",
     "status": "read",
     "method": "browser navigation + wait_for_load + DOM text; web_extract backend unsupported",
-    "notes": "The game launcher marks Art Studio, Music Maker, Fitness Fun and Patchy’s Mathy Treasure as ready to play. Word Wizard and Science Explorer are listed as coming soon, not playable releases.",
+    "notes": "The game launcher marks Art Studio, Music Maker, Fitness Fun and Patchy\u2019s Mathy Treasure as ready to play. Word Wizard and Science Explorer are listed as coming soon, not playable releases.",
     "objectKind": "console",
     "slotId": "floor-9",
     "zone": "east learning corner",
-    "evidenceExcerpt": "🎮 APOLLO'S\nLEARNING CORNER\nArt Studio\n\nCreate digital masterpieces with paint and fun elements\n\nREADY TO PLAY\nMusic Maker\n\nMake music with everyday objects and instruments\n\nREADY TO PLAY\nFitness Fun\n\nStay active with fun fitness challenges\n"
+    "evidenceExcerpt": "\ud83c\udfae APOLLO'S\nLEARNING CORNER\nArt Studio\n\nCreate digital masterpieces with paint and fun elements\n\nREADY TO PLAY\nMusic Maker\n\nMake music with everyday objects and instruments\n\nREADY TO PLAY\nFitness Fun\n\nStay active with fun fitness challenges\n"
   },
   {
     "suppliedUrl": "https://amzn.to/3Snypsv",
@@ -101,7 +129,7 @@
     "observedTitle": "Amazon.com: Apollo's Adventure in Our Solar System: 9798377796299: Corner, Apollo's Learning, Davis, Matthew M, Davis, Matthew M: Books",
     "status": "read",
     "method": "browser navigation + wait_for_load + DOM text; web_extract backend unsupported",
-    "notes": "The supplied Amazon short link leads to Apollo’s Adventure in Our Solar System, credited to Apollo’s Learning Corner and Matthew M Davis. Friendly alien Apollo explores the planets from Mercury to Neptune in an illustrated children’s book.",
+    "notes": "The supplied Amazon short link leads to Apollo\u2019s Adventure in Our Solar System, credited to Apollo\u2019s Learning Corner and Matthew M Davis. Friendly alien Apollo explores the planets from Mercury to Neptune in an illustrated children\u2019s book.",
     "objectKind": "book",
     "slotId": "shelf-2",
     "zone": "east learning corner",
@@ -110,38 +138,38 @@
   {
     "suppliedUrl": "https://thescoobmeisterm.github.io/novation-bs2-worship-ambient/index.html",
     "resolvedUrl": "https://thescoobmeisterm.github.io/novation-bs2-worship-ambient/index.html",
-    "observedTitle": "Refinery Creative — Novation Bass Station II Patch Manual & Synthesizer",
+    "observedTitle": "Refinery Creative \u2014 Novation Bass Station II Patch Manual & Synthesizer",
     "status": "read",
     "method": "browser navigation + wait_for_load + DOM text; web_extract backend unsupported",
     "notes": "Interactive Bass Station II patch manual and Web Audio synth for worship, ambient and post-rock. The page offers a 60-patch bank and distinguishes 48 synth patches from 12 hardware bass-through patches; browser emulation is not hardware audition proof.",
     "objectKind": "synthesizer",
     "slotId": "loft-2",
     "zone": "loft listening studio",
-    "evidenceExcerpt": "Refinery Creative\nBSII EDITION\n\nThe Refinery Church • Worship Arts\n\n★\n0\nRefinery\n60 Patches in Sequential Bank Order (Slots 000–059)\nNovation Bass Station II\nWorship, Ambient & Post-Rock\n\nThe official interactive sound manual, audio showcas"
+    "evidenceExcerpt": "Refinery Creative\nBSII EDITION\n\nThe Refinery Church \u2022 Worship Arts\n\n\u2605\n0\nRefinery\n60 Patches in Sequential Bank Order (Slots 000\u2013059)\nNovation Bass Station II\nWorship, Ambient & Post-Rock\n\nThe official interactive sound manual, audio showcas"
   },
   {
     "suppliedUrl": "https://thescoobmeisterm.github.io/TinkerWorkbench/",
     "resolvedUrl": "https://thescoobmeisterm.github.io/TinkerWorkbench/",
-    "observedTitle": "Ignite · Tinkerer's Robot Lab",
+    "observedTitle": "Ignite \u00b7 Tinkerer's Robot Lab",
     "status": "read",
     "method": "browser navigation + wait_for_load + DOM text; web_extract backend unsupported",
     "notes": "Five guided circuit builds cover LED light, blinking, button input, servo sweep and potentiometer control, plus a sandbox. Tap labeled pins and assemble instruction blocks; this is a guided learning model, not a substitute for real circuit safety checks.",
     "objectKind": "robot",
     "slotId": "floor-old-10",
     "zone": "front maker arcade",
-    "evidenceExcerpt": "ϟ\nignite\nTINKERERS SPARK TABLE\nTable guide ↗\nYOUR LEARNING PATH\nSmall sparks.\nBig discoveries.\n\nFive little builds. One new superpower.\n\n1\nLight an LED\nYour first circuit\n2\nBlink LED\nMake a rhythm\n3\nButton LED\nAdd an input\n4\nServo sweep\nMak"
+    "evidenceExcerpt": "\u03df\nignite\nTINKERERS SPARK TABLE\nTable guide \u2197\nYOUR LEARNING PATH\nSmall sparks.\nBig discoveries.\n\nFive little builds. One new superpower.\n\n1\nLight an LED\nYour first circuit\n2\nBlink LED\nMake a rhythm\n3\nButton LED\nAdd an input\n4\nServo sweep\nMak"
   },
   {
     "suppliedUrl": "https://thescoobmeisterm.github.io/SparkTinkerGame/",
     "resolvedUrl": "https://thescoobmeisterm.github.io/SparkTinkerGame/",
-    "observedTitle": "Who's That Robot Part? — Tinkerer's Table",
+    "observedTitle": "Who's That Robot Part? \u2014 Tinkerer's Table",
     "status": "read",
     "method": "browser navigation + wait_for_load + DOM text; web_extract backend unsupported",
     "notes": "A robot-component identification challenge: five mystery parts, eight seconds each and four answer choices. Its landing page invites quick rounds without sign-up. The cartridge sits beside the maker robot.",
     "objectKind": "cartridge",
     "slotId": "floor-11",
     "zone": "front maker arcade",
-    "evidenceExcerpt": "⚒\ntinkerer's table\n.\nA LITTLE CURIOSITY GOES A LONG WAY\n♪ On\n⛶\nTHE ROBOT PARTS CHALLENGE\nSmall parts.\nBig brain energy.\n\nThink you know what makes a robot tick?\nMeet a mystery part. Pick its name.\nBeat the clock.\n\n◎  5 mystery parts\n◷  8 se"
+    "evidenceExcerpt": "\u2692\ntinkerer's table\n.\nA LITTLE CURIOSITY GOES A LONG WAY\n\u266a On\n\u26f6\nTHE ROBOT PARTS CHALLENGE\nSmall parts.\nBig brain energy.\n\nThink you know what makes a robot tick?\nMeet a mystery part. Pick its name.\nBeat the clock.\n\n\u25ce \u00a05 mystery parts\n\u25f7 \u00a08 se"
   },
   {
     "suppliedUrl": "https://theplutollc.com/",
@@ -153,7 +181,7 @@
     "objectKind": "car",
     "slotId": "floor-15",
     "zone": "east business display / front car",
-    "evidenceExcerpt": "Skip to content\nTOGGLE MOBILE MENU\nWelcome to Pluto L.L.C.\n\nWelcome to Pluto LLC — Central Ohio’s Trusted Peer-to-Peer Car Rental Service\n\nAffordable, Convenient, and Reliable Car Rentals — Powered by Turo, Personalized by Pluto\n\nWhether yo"
+    "evidenceExcerpt": "Skip to content\nTOGGLE MOBILE MENU\nWelcome to Pluto L.L.C.\n\nWelcome to Pluto LLC \u2014 Central Ohio\u2019s Trusted Peer-to-Peer Car Rental Service\n\nAffordable, Convenient, and Reliable Car Rentals \u2014 Powered by Turo, Personalized by Pluto\n\nWhether yo"
   },
   {
     "suppliedUrl": "https://os.dvgpro.com/",
@@ -165,6 +193,6 @@
     "objectKind": "box",
     "slotId": "bench-2",
     "zone": "east business display / front car",
-    "evidenceExcerpt": "DVGProOS™\nMenu\nONE CONNECTED BUSINESS TOOLKIT\nTell us what is slowing your business down.\n\nWe will match your problem to the simplest practical system that can fix it, then keep your tools, projects, team access, and billing connected as yo"
+    "evidenceExcerpt": "DVGProOS\u2122\nMenu\nONE CONNECTED BUSINESS TOOLKIT\nTell us what is slowing your business down.\n\nWe will match your problem to the simplest practical system that can fix it, then keep your tools, projects, team access, and billing connected as yo"
   }
 ]

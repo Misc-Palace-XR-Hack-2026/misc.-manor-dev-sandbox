@@ -3,6 +3,7 @@ import { igniteBuilders } from './ignite-objects';
 import { cozyBuilders } from './cozy-objects';
 import { buildArmchair, buildSideTable, buildTurntable, buildRug, buildLeafyPlant } from './study-decor';
 import type { ObjectKind, ContentItem } from '../core/types';
+import { mediaArt } from '../core/media-art';
 import { validPhotoData, photoDimensions } from '../core/photos';
 
 // Placeholder objects built from primitives. Origin = base center, +z = front face.
@@ -380,7 +381,35 @@ function titleTexture(title: string): THREE.CanvasTexture {
   return texture;
 }
 
-export function buildObject(kind: ObjectKind, content?: Pick<ContentItem,'title'|'imageData'>): THREE.Group {
+function snapshotTexture(content: Pick<ContentItem,'title'|'imageData'|'type'|'sourceKind'|'sourceRef'>): THREE.CanvasTexture {
+  if (validPhotoData(content.imageData)) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 512;
+    const c = canvas.getContext('2d')!;
+    c.fillStyle = '#1c1814'; c.fillRect(0, 0, 512, 512);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => { c.drawImage(img, 0, 0, 512, 512); texture.needsUpdate = true; };
+    img.src = content.imageData!;
+    return texture;
+  }
+  const art = mediaArt(content as ContentItem);
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 512;
+  const c = canvas.getContext('2d')!;
+  c.fillStyle = '#2a2733'; c.fillRect(0, 0, 512, 512);
+  c.fillStyle = '#f8efdb'; c.font = '120px sans-serif'; c.textAlign = 'center';
+  c.fillText(art.glyph, 256, 220);
+  c.font = 'bold 36px Georgia, serif';
+  c.fillText(content.title.slice(0, 28), 256, 340, 460);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+export function buildObject(kind: ObjectKind, content?: Pick<ContentItem,'title'|'imageData'|'type'|'sourceKind'|'sourceRef'>): THREE.Group {
   const g = new THREE.Group();
   g.scale.setScalar(OBJECT_SCALE);
   for (const part of BUILDERS[kind]()) {
@@ -392,7 +421,18 @@ export function buildObject(kind: ObjectKind, content?: Pick<ContentItem,'title'
     });
     g.add(part);
   }
-  if (kind === 'book' && content) {
+  if (content && (kind === 'tv' || kind === 'photoFrame' || kind === 'record' || kind === 'turntable' || kind === 'book' || kind === 'notebook')) {
+    const map = snapshotTexture(content);
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(kind === 'tv' ? 0.36 : 0.28, kind === 'tv' ? 0.26 : 0.28), new THREE.MeshBasicMaterial({ map }));
+    face.name = 'preview-snapshot';
+    if (kind === 'tv') face.position.set(-0.06, 0.24, 0.24);
+    else if (kind === 'photoFrame') face.position.set(0, 0.30, 0.041);
+    else if (kind === 'book') face.position.set(0, 0.23, 0.096);
+    else if (kind === 'notebook') { face.rotation.x = -Math.PI / 2; face.position.set(0, 0.06, 0); }
+    else face.position.set(-0.05, 0.18, 0.12);
+    g.add(face);
+  }
+  if (kind === 'book' && content && !g.getObjectByName('preview-snapshot')) {
     const face = new THREE.Mesh(
       new THREE.PlaneGeometry(0.30, 0.42),
       new THREE.MeshStandardMaterial({ map: titleTexture(content.title), roughness: 0.85 }),
