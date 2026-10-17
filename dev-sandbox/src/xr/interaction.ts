@@ -73,6 +73,17 @@ export function walkableAt(point: { x: number; y: number; z: number }): { x: num
   return null;
 }
 
+/** Analytic invisible ramp; deliberately absent from render/pick/shadow lists.
+ * Optional stair mode: left stick forward/back follows the stair run, not head yaw.
+ * Both ends extend onto level landings. Teleport and snap turn remain available.
+ */
+export function walkStairs(p: {x:number;y:number;z:number}, stick: number, dt: number): {x:number;y:number;z:number} {
+  const height = (z:number) => 2.3 * Math.max(0, Math.min(1, (5.8-z)/2.8));
+  if (![p.x,p.y,p.z,stick,dt].every(Number.isFinite) || p.x < .3 || p.x > 1.1 || p.z < 2.6 || p.z > 6.2 || Math.abs(p.y-height(p.z)) > .06 || Math.abs(stick) < .2) return p;
+  const z = Math.max(2.6, Math.min(6.2, p.z + stick * .65 * Math.max(0,Math.min(dt,.05))));
+  return {x:p.x, y:height(z), z};
+}
+
 export function loftBeaconVisible(presenting: boolean, playerY: number): boolean {
   return presenting && playerY < 1.5;
 }
@@ -178,6 +189,7 @@ export interface PanelActionResult {
   page?: PanelPage;
   teleport?: { x: number; y: number; z: number };
   exit?: boolean;
+  stairs?: boolean;
   openUrl?: string;
 }
 
@@ -322,6 +334,8 @@ export function panelButtons(store: Store, page: PanelPage, _rooms: Neighborhood
     ];
   }
   const home: PanelButton[] = [
+    { id: 'stairs:bottom', label: 'Walk stairs ↑ (left stick)' },
+    { id: 'stairs:top', label: 'Walk stairs ↓ (left stick)' },
     { id: 'go:loft', label: 'Go to loft' },
     { id: 'go:floor', label: 'Go to floor' },
   ];
@@ -358,6 +372,8 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   if (id === 'howto:rooms') return { page: 'howto-rooms' };
   if (id === 'howto:style') return { page: 'howto-style' };
   if (id === 'howto:copy') return {};
+  if (id === 'stairs:bottom') return { stairs: true, teleport: {x:.7,y:0,z:6.2} };
+  if (id === 'stairs:top') return { stairs: true, teleport: {x:.7,y:2.3,z:2.6} };
   if (id === 'go:loft') return { teleport: { x: 2.0, y: 2.3, z: 1.6 } };
   if (id === 'go:floor') return { teleport: spawnPosition() };
   if (id === 'exit') return { exit: true };

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Store } from '../core/store';
-import { inspectPreview, loftBeaconVisible, objectIdFromRay, spawnPosition, stickForwardTeleport, walkableAt, walkableFloorPad, xrSelect, xrSessionInit, type NeighborhoodRoom, type PanelActionResult } from './interaction';
+import { walkStairs, inspectPreview, loftBeaconVisible, objectIdFromRay, spawnPosition, stickForwardTeleport, walkableAt, walkableFloorPad, xrSelect, xrSessionInit, type NeighborhoodRoom, type PanelActionResult } from './interaction';
 import { XrPanel } from './panel';
 import { XrHoverLabel } from './hover';
 import { XrObjectMenu } from './object-menu';
@@ -30,6 +30,8 @@ export class XrSession {
   private overlayCard: PreviewCardView;
   private overlayGranted = false;
   private lastSnap = 0;
+  private stairMode = false;
+  private lastWalk = 0;
   private hoverPoint: THREE.Vector3 | null = null;
   private placing = false;
   presenting = false;
@@ -110,6 +112,7 @@ export class XrSession {
 
   private onEnd(): void {
     this.presenting = false;
+    this.stairMode = false;
     this.store.select(null);
     this.marker.visible = false;
     this.hoverPoint = null;
@@ -219,13 +222,18 @@ export class XrSession {
     if (result.page) this.panel.show(result.page);
     if (this.store.selectedId && !this.store.slotOf(this.store.selectedId)) this.placing = true;
     if (result.exit) void this.exit();
-    if (result.teleport) this.player.position.set(result.teleport.x, result.teleport.y, result.teleport.z);
+    if (result.teleport) {
+      this.stairMode = Boolean(result.stairs);
+      this.player.position.set(result.teleport.x, result.teleport.y, result.teleport.z);
+      if (result.stairs) this.panel.hide();
+    }
     this.syncGuides();
   }
 
   private teleport(point: THREE.Vector3): void {
     const landing = walkableAt(point) ?? (point.y > 1.6 ? { x: 2.0, y: 2.3, z: 1.6 } : null);
     if (!landing) return;
+    this.stairMode = false;
     this.player.position.set(landing.x, landing.y, landing.z);
     this.syncGuides();
   }
@@ -238,6 +246,8 @@ export class XrSession {
 
   private updateControllers(): void {
     const now = performance.now();
+    const dt = Math.min(.05, (now-this.lastWalk)/1000);
+    this.lastWalk = now;
     const session = this.renderer.xr.getSession();
     this.hoverPoint = null;
     this.marker.visible = false;
@@ -276,6 +286,11 @@ export class XrSession {
         if (!gp) continue;
         const x = gp.axes[2] ?? gp.axes[0] ?? 0;
         const y = gp.axes[3] ?? gp.axes[1] ?? 0;
+        if (this.stairMode && source.handedness === 'left' && !this.placing && !this.panel.visible) {
+          const p = walkStairs(this.player.position, y, dt);
+          this.player.position.set(p.x,p.y,p.z);
+          continue;
+        }
         if (Math.abs(x) > 0.7 && Math.abs(x) >= Math.abs(y) && now - this.lastSnap > 280) {
           this.player.rotateY(-Math.sign(x) * SNAP);
           this.lastSnap = now;
