@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { Store, newRoom, validateRoom } from '../src/core/store';
 import { seedRoom } from '../src/core/rooms';
 import { THEMES } from '../src/core/themes';
+import { getLayout, DEFAULT_LAYOUT_ID } from '../src/core/layout';
 const path = join(process.cwd(), 'rooms/matt.json');
 const load = () => JSON.parse(readFileSync(path, 'utf8'));
 test('Matt dedicated seed includes owner destinations, researched notes, and cyber look', () => {
@@ -76,4 +77,15 @@ test('Matt music destinations use official Spotify albums and three exact YouTub
   assert.equal(room.placements.length, room.contentItems.length);
   assert.equal(room.representations.find((r: {contentItemId:string}) => r.contentItemId === 'matt-youtube').objectKind, 'tv');
   assert.equal(room.representations.filter((r: {objectKind:string}) => r.objectKind === 'tv').length, 1);
+  const slotOf = (id: string) => room.placements.find((p: {representationId:string}) => p.representationId === id).slotId;
+  const layout = getLayout(DEFAULT_LAYOUT_ID)!;
+  const pos = (id: string) => layout.slots.find((s) => s.id === id)!.pos;
+  const robotSlot = slotOf('matt-object-tinker-lab');
+  assert.equal(robotSlot, 'loft-4', 'robot belongs in the loft back-left corner');
+  const turntable = pos(slotOf('matt-object-cyber-funk'));
+  const box = pos(slotOf('matt-object-os'));
+  const [tx, , tz] = turntable;
+  const [bx, , bz] = box;
+  assert.ok(!(tx + tz > bx + bz + 0.8 && Math.abs(tx - bx) > 0.5 && Math.abs(tz - bz) > 0.5),
+    'record stand should not sit in front of the box');
 });

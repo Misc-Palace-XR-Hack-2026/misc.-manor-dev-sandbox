@@ -102,3 +102,13 @@ test('addItem follows the rules: chair on the back floor, rug in front, lamp bes
   const lampSlot = store.slotOf(lamp)!;
   assert.ok(Math.abs(pos(lampSlot)[0] - pos(chairSlot)[0]) > 0.4, `lamp ${lampSlot} beside ${chairSlot}`);
 });
+
+test('auto-place prefers a wall slot over the open center', () => {
+  const back = ['floor-1', 'floor-2', 'floor-3', 'floor-front-loft-1'];
+  const slot = chooseSlot('box', layout, occupied(...back), []);
+  assert.ok(slot);
+  const [x, y, z] = pos(slot!);
+  assert.ok(y < 0.2, `box stays on the floor (${slot})`);
+  const wallDist = Math.min(x, z, 10.3 - x, 7.3 - z);
+  assert.ok(wallDist < 2.0, `box hugs a wall, got ${slot} dist=${wallDist}`);
+});

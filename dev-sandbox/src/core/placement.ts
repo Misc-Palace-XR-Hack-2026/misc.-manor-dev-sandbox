@@ -77,6 +77,8 @@ function scoreSlot(
   const hearths = ofKind(occupants, layout, 'fireplace');
   const tvs = ofKind(occupants, layout, 'tv');
   let score = 0;
+  const wallDist = Math.min(x, z, 10.3 - x, 7.3 - z);
+  score += Math.max(0, 2.5 - wallDist) * 16;
   if (LARGE.has(kind)) {
     score += y < 0.2 ? 80 : -40;
     score += (3 - z) * 12;
