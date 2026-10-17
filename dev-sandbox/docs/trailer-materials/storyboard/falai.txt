@@ -1,0 +1,63 @@
+
+  Working dir: /Users/gungo/Documents/misc-palace/build-docs/dev-sandbox/docs/trailer-materials
+  Branch: trailer/german-draft
+
+  CONTEXT
+  I'm making a 60s trailer for Misc. Palace (a cozy voxel 3D "room for your
+  favorite things"). The authoritative script is PRODUCTION_SCREENPLAY_60S_TRAILER.md
+  — 9 shots, Shot 7 splits into 7a/7b/7c, so 11 panels total. My hand-drawn rough
+  sketches are already converted to JPG in ./sketches/ and already mapped into
+  STORYBOARD_SKETCH_BOARD.html (simple 4-up board) and STORYBOARD_PRESENTATION.html
+  (detailed deck). Read all three files first.
+
+  TASK
+  Generate finished storyboard panel art from my sketches using the fal-ai MCP
+  server, then build a new board using the generated images.
+
+  1. Confirm fal-ai MCP is connected. If not, stop and tell me.
+  2. Read each sketch in ./sketches/ and the matching shot in the screenplay.
+  3. Write one image prompt per shot (11 prompts). Decide per shot whether it
+     wants full concept art or looser line art — hero/pitch beats (Shots 3, 4, 6,
+     8, 9) get concept art, functional beats (1, 2, 5, 7a, 7b, 7c) get line art.
+     Show me all 11 prompts and WAIT for my approval before generating anything.
+  4. After I approve, generate the 11 images via fal, using the corresponding
+     sketch as an image-to-image reference so the composition stays mine.
+     Pin a seed and reuse it for character/room consistency.
+  5. Build STORYBOARD_GENERATED.html: vertical Letter pages, 4 panels per page,
+     generated image on top, scene description + dialogue below each. Mirror the
+     structure of STORYBOARD_SKETCH_BOARD.html.
+
+  SKETCH → SHOT MAP (already worked out, don't re-derive):
+    sketch 1 + 2        -> Shot 1
+    sketch 3 + 4        -> Shot 2
+    sketch 5            -> Shot 3 AND Shot 4
+    sketch 7            -> Shot 4
+    sketch 6            -> Shot 5
+    sketch 8            -> Shot 6
+    sketch 9a-b         -> Shot 7a AND Shot 7b
+    sketch 9c           -> Shot 7c
+    sketch 10a + 10b    -> Shot 8
+    sketch 11           -> Shot 9
+    sketch extra        -> not in cut, ignore
+
+  ART DIRECTION
+  Voxelated / low-poly 3D room, warm earth tones, firelight amber. Fireplace is
+  the key light, warm, lower-left. Soft ambient, vignetted edges. Isometric 3/4
+  camera. Cozy, lived-in, intimate. Character "German": well-dressed, silver
+  streak in hair, unlit bubble pipe.
+
+  HARD CONSTRAINTS
+  - Do NOT screenshot or capture anything from the dev-sandbox app. Generated
+    images only.
+  - Do NOT delete or modify ./sketches/ or ./storyboard-rough/ (HEIC originals).
+  - Do NOT touch STORYBOARD_SKETCH_BOARD.html or STORYBOARD_PRESENTATION.html.
+  - Keep it simple. No build scripts, no node_modules, no capture pipelines.
+    One static HTML file plus a folder of generated PNGs.
+  - Shot 7b must be visibly labelled a CONCEPT frame — production requires real
+    VR headset footage there.
+  - Shot 6 must carry an on-screen "CONCEPT SEQUENCE" label.
+  - Tell me the cost before generating, and stop if it exceeds free credit.
+
+  Note: macOS blocks headless Chrome from reading ~/Documents. If you need to
+  render for verification, copy the HTML + images to /tmp first.
+

@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MISC. PALACE — 60s Trailer Storyboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #1a1a1a;
+            color: #f0f0f0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #d4a574;
+            padding-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: #f4a86a;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            color: #ccc;
+        }
+
+        .storyboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
+            border: 2px solid #d4a574;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            page-break-inside: avoid;
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, #d4a574 0%, #b8905a 100%);
+            color: #1a1a1a;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .panel-number {
+            font-size: 1.3em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .panel-timing {
+            font-size: 0.95em;
+            font-weight: bold;
+        }
+
+        .panel-visual {
+            background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            color: #888;
+            font-size: 0.9em;
+            text-align: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* --- hand-drawn rough sketches + generated side-by-side --- */
+        .sketch-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+            position: relative;
+            z-index: 1;
+        }
+
+        .sketches-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            flex: 1 1 auto;
+            min-width: 280px;
+            max-width: 520px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .sketch {
+            flex: 1 1 140px;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            min-width: 130px;
+        }
+
+        .sketch img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 6px;
+            border: 1px solid #5a5a5a;
+            background: #fff;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+        }
+
+        .sketch figcaption {
+            font-size: 0.75em;
+            line-height: 1.4;
+            color: #9a9a9a;
+            text-align: center;
+            letter-spacing: 0.3px;
+        }
+
+        .sketch figcaption strong {
+            color: #d4a574;
+            font-weight: 600;
+        }
+
+        .generated {
+            flex: 1 1 auto;
+            min-width: 240px;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        .generated img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 6px;
+            border: 2px solid #d4a574;
+            background: #1a1a1a;
+            box-shadow: 0 4px 14px rgba(212, 165, 116, 0.2);
+        }
+
+        .generated figcaption {
+            font-size: 0.78em;
+            line-height: 1.45;
+            color: #b8a08a;
+            text-align: center;
+            letter-spacing: 0.3px;
+            font-weight: 500;
+        }
+
+        .panel-visual::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 2px,
+                rgba(212, 165, 116, 0.03) 2px,
+                rgba(212, 165, 116, 0.03) 4px
+            );
+            pointer-events: none;
+        }
+
+        .visual-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        .visual-placeholder {
+            font-size: 0.9em;
+            font-weight: 500;
+            line-height: 1.7;
+            color: #bbb;
+            background: rgba(0, 0, 0, 0.28);
+            border: 1px dashed #5a5a5a;
+            border-radius: 6px;
+            padding: 12px 16px;
+        }
+
+        .panel-content {
+            padding: 25px;
+        }
+
+        .scene-description {
+            margin-bottom: 20px;
+        }
+
+        .scene-description h3 {
+            color: #f4a86a;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .scene-description p {
+            color: #ddd;
+            font-size: 0.95em;
+            line-height: 1.7;
+        }
+
+        .dialogue-box {
+            background: rgba(212, 165, 116, 0.1);
+            border-left: 3px solid #d4a574;
+            padding: 12px 15px;
+            margin: 15px 0;
+            font-style: italic;
+            color: #e8d4c0;
+            border-radius: 4px;
+        }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .action-item {
+            background: rgba(100, 100, 100, 0.3);
+            padding: 10px 12px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #ccc;
+        }
+
+        .action-item strong {
+            color: #f4a86a;
+        }
+
+        .notes {
+            background: rgba(80, 80, 80, 0.4);
+            border-left: 2px solid #888;
+            padding: 12px 15px;
+            margin-top: 15px;
+            font-size: 0.85em;
+            color: #aaa;
+            border-radius: 4px;
+        }
+
+        .notes strong {
+            color: #f4a86a;
+        }
+
+        .camera-note {
+            color: #b8d4f1;
+            font-weight: 500;
+            margin: 10px 0 5px 0;
+        }
+
+        .audio-note {
+            color: #d4b8f1;
+            font-weight: 500;
+            margin: 10px 0 5px 0;
+        }
+
+        .timing-badge {
+            display: inline-block;
+            background: #d4a574;
+            color: #1a1a1a;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin: 5px 5px 5px 0;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 2px solid #d4a574;
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        @media print {
+            body {
+                background: white;
+                color: #000;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .panel {
+                background: white;
+                border-color: #ccc;
+                page-break-inside: avoid;
+            }
+
+            .panel-header {
+                background: #e8d4c0;
+                color: #000;
+            }
+
+            .panel-visual {
+                background: #f5f5f5;
+            }
+
+            .panel-visual::before { display: none; }
+
+            .sketch img {
+                border-color: #bbb;
+                box-shadow: none;
+            }
+
+            .sketch figcaption { color: #555; }
+
+            .visual-placeholder {
+                background: #fafafa;
+                border-color: #bbb;
+                color: #444;
+            }
+
+            .dialogue-box {
+                background: #f0f0f0;
+                border-left-color: #999;
+                color: #333;
+            }
+
+            .header {
+                border-color: #ccc;
+            }
+        }
+
+        @page {
+            size: letter;
+            margin: 0.5in;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>MISC. PALACE</h1>
+        <p>60 Second Trailer — Visual Storyboard</p>
+        <p style="font-size: 0.9em; margin-top: 10px; color: #999;">Production Screenplay & Shot Breakdown</p>
+    </div>
+
+    <div class="storyboard-container">
+
+        <!-- SHOT 1 -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-number">SHOT 1</span>
+                <span class="panel-timing">0:00–0:03 (3 sec)</span>
+            </div>
+            <div class="panel-visual">
+                <div class="sketch-row">
+                    <div class="sketches-group">
+                        <figure class="sketch">
+                            <img src="../sketches/storyboard-shot-1.jpg" alt="Rough sketch: closed vignette / iris, title page">
+                            <figcaption><strong>Sketch 1</strong> — vignette closed</figcaption>
+                        </figure>
+                        <figure class="sketch">
+                            <img src="../sketches/storyboard-shot-2.jpg" alt="Rough sketch: German in armchair with bubble pipe by the fireplace">
+                            <figcaption><strong>Sketch 2</strong> — German in chair</figcaption>
+                        </figure>
+                    </div>
+                    <figure class="generated">
+                        <img src="generated/shot-1.jpg" alt="Generated: vignette fade-in with German">
+                        <figcaption><strong>Generated</strong> — Shot 1</figcaption>
+                    </figure>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="scene-description">
+                    <h3>Vignette Fade-In + German Notices Viewer</h3>
+                    <p>Start from black. Over 1-2 seconds, a vignette circle opens/iris reveals the warm, cozy 3D room. Isometric angle showing fireplace (warm amber glow, lower-left), armchair, furniture, rug. Slow gentle pan/orbit.</p>
+                    <p>Then CUT TO: Mid-shot of German sitting in the armchair, well-dressed, silver streak in hair, unlit bubble pipe, reading comic book. As dialogue begins, he glances up and notices the viewer—slight knowing smile.</p>
+                </div>
+                <div class="dialogue-box">
+                    "Welcome to the miscellaneous manor. It can get pretty scary out there, so much doom filled, endless scrolling…"
+                </div>
+                <div class="camera-note">📷 Camera: Isometric wide establishing → mid-shot of German</div>
+                <div class="audio-note">🔊 Audio: As vignette opens, fireplace ambience fades in. Music bed enters low. German's voiceover begins.</div>
+                <div class="notes">
+                    <strong>Production Notes:</strong> Room ambience (fireplace crackle) is critical from fade-in. German's delivery: natural, warm, conversational. No stage voice. Capture room tone separately.
+                </div>
+            </div>
+        </div>
+
+        <!-- SHOT 2 -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-number">SHOT 2</span>
+                <span class="panel-timing">0:03–0:10 (7 sec)</span>
+            </div>
+            <div class="panel-visual">
+                <div class="sketch-row">
+                    <div class="sketches-group">
+                        <figure class="sketch">
+                            <img src="../sketches/storyboard-shot-3.jpg" alt="Rough sketch: floating preview panel above the fireplace">
+                            <figcaption><strong>Sketch 3</strong> — preview card floats</figcaption>
+                        </figure>
+                        <figure class="sketch">
+                            <img src="../sketches/storyboard-shot-4.jpg" alt="Rough sketch: push in until only the preview fills frame">
+                            <figcaption><strong>Sketch 4</strong> — push in zoom</figcaption>
+                        </figure>
+                    </div>
+                    <figure class="generated">
+                        <img src="generated/shot-2.jpg" alt="Generated: comic swirls into preview thumbnail">
+                        <figcaption><strong>Generated</strong> — Shot 2b</figcaption>
+                    </figure>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="scene-description">
+                    <h3>Comic Swirls Into Preview Thumbnail</h3>
+                    <p>Cut back to 3D room view (isometric). German's hand visible holding comic book. Comic lifts from hands, swirls in mid-air with gentle rotation (~1-1.5 sec). As it swirls, morphs into a floating rectangular preview card showing nostalgic internet content (retro music player UI, webtoon, early 2000s website, etc.). Camera slow zoom-in on thumbnail over ~4 seconds, depth of field keeps thumbnail sharp, background softens.</p>
+                </div>
+                <div class="dialogue-box">
+                    "…We think the internet could use some warmth and a little charm."
+                </div>
+                <div class="camera-note">📷 Camera: Isometric room → slow zoom-in on thumbnail (3-4 sec)</div>
+                <div class="audio-note">🔊 Audio: Music swells gently. Optional brief audio snippet of the media being referenced.</div>
+                <div class="notes">
+                    <strong>VFX Note:</strong> Comic swirl/morph is key transition. Keep magical but not cartoonish (~1.5 sec morph time). Thumbnail content should be recognizable/nostalgic (music UI, old webtoon, etc.).
+                </div>
+            </div>
+        </div>
+
+        <!-- SHOT 3 -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-number">SHOT 3</span>
+                <span class="panel-timing">0:10–0:18 (8 sec)</span>
+            </div>
+            <div class="panel-visual">
+                <div class="sketch-row">
+                    <div class="sketches-group">
+                        <figure class="sketch">
+                            <img src="../sketches/storyboard-shot-4.jpg" alt="Rough sketch: close-up preview card">
+                            <figcaption><strong>Sketch 4</strong> — contemplative preview</figcaption>
+                        </figure>
+                    </div>
+                    <figure class="generated">
+                        <img src="generated/shot-3.jpg" alt="Generated: close-up preview card contemplation">
+                        <figcaption><strong>Generated</strong> — Shot 3</figcaption>
+                    </figure>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="scene-description">
+                    <h3>Contemplative Preview Card</h3>
+                    <p>Close-up of the preview card. It floats centered, framed with a soft glow. A quiet moment to take it in — nostalgic, inviting. The camera holds on this single moment, letting the user absorb the significance of what they're seeing.</p>
+                </div>
+                <div class="dialogue-box">
+                    "Someone sent me this song, and it reminded me of a comic book I once had."
+                </div>
+                <div class="camera-note">📷 Camera: Close-up, centered on floating preview card. Subtle ambient light and glow.</div>
+                <div class="audio-note">🔊 Audio: Music continues softly. Contemplative, wistful mood.</div>
+                <div class="notes">
+                    <strong>Purpose:</strong> Emotional beat. Connect viewer to the personal, nostalgic feeling of discovering old treasures. This is the "why" moment.
+                </div>
+            </div>
+        </div>
+
+        <!-- SHOT 4 -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-number">SHOT 4</span>
+                <span class="panel-timing">0:18–0:27 (9 sec)</span>
+            </div>
+            <div class="panel-visual">
+                <div class="sketch-row">
+                    <div class="sketches-group">
+                        <figure class="sketch">
+                            <img src="../sketches/storyboard-shot-7.jpg" alt="Rough sketch: clicking objects opens a preview above them">
+                            <figcaption><strong>Sketch 7</strong> — full room with icons</figcaption>
+                        </figure>
+                    </div>
+                    <figure class="generated">
+                        <img src="generated/shot-4.jpg" alt="Generated: full room orbiting with icons">
+                        <figcaption><strong>Generated</strong> — Shot 4</figcaption>
+                    </figure>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="scene-description">
+                    <h3>Full Room Reveal with Icon Overlays</h3>
+                    <p>Camera pans/rotates upward and around the room over 9 seconds, showing vertical scope: walls, upper shelves, ceiling, architectural depth. Objects visible throughout: books, vinyl records, TV with knobs/antenna, plants, sleeping cat, desk with lamp, artwork on walls. As camera pans, small semi-transparent icons fade in above object clusters (2-3 sec per icon set).</p>
+                </div>
+                <div class="action-grid">
+                    <div class="action-item"><strong>🎵 Music note</strong> (gold/amber) above audio items</div>
+                    <div class="action-item"><strong>🎪 Toy/circus</strong> (warm red) above entertainment</div>
+                    <div class="action-item"><strong>✏️ Pencil/tool</strong> (soft blue) above work/productive</div>
+                    <div class="action-item"><strong>📖 Book icon</strong> (russet) above reading materials</div>
+                </div>
+                <div class="dialogue-box">
+                    "I've kept all my digital treasures, all in one place."
+                </div>
+                <div class="camera-note">📷 Camera: Smooth pan/orbit upward (~30-45° rotation). Isometric view throughout.</div>
+                <div class="audio-note">🔊 Audio: Music builds gently. Ambient room tone continues.</div>
+                <div class="notes">
+                    <strong>Icon Note:</strong> Icons are subtle, semi-transparent, ~2-3% of screen scale. Appear/fade naturally (~2 sec per group). Category clusters: music, books, entertainment, cozy items.
+                </div>
+            </div>
+        </div>
+
+        <!-- SHOT 5 -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-number">SHOT 5</span>
+                <span class="panel-timing">0:27–0:35 (8 sec)</span>
+            </div>
+            <div class="panel-visual">
+                <div class="sketch-row">
+                    <div class="sketches-group">
+                        <figure class="sketch">
+                            <img src="../sketches/storyboard-shot-6.jpg" alt="Rough sketch: objects swinging and flinging into place on the shelf">
+                            <figcaption><strong>Sketch 6</strong> — objects snap in place</figcaption>
+                        </figure>
+                    </div>
+                    <figure class="generated">
+                        <img src="generated/shot-5.jpg" alt="Generated: objects fly onto shelf montage">
+                        <figcaption><strong>Generated</strong> — Shot 5</figcaption>
+                    </figure>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="scene-description">
+                    <h3>Montage — Objects Fly Into Place</h3>
+                    <p>Fast-paced montage sequence. 4-5 object placements, each 0.75-1.5 seconds. Objects picked up and snapped onto shelves/surfaces with satisfying bounce/settle:</p>
+                </div>
+                <div class="action-grid">
+                    <div class="action-item">📗 Book lands on shelf → <strong>*thump*</strong></div>
+                    <div class="action-item">💿 Vinyl spins onto turntable → <strong>*snick*</strong></div>
+                    <div class="action-item">🎙️ Cassette lands neatly → <strong>*tap*</strong></div>
+                    <div class="action-item">😴 Cat settles in bed → <strong>*whoosh*</strong></div>
+                    <div class="action-item">🎧 Headphones on hook → <strong>*click*</strong></div>
+                </div>
+                <div class="dialogue-box">
+                    "What would your miscellaneous palace look like?"
+                </div>
+                <div class="camera-note">📷 Camera: Wide room view with slight zoom-ins per placement for emphasis. Quick cuts for variety.</div>
+                <div class="audio-note">🔊 Audio: Music takes full stage. Soft tactile SFX per placement (thunk/snap/whoosh). NO UI beeps.</div>
+                <div class="notes">
+                    <strong>Pacing:</strong> SNAPPY. Each placement ~0.75-1.5 sec. Convey: "Organizing is fun and satisfying." Objects fully visible, readable, not silhouettes. <strong>Note:</strong> Dialogue may span between Shots 5 and 6.
+                </div>
+            </div>
+        </div>
+
+        <!-- SHOT 5B -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-number">SHOT 5b</span>
+                <span class="panel-timing">0:35–0:40 (5 sec)</span>
+            </div>
+            <div class="panel-visual">
+                <div class="sketch-row">
+                    <div class="sketches-group">
+                        <figure class="sketch">
+                            <img src="../sketches/storyboard-shot-7.jpg" alt="Rough sketch: 3 objects with previews">
+                            <figcaption><strong>Sketch 7</strong> — 3 objects with previews</figcaption>
+                        </figure>
+                    </div>
+                    <figure class="generated">
+                        <img src="generated/shot-5b.jpg" alt="Generated: zoomed-in 3 objects with preview cards">
+                        <figcaption><strong>Generated</strong> — Shot 5b</figcaption>
+                    </figure>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="scene-description">
+                    <h3>Zoomed-In Objects with Preview Cards</h3>
+                    <p>Zoomed-in detail shot showing three interactive objects on a shelf: sleeping cat, CRT TV, yo-yo. Preview cards float above each when clicked — music player UI above cat, play button above TV, retro game above yo-yo. Items remain static on shelf display, showing what happens when users interact with the collection.</p>
+                </div>
+                <div class="camera-note">📷 Camera: Close-up, isolated shelf detail. Each object and preview clearly visible.</div>
+                <div class="audio-note">🔊 Audio: Music continues. Optional subtle click/hover feedback SFX.</div>
+                <div class="notes">
+                    <strong>Purpose:</strong> Show the interactive moment—users can click/hover on objects to see previews. Bridge between placement (Shot 5) and magic organization (Shot 6).
+                </div>
+            </div>
+        </div>
+
+        <!-- SHOT 6 -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-number">SHOT 6</span>
+                <span class="panel-timing">0:40–0:53 (13 sec)</span>
+            </div>
+            <div class="panel-visual">
+                <div class="sketch-row">
+                    <div class="sketches-group">
+                        <figure class="sketch">
+                            <img src="../sketches/storyboard-shot-8.jpg" alt="Rough sketch: imported bookmarks fly out of a box and auto-organize onto shelves">
+                            <figcaption><strong>Sketch 8</strong> — magic organization</figcaption>
+                        </figure>
+                    </div>
+                    <figure class="generated">
+                        <img src="generated/shot-6.jpg" alt="Generated: magic organization concept sequence">
+                        <figcaption><strong>Generated</strong> — Shot 6</figcaption>
+                    </figure>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="scene-description">
+                    <h3>Magic Organization (Concept Sequence)</h3>
+                    <p>Overhead/god's-eye isometric view, looking down ~45°. Cardboard box (open, full of mixed objects) sits center of room. Magic wand appears and waves over box. Objects swirl up from box in curved, elegant flight paths (not straight lines). Each object floats to its thematic zone: music items group left-center, work items right, entertainment lower-left, cozy items center. Objects settle with gentle hover-and-descend, soft glow fading as they land.</p>
+                </div>
+                <div class="timing-badge">⭐ ON-SCREEN TEXT: "CONCEPT SEQUENCE"</div>
+                <div class="camera-note">📷 Camera: Fixed overhead god's-eye isometric. Subtle orbit optional (~5° only).</div>
+                <div class="audio-note">🔊 Audio: Music swells to crescendo. Magical sparkle/swirl/whoosh SFX. Soft settling sounds. Optional magical chime.</div>
+                <div class="notes">
+                    <strong>Note:</strong> Dialogue from Shot 5 ("What would your manor look like?") may continue through this sequence. This is aspirational concept work, not a shipped feature.
+                </div>
+            </div>
+        </div>
+
+        <!-- SHOT 7A -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-number">SHOT 7a</span>
+                <span class="panel-timing">0:48–0:53 (5 sec)</span>
+            </div>
+            <div class="panel-visual">
+                <div class="sketch-row">
+                    <div class="sketches-group">
+                        <figure class="sketch">
+                            <img src="../sketches/storyboard-shot-9a-b.jpg" alt="Rough sketch: phone web view">
+                            <figcaption><strong>Sketch 9a</strong> — phone view</figcaption>
+                        </figure>
+                    </div>
+                    <figure class="generated">
+                        <img src="generated/shot-7a.jpg" alt="Generated: phone web view">
+                        <figcaption><strong>Generated</strong> — Shot 7a</figcaption>
+                    </figure>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="scene-description">
+                    <h3>Phone/Web View Perspective</h3>
+                    <p>Show mobile phone (portrait orientation) OR desktop monitor/laptop with Misc. Palace room displayed on screen. Room shown at reduced scale in responsive layout. Isometric camera angle visible on-screen. UI elements visible (buttons, controls) around room. Room readable but distant on small screen.</p>
+                </div>
+                <div class="dialogue-box">
+                    "Venture out and see what others have to share" (begins here)
+                </div>
+                <div class="camera-note">📷 Camera: Wide shot showing device taking up most of frame. Screen content clearly visible.</div>
+                <div class="audio-note">🔊 Audio: German's voiceover continues. Music steady bed.</div>
+                <div class="notes">
+                    <strong>Capture:</strong> Real mobile web capture of dev-sandbox. Show responsive design working. Interaction should feel natural.
+                </div>
+            </div>
+        </div>
+
+        <!-- SHOT 7B -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-number">SHOT 7b</span>
+                <span class="panel-timing">0:53–0:58 (5 sec)</span>
+            </div>
+            <div class="panel-visual">
+                <div class="sketch-row">
+                    <div class="sketches-group">
+                        <figure class="sketch">
+                            <img src="../sketches/storyboard-shot-9a-b.jpg" alt="Rough sketch: VR first-person view">
+                            <figcaption><strong>Sketch 9a</strong> — VR POV</figcaption>
+                        </figure>
+                        <figure class="sketch">
+                            <img src="../sketches/storyboard-shot-9c.jpg" alt="Rough sketch: avatar chilling">
+                            <figcaption><strong>Sketch 9c</strong> — 3rd-person avatar</figcaption>
+                        </figure>
+                    </div>
+                    <figure class="generated">
+                        <img src="generated/shot-7b.jpg" alt="Generated: VR first-person POV">
+                        <figcaption><strong>Generated</strong> — Shot 7b</figcaption>
+                    </figure>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="scene-description">
+                    <h3>VR First-Person POV</h3>
+                    <p>First-person headset perspective, seated eye-level in armchair. Head turns smoothly across ~30-40° total: look left (see side table, lamp, bookshelf), look forward (fireplace large and warm), look right (another wall, more objects). Slow natural head movements (~10-15° per direction). Objects at HUMAN SCALE (large, close, real). Fireplace looms large and enveloping. Warm ambient lighting makes you feel PRESENT in the space.</p>
+                </div>
+                <div class="camera-note">📷 Camera: Pure first-person headset POV. No visible hands or interface (optional subtle reticle only).</div>
+                <div class="audio-note">🔊 Audio: Music steady. Ambient room sounds: fireplace crackle, subtle presence tone.</div>
+                <div class="notes">
+                    <strong>⚠️ CRITICAL - VR CAPTURE:</strong> Must be REAL VR headset footage (Quest/similar). Do NOT fake or composite. This is the authentic differentiator between web and VR. Non-negotiable for credibility.
+                </div>
+            </div>
+        </div>
+
+        <!-- SHOT 7C -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-number">SHOT 7c</span>
+                <span class="panel-timing">0:58–1:02 (4 sec)</span>
+            </div>
+            <div class="panel-visual">
+                <div class="sketch-row">
+                    <div class="sketches-group">
+                        <figure class="sketch">
+                            <img src="../sketches/storyboard-shot-9c.jpg" alt="Rough sketch: third-person avatar lounging with headphones">
+                            <figcaption><strong>Sketch 9c</strong> — 3rd-person avatar</figcaption>
+                        </figure>
+                    </div>
+                    <figure class="generated">
+                        <img src="generated/shot-7c.jpg" alt="Generated: third-person avatar chilling">
+                        <figcaption><strong>Generated</strong> — Shot 7c</figcaption>
+                    </figure>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="scene-description">
+                    <h3>Third-Person Avatar View</h3>
+                    <p>Isometric 3/4 third-person camera showing avatar in room center/center-right. Avatar is stylized character or simple humanoid (consistent with voxel aesthetic). Avatar is RELAXED & CHILLED: sitting or standing casually, headphones on, body language comfortable and at ease. Room visible all around avatar. Avatar may have gentle sway/bob to music (subtle). Warm lighting throughout.</p>
+                </div>
+                <div class="camera-note">📷 Camera: Isometric 3/4 third-person. Avatar visible center frame, room surrounding. Static or slow orbit (~5°).</div>
+                <div class="audio-note">🔊 Audio: Music continues. Optional very subtle audio from avatar (faint music leak if headphones on).</div>
+                <div class="notes">
+                    <strong>Capture:</strong> Dev-sandbox avatar model + room, OR composited real person into 3D space. Goal: show ownership, comfort, and joy in personal space.
+                </div>
+            </div>
+        </div>
+
+        <!-- SHOT 8 -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-number">SHOT 8</span>
+                <span class="panel-timing">1:02–1:14 (12 sec)</span>
+            </div>
+            <div class="panel-visual">
+                <div class="sketch-row">
+                    <div class="sketches-group">
+                        <figure class="sketch">
+                            <img src="../sketches/storyboard-shot-10a.jpg" alt="Rough sketch: zoom out from the room">
+                            <figcaption><strong>Sketch 10a</strong> — zoom out</figcaption>
+                        </figure>
+                        <figure class="sketch">
+                            <img src="../sketches/storyboard-shot-10b.jpg" alt="Rough sketch: voxel neighborhood">
+                            <figcaption><strong>Sketch 10b</strong> — neighborhood</figcaption>
+                        </figure>
+                    </div>
+                    <figure class="generated">
+                        <img src="generated/shot-8.jpg" alt="Generated: neighborhood with voxel rooms">
+                        <figcaption><strong>Generated</strong> — Shot 8</figcaption>
+                    </figure>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="scene-description">
+                    <h3>Neighborhood Exploration</h3>
+                    <p>Avatar walks toward exit of main room (takes ~2-3 sec). Camera pulls back and up (zoom-out, tilt), revealing wider neighborhood street/cul-de-sac. Stylized voxel buildings visible (each represents a person's room). Winding path connecting buildings. Warm golden-hour lighting. Quick montage pans showing different themed rooms (each 1.5-2 sec):</p>
+                </div>
+                <div class="action-grid">
+                    <div class="action-item"><strong>🌿 Plant Room</strong> - greens, bright, botanical</div>
+                    <div class="action-item"><strong>🎵 Music Room</strong> - colorful records, warm, eclectic</div>
+                    <div class="action-item"><strong>🎨 Creative Room</strong> - organized desk, tools, focused</div>
+                    <div class="action-item"><strong>🏠 Cozy Room</strong> - personal touches, cat visible, warm</div>
+                </div>
+                <div class="camera-note">📷 Camera: Wide room shot → zoom-out/pull-back revealing neighborhood → smooth pans along path showing 3-4 different rooms.</div>
+                <div class="audio-note">🔊 Audio: Music gentle or shifts to neighborhood theme. Ambient: wind, distant sounds from rooms (very subtle). Optional footsteps.</div>
+                <div class="notes">
+                    <strong>Labels (Optional):</strong> "German's Room," "Matt's Room," etc. visible on buildings. Neighborhood should feel cozy & inviting, not industrial. Each room distinct—shows personalization & variety.
+                </div>
+            </div>
+        </div>
+
+        <!-- SHOT 9 -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-number">SHOT 9 — END CARD</span>
+                <span class="panel-timing">1:14–1:18 (4 sec)</span>
+            </div>
+            <div class="panel-visual">
+                <div class="sketch-row">
+                    <div class="sketches-group">
+                        <figure class="sketch">
+                            <img src="../sketches/storyboard-shot-11.jpg" alt="Rough sketch: end card with title and QR code">
+                            <figcaption><strong>Sketch 11</strong> — end card</figcaption>
+                        </figure>
+                    </div>
+                    <figure class="generated">
+                        <img src="generated/shot-9.jpg" alt="Generated: end card">
+                        <figcaption><strong>Generated</strong> — Shot 9</figcaption>
+                    </figure>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="scene-description">
+                    <h3>End Card with Call-to-Action</h3>
+                    <p>Clean title card over warm background (either final neighborhood shot faded, or warm solid color like burnt orange/amber). Centered text hierarchy:</p>
+                </div>
+                <div class="action-grid">
+                    <div class="action-item"><strong>Primary:</strong> "MISC. MANOR" or "PALACE" (large, bold, white/cream)</div>
+                    <div class="action-item"><strong>Tagline:</strong> "A room for your favorite things" (medium, white/cream)</div>
+                    <div class="action-item"><strong>CTA:</strong> "Play now" / "Try the demo" (medium-small, warm accent color)</div>
+                    <div class="action-item"><strong>URL/QR:</strong> Real, tested destination (small, bottom-right or center)</div>
+                </div>
+                <div class="camera-note">📷 Camera: Static end card, high contrast text, readable on mobile & desktop.</div>
+                <div class="audio-note">🔊 Audio: Music reaches gentle, satisfying resolution. Quiet closure.</div>
+                <div class="notes">
+                    <strong>⚠️ CRITICAL:</strong> URL/QR must be REAL & TESTED. NO placeholder text. Must be functional, tested destination before export. Hold for 4 seconds (readable time on phone). No animation or movement on end card.
+                </div>
+            </div>
+        </div>
+
+        <!-- APPENDIX — SKETCH NOT IN CURRENT CUT -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-number">Appendix — not in current cut</span>
+                <span class="panel-timing">unassigned</span>
+            </div>
+            <div class="panel-visual">
+                <div class="sketch-row">
+                    <div class="sketches-group">
+                        <figure class="sketch">
+                            <img src="../sketches/storyboard-shot-extra.jpg" alt="Rough sketch: customising the room, swapping themes and layouts">
+                            <figcaption><strong>Extra sketch</strong> — "customizing room, theme changes": theme 1, theme 2, layout change</figcaption>
+                        </figure>
+                    </div>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="scene-description">
+                    <h3>Room Customisation / Theme Switching</h3>
+                    <p>This beat was drawn but has no home in the current 9-shot cut. It shows the same room re-skinned across two themes plus a layout change — the personalisation pitch. If the edit needs an extra customisation beat, it slots most naturally just after Shot 5 (the montage) or as an alternate to Shot 6.</p>
+                </div>
+                <div class="notes">
+                    <strong>Status:</strong> Parked. Keeping it here so the drawing isn't lost. No timing allocated, and the trailer is already ~75 sec against a ~60 sec target, so adding it means cutting elsewhere.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <p><strong>MISC. MANOR — 60 Second Trailer Storyboard</strong></p>
+        <p>Total Runtime: ~75 seconds (trim Shots 6–8 by ~15 sec if hard 60s limit needed)</p>
+        <p style="margin-top: 20px; font-size: 0.85em;">Production documents: PRODUCTION_SCREENPLAY_60S_TRAILER.md | STORYBOARD_VISUAL_COMPOSITION_GUIDE.md</p>
+        <p style="margin-top: 10px; font-size: 0.8em; color: #666;">Generated for production team. Ready for filmmaker, editor, and production designer review.</p>
+    </div>
+
+</body>
+</html>

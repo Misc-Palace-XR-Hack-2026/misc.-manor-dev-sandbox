@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MISC. MANOR — Sketch Board (4-up)</title>
+<style>
+  @page { size: letter portrait; margin: 0.45in; }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #6e6e6e;
+    color: #1a1a1a;
+    padding: 24px 0;
+  }
+
+  .page {
+    width: 8.5in;
+    min-height: 11in;
+    margin: 0 auto 24px;
+    padding: 0.45in;
+    background: #fff;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .page-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 2px solid #c8923f;
+    padding-bottom: 6px;
+    margin-bottom: 14px;
+    flex: 0 0 auto;
+  }
+
+  .page-head .title {
+    font-size: 11pt;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #8a5d16;
+  }
+
+  .page-head .meta { font-size: 8.5pt; color: #777; }
+
+  .grid {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: min-content;
+    align-content: center;
+    gap: 16px;
+  }
+
+  .cell {
+    border: 1px solid #c9c9c9;
+    border-radius: 5px;
+    padding: 9px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    overflow: hidden;
+    break-inside: avoid;
+  }
+
+  .cell-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+
+  .shot {
+    font-size: 9.5pt;
+    font-weight: 700;
+    color: #8a5d16;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .time { font-size: 7.5pt; color: #888; white-space: nowrap; }
+
+  /* 4:3 frame — every sketch is 1200x900, so nothing letterboxes */
+  .cell img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    display: block;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    background: #fff;
+    flex: 0 0 auto;
+  }
+
+  .caption { flex: 1 1 auto; min-height: 0; }
+
+  .caption p {
+    font-size: 8pt;
+    line-height: 1.42;
+    color: #333;
+    margin-bottom: 5px;
+  }
+
+  .caption .note {
+    font-size: 7.5pt;
+    color: #777;
+    font-style: italic;
+  }
+
+  .vo {
+    font-size: 8pt;
+    line-height: 1.4;
+    font-style: italic;
+    color: #5a4420;
+    border-left: 2.5px solid #c8923f;
+    background: #faf4e8;
+    padding: 5px 8px;
+    border-radius: 0 3px 3px 0;
+  }
+
+  .vo b {
+    display: block;
+    font-style: normal;
+    font-size: 6.8pt;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #a07828;
+    margin-bottom: 2px;
+  }
+
+  .flag {
+    display: inline-block;
+    font-size: 6.8pt;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    background: #8a5d16;
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  .flag.warn { background: #a8381f; }
+  .flag.park { background: #666; }
+
+  .cell.parked { border-style: dashed; background: #fafafa; }
+
+  @media print {
+    body { background: #fff; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page {
+      width: auto; min-height: 0; margin: 0; padding: 0;
+      box-shadow: none; break-after: page;
+    }
+    .page:last-child { break-after: auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ======================= PAGE 1 ======================= -->
+<div class="page">
+  <div class="page-head">
+    <span class="title">Misc. Manor — 60s Trailer · Sketch Board</span>
+    <span class="meta">Page 1 / 4 · panels 1–4</span>
+  </div>
+  <div class="grid">
+
+    <div class="cell">
+      <div class="cell-head"><span class="shot">Shot 1 · a</span><span class="time">0:00–0:03</span></div>
+      <img src="../sketches/storyboard-shot-1.jpg" alt="Vignette closed, iris about to open">
+      <div class="caption">
+        <p>Open on black. A vignette/iris lifts over 1–2s to reveal the warm room. Fireplace amber, lower-left. Slow gentle orbit.</p>
+        <div class="vo"><b>German (VO)</b>"Welcome to the Miscellaneous Manor. It can get pretty scary out there, so much doom filled, endless scrolling…"</div>
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="cell-head"><span class="shot">Shot 1 · b</span><span class="time">0:00–0:03</span></div>
+      <img src="../sketches/storyboard-shot-2.jpg" alt="German in armchair with bubble pipe by the fireplace">
+      <div class="caption">
+        <p>Cut to mid-shot: German in the armchair, bubble pipe, comic book, candle and side table. He glances up and notices us — small knowing smile.</p>
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="cell-head"><span class="shot">Shot 2 · a</span><span class="time">0:03–0:10</span></div>
+      <img src="../sketches/storyboard-shot-3.jpg" alt="Preview card floating above the fireplace">
+      <div class="caption">
+        <p>The comic lifts from his hands, swirls (~1.5s) and morphs into a floating preview card — ▶ ♪ abc — hovering above the fireplace. Sound lines radiate.</p>
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="cell-head"><span class="shot">Shot 2 · b</span><span class="time">0:03–0:10</span></div>
+      <img src="../sketches/storyboard-shot-4.jpg" alt="Push in until only the preview fills the frame">
+      <div class="caption">
+        <p>Slow 4s push-in. Depth of field holds the card sharp while the room softens behind, until only the preview fills frame.</p>
+        <div class="vo"><b>German (VO)</b>"…We think the internet could use some warmth and a little charm."</div>
+        <p class="note">Sketch note: "push in until only preview".</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ======================= PAGE 2 ======================= -->
+<div class="page">
+  <div class="page-head">
+    <span class="title">Misc. Manor — 60s Trailer · Sketch Board</span>
+    <span class="meta">Page 2 / 4 · panels 3–5b</span>
+  </div>
+  <div class="grid">
+
+    <div class="cell">
+      <div class="cell-head"><span class="shot">Shot 3</span><span class="time">0:10–0:18</span></div>
+      <img src="../sketches/storyboard-shot-4.jpg" alt="Close-up of preview card, contemplation moment">
+      <div class="caption">
+        <p>Close-up of the preview card. It floats centered, framed with a soft glow. A quiet moment to take it in — nostalgic, inviting.</p>
+        <div class="vo"><b>German (VO)</b>"Someone sent me this song, and it reminded me of a comic book I once had."</div>
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="cell-head"><span class="shot">Shot 4</span><span class="time">0:18–0:27</span></div>
+      <img src="../sketches/storyboard-shot-7.jpg" alt="Clicking objects opens previews above them">
+      <div class="caption">
+        <p>Camera orbits up around the room. Objects are live: click the cat, the TV, the fishbowl and a preview blooms above each. Soft category icons fade in over clusters.</p>
+        <div class="vo"><b>German (VO)</b>"I've kept all my digital treasures, all in one place."</div>
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="cell-head"><span class="shot">Shot 5</span><span class="time">0:27–0:35</span></div>
+      <img src="../sketches/storyboard-shot-6.jpg" alt="Objects swing and fling into place on the shelf">
+      <div class="caption">
+        <p>Snappy montage, 4–5 placements at 0.75–1.5s each. Plant, robot, cassette arc onto the shelf and settle with a bounce. Tactile SFX only — no UI beeps.</p>
+        <div class="vo"><b>German (VO)</b>"What would your manor look like?"</div>
+        <p class="note">Dialogue may span between Shots 5 and 6.</p>
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="cell-head"><span class="shot">Shot 5b</span><span class="time">0:35–0:40</span></div>
+      <img src="../sketches/storyboard-shot-7.jpg" alt="Zoomed in: clicking objects, previews above them">
+      <div class="caption">
+        <p>Zoomed-in detail shot. Three objects on a shelf ready for interaction: sleeping cat, CRT TV, yo-yo. Preview cards float above each when clicked — music player UI above cat, play button above TV, retro game above yo-yo. Items remain static on shelf.</p>
+        <p class="note">Interactive moment showing what previews look like when hovering over shelf items.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ======================= PAGE 3 ======================= -->
+<div class="page">
+  <div class="page-head">
+    <span class="title">Misc. Manor — 60s Trailer · Sketch Board</span>
+    <span class="meta">Page 3 / 4 · panels 6–9c</span>
+  </div>
+  <div class="grid">
+
+    <div class="cell">
+      <div class="cell-head"><span class="shot">Shot 6</span><span class="time">0:40–0:53</span></div>
+      <img src="../sketches/storyboard-shot-8.jpg" alt="Imported bookmarks fly out of a box and self-organise">
+      <div class="caption">
+        <p><span class="flag warn">Concept sequence</span></p>
+        <p>God's-eye view. A box of imported bookmarks opens, a wand waves, and objects curve out to their thematic zones and settle.</p>
+        <p class="note">Label "CONCEPT SEQUENCE" on screen throughout — this is aspirational, not a shipped feature. Dialogue from Shot 5 may continue here.</p>
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="cell-head"><span class="shot">Shot 7a</span><span class="time">0:48–0:53</span></div>
+      <img src="../sketches/storyboard-shot-9a-b.jpg" alt="Multiple points of view on the finished room">
+      <div class="caption">
+        <p>Phone / web view. The room on a handheld screen at reduced scale, UI around it, isometric angle intact.</p>
+        <div class="vo"><b>German (VO)</b>"Venture out and see what others have to share…"</div>
+        <p class="note">Show only the phone displaying the web app — no hand holding it.</p>
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="cell-head"><span class="shot">Shot 7b</span><span class="time">0:53–0:58</span></div>
+      <img src="../sketches/storyboard-shot-9a-b.jpg" alt="VR first-person seated view of the room">
+      <div class="caption">
+        <p><span class="flag warn">Real VR capture</span></p>
+        <p>First-person headset POV, seated. Head turns left → forward → right across ~35°. Objects at human scale, fireplace looming and warm.</p>
+        <p class="note">Must be genuine headset footage. Do not fake or composite.</p>
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="cell-head"><span class="shot">Shot 7c</span><span class="time">0:58–1:02</span></div>
+      <img src="../sketches/storyboard-shot-9c.jpg" alt="Third-person avatar lounging with headphones">
+      <div class="caption">
+        <p>Isometric 3/4 third-person. The avatar lounges in headphones, relaxed, gently bobbing to music. Room wraps around them.</p>
+        <p class="note">Goal: ownership and comfort in a space that's yours.</p>
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="cell-head"><span class="shot">Shot 8 · a</span><span class="time">1:02–1:14</span></div>
+      <img src="../sketches/storyboard-shot-10a.jpg" alt="Zoom out from the room to show sharing with others">
+      <div class="caption">
+        <p>The avatar heads for the door. Camera pulls back and tilts up — and there are other people out there.</p>
+        <p class="note">Sketch note: “zoom out, show sharing possibility”.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ======================= PAGE 4 ======================= -->
+<div class="page">
+  <div class="page-head">
+    <span class="title">Misc. Manor — 60s Trailer · Sketch Board</span>
+    <span class="meta">Page 4 / 4 · panels 8a–9 + Appendix</span>
+  </div>
+  <div class="grid">
+
+    <div class="cell">
+      <div class="cell-head"><span class="shot">Shot 8 · a</span><span class="time">1:02–1:14</span></div>
+      <img src="../sketches/storyboard-shot-10a.jpg" alt="Zoom out from the room to show sharing with others">
+      <div class="caption">
+        <p>The avatar heads for the door. Camera pulls back and tilts up — and there are other people out there.</p>
+        <p class="note">Sketch note: "zoom out, show sharing possibility".</p>
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="cell-head"><span class="shot">Shot 8 · b</span><span class="time">1:02–1:14</span></div>
+      <img src="../sketches/storyboard-shot-10b.jpg" alt="Many voxel rooms connected by winding paths">
+      <div class="caption">
+        <p>Wide on the neighbourhood: a scatter of voxel rooms joined by winding paths, golden-hour light. Quick pans across a plant room, a music room, a creative room, a cosy room.</p>
+        <p class="note">Sketch note: “so much to explore — friends, peers”.</p>
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="cell-head"><span class="shot">Shot 9 · End card</span><span class="time">1:14–1:18</span></div>
+      <img src="../sketches/storyboard-shot-11.jpg" alt="End card with title and QR code">
+      <div class="caption">
+        <p>Static card on warm ground. Title, tagline "A room for your favorite things", CTA, and a QR / URL. Held 4s, no movement.</p>
+        <div class="vo"><b>German (VO)</b>"Try it now on Miscellaneous Manor."</div>
+        <p class="note">URL and QR must be real and tested before export. No placeholders.</p>
+      </div>
+    </div>
+
+    <div class="cell parked">
+      <div class="cell-head"><span class="shot">Appendix</span><span class="time">unassigned</span></div>
+      <img src="../sketches/storyboard-shot-extra.jpg" alt="Customising the room, swapping themes and layouts">
+      <div class="caption">
+        <p><span class="flag park">Not in current cut</span></p>
+        <p>Room customisation — theme 1, theme 2, layout change. The personalisation pitch.</p>
+        <p class="note">Parked. Would slot after Shot 5 or replace Shot 6. The cut is already ~75s against a ~60s target, so this costs time elsewhere.</p>
+      </div>
+    </div>
+
+    <div class="cell parked" style="justify-content:center;align-items:center;border:1px dashed #ddd;">
+      <p class="note" style="text-align:center;">14 sketches · 9 shots (11 panels)<br>Runtime ~75s — trim Shots 6–8 by ~15s for a hard 60s<br><br>Full detail, camera and audio notes:<br><b>STORYBOARD_PRESENTATION.html</b></p>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
