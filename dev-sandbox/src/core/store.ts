@@ -226,13 +226,13 @@ export class Store {
   }
 
   // ---- commands (every one is undoable) ---------------------------------
-  addItem(input: { title: string; sourceRef: string; type?: ContentType | 'auto'; kind?: ObjectKind }): string {
+  addItem(input: { title: string; sourceRef: string; type?: ContentType | 'auto'; kind?: ObjectKind; place?: boolean }): string {
     const ref = normalizeRef(input.sourceRef.trim());
     const type = !input.type || input.type === 'auto' ? guessType(ref) : input.type;
     let repId = '';
     this.commit((s) => {
       repId = this.createItem(s, input.title.trim() || ref || 'Untitled', ref, type, [], input.kind);
-      this.placeInFreeSlot(s, repId);
+      if (input.place !== false) this.placeInFreeSlot(s, repId);
     });
     return repId;
   }
@@ -382,7 +382,7 @@ export class Store {
       const c = s.contentItems.find((x) => x.id === contentId);
       if (!c || s.representations.some((r) => r.contentItemId === contentId)) return;
       const rep = this.createRep(s, c);
-      this.placeInFreeSlot(s, rep.id);
+      if (!this.placeInFreeSlot(s, rep.id)) s.representations = s.representations.filter((r) => r.id !== rep.id);
     });
   }
 

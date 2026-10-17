@@ -6,6 +6,8 @@ import { SURFACE_PRESETS, type SurfaceTarget } from '../core/surfaces';
 import { ROOM_DIRECTORY, seedRoom } from '../core/rooms';
 import { THEMES } from '../core/themes';
 import { safeUrl } from '../core/content';
+import { creationButtons, XrCreation } from './creation';
+import { currentStep, progressLabel, type OnboardingState } from '../core/onboarding';
 
 export interface XrProbe {
   isSecureContext: boolean;
@@ -178,7 +180,10 @@ export type PanelPage =
   | 'howto-create'
   | 'howto-move'
   | 'howto-rooms'
-  | 'howto-style';
+  | 'howto-style'
+  | 'create'
+  | 'welcome'
+  | 'guide';
 
 export interface PanelButton {
   id: string;
@@ -191,6 +196,7 @@ export interface PanelActionResult {
   exit?: boolean;
   stairs?: boolean;
   openUrl?: string;
+  tutorialEvent?: string;
 }
 
 export interface InspectPreview {
@@ -254,7 +260,7 @@ export function objectActions(store: Store): PanelButton[] {
   return actions;
 }
 
-export function panelButtons(store: Store, page: PanelPage, _rooms: NeighborhoodRoom[] = []): PanelButton[] {
+export function panelButtons(store: Store, page: PanelPage, _rooms: NeighborhoodRoom[] = [], draft?: XrCreation, guide?: OnboardingState | null): PanelButton[] {
   const selected = store.selectedId
     ? store.state.representations.find((r) => r.id === store.selectedId)
     : undefined;
@@ -311,9 +317,28 @@ export function panelButtons(store: Store, page: PanelPage, _rooms: Neighborhood
       ...Object.entries(THEMES).map(([id, theme]) => ({ id: 'theme:' + id, label: theme.label })),
     ];
   }
+  if (page === 'welcome') {
+    return [
+      { id: 'guide:start', label: 'Start tutorial' },
+      { id: 'guide:room', label: 'Go to room' },
+    ];
+  }
+  if (page === 'guide' && guide?.lesson) {
+    const step = currentStep(guide);
+    return [
+      { id: 'guide:status', label: `${progressLabel(guide)} · ${step?.title ?? ''}` },
+      { id: 'guide:copy', label: step?.prompt ?? '' },
+      { id: 'guide:skip', label: 'Skip / Exit' },
+    ];
+  }
+  if (page === 'create' && draft) return creationButtons(draft);
   if (page === 'howto') {
     return [
       { id: 'page:home', label: 'Back' },
+      { id: 'guide:create', label: 'Practice: create' },
+      { id: 'guide:move', label: 'Practice: move' },
+      { id: 'guide:rooms', label: 'Practice: rooms' },
+      { id: 'guide:style', label: 'Practice: style' },
       { id: 'howto:create', label: 'Create an item' },
       { id: 'howto:move', label: 'Move and put away' },
       { id: 'howto:rooms', label: 'Visit rooms' },
@@ -347,6 +372,7 @@ export function panelButtons(store: Store, page: PanelPage, _rooms: Neighborhood
     { id: 'page:themes', label: 'Theme' },
     { id: 'page:object', label: 'Change object' },
     { id: 'page:rooms', label: 'Rooms' },
+    { id: 'page:create', label: 'Add object' },
     { id: 'page:howto', label: 'How-to' },
     { id: 'undo', label: store.canUndo ? 'Undo' : 'Undo (nothing yet)' },
     { id: 'cancel', label: 'Cancel selection' },
@@ -357,15 +383,21 @@ export function panelButtons(store: Store, page: PanelPage, _rooms: Neighborhood
   return home;
 }
 
-export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom[] = []): PanelActionResult {
+export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom[] = [], draft?: XrCreation): PanelActionResult {
   if (id === 'page:home') return { page: 'home' };
-  if (id === 'page:lighting') return { page: 'lighting' };
+  if (id === 'page:lighting') return { page: 'lighting', tutorialEvent: 'open-style' };
   if (id === 'page:music') return { page: 'music' };
   if (id === 'page:surfaces') return { page: 'surfaces' };
   if (id === 'page:object') return { page: 'object' };
-  if (id === 'page:inbox') return { page: 'inbox' };
+  if (id === 'page:inbox') return { page: 'inbox', tutorialEvent: 'restored' };
   if (id === 'page:rooms') return { page: 'rooms' };
   if (id === 'page:themes') return { page: 'themes' };
+  if (id === 'page:create') return { page: 'create', tutorialEvent: 'open-add' };
+  if (id === 'page:welcome') return { page: 'welcome' };
+  if (id === 'guide:room') return { page: 'home', tutorialEvent: 'skip' };
+  if (id === 'guide:start') return { page: 'guide', tutorialEvent: 'start' };
+  if (id.startsWith('guide:') && ['create','move','rooms','style'].includes(id.slice(6))) return { page: 'guide', tutorialEvent: 'lesson:' + id.slice(6) };
+  if (id === 'guide:skip') return { page: 'home', tutorialEvent: 'skip' };
   if (id === 'page:howto' || id === 'howto:skip') return { page: id === 'howto:skip' ? 'home' : 'howto' };
   if (id === 'howto:create') return { page: 'howto-create' };
   if (id === 'howto:move') return { page: 'howto-move' };
@@ -376,6 +408,17 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   if (id === 'stairs:top') return { stairs: true, teleport: {x:.7,y:2.3,z:2.6} };
   if (id === 'go:loft') return { teleport: { x: 2.0, y: 2.3, z: 1.6 } };
   if (id === 'go:floor') return { teleport: spawnPosition() };
+  if (id === 'create:cancel') return { page: 'home' };
+  if (id === 'create:done' || id === 'create:title' || id === 'create:text' || id === 'guide:status' || id === 'guide:copy') return {};
+  if (draft && id.startsWith('key:')) { draft.key(id.slice(4)); return { tutorialEvent: draft.field === 'title' ? 'typed-title' : 'typed-content' }; }
+  if (draft && id === 'create:field-title') { draft.field = 'title'; return {}; }
+  if (draft && id === 'create:field-text') { draft.field = 'text'; return {}; }
+  if (draft && id === 'create:mode') { draft.mode = draft.mode === 'link' ? 'note' : 'link'; return {}; }
+  if (draft && id.startsWith('create-kind:')) { draft.kind = (id.slice(12) || '') as ObjectKind | ''; return {}; }
+  if (draft && id === 'create:submit') {
+    const created = draft.create(store);
+    return created ? { tutorialEvent: 'created' } : {};
+  }
   if (id === 'exit') return { exit: true };
   if (id === 'home:return') {
     store.returnHome();
@@ -385,7 +428,7 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
     const roomId = id.slice(5);
     const repo = Object.fromEntries(rooms.map((room) => [room.name, room.data]));
     store.switchRoom(roomId, seedRoom(roomId, repo));
-    return { page: 'home' };
+    return { page: 'home', tutorialEvent: 'switched' };
   }
   if (id.startsWith('theme:')) {
     const theme = THEMES[id.slice(6)];
@@ -398,12 +441,12 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   }
   if (id === 'move' && store.selectedId) {
     store.pickUp(store.selectedId);
-    return {};
+    return { tutorialEvent: 'picked' };
   }
   if (id === 'undo') store.undo();
   else if (id === 'cancel') store.select(null);
   else if (id.startsWith('kind:') && store.selectedId) store.setKind(store.selectedId, id.slice(5) as ObjectKind);
-  else if (id.startsWith('light:')) store.setLighting((id.slice(6) || undefined) as Lighting | undefined);
+  else if (id.startsWith('light:')) { store.setLighting((id.slice(6) || undefined) as Lighting | undefined); return { tutorialEvent: 'styled' }; }
   else if (id.startsWith('stash:') && store.selectedId) store.stash(store.selectedId);
   else if (id.startsWith('out:')) store.bringOut(id.slice(4));
   else if (id.startsWith('music:')) {

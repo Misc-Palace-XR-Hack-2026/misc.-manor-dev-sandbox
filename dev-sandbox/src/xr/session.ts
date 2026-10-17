@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Store } from '../core/store';
 import { walkStairs, inspectPreview, loftBeaconVisible, objectIdFromRay, spawnPosition, stickForwardTeleport, walkableAt, walkableFloorPad, xrSelect, xrSessionInit, type NeighborhoodRoom, type PanelActionResult } from './interaction';
+import type { OnboardingState } from '../core/onboarding';
 import { XrPanel } from './panel';
 import { XrHoverLabel } from './hover';
 import { XrObjectMenu } from './object-menu';
@@ -44,6 +45,7 @@ export class XrSession {
     private slots: THREE.Group,
     private room: THREE.Group,
     rooms: NeighborhoodRoom[] = [],
+    private onTutorial?: (event: string) => void,
   ) {
     this.renderer.xr.enabled = true;
     this.renderer.xr.setReferenceSpaceType('local-floor');
@@ -106,7 +108,9 @@ export class XrSession {
     this.player.rotation.set(0, 0, 0);
     this.store.select(null);
     this.overlay.hidden = !this.overlayGranted;
-    this.panel.show();
+    const tutorial = (globalThis as unknown as { tutorial?: { state: unknown } }).tutorial;
+    this.panel.guide = (tutorial?.state as typeof this.panel.guide) ?? null;
+    this.panel.show(this.panel.guide?.status === 'fresh' && !this.panel.guide.lesson ? 'welcome' : 'home');
     this.syncGuides();
   }
 
@@ -202,6 +206,7 @@ export class XrSession {
       if (hit?.kind === 'slot') {
         xrSelect(this.store, { kind: 'destination', id: hit.id });
         this.placing = false;
+        this.onTutorial?.('placed');
       }
       return;
     }
@@ -220,6 +225,9 @@ export class XrSession {
       a.remove();
     }
     if (result.page) this.panel.show(result.page);
+    if (result.tutorialEvent) this.onTutorial?.(result.tutorialEvent);
+    const tutorial = (globalThis as unknown as { tutorial?: { state: OnboardingState | null } }).tutorial;
+    if (tutorial) this.panel.guide = tutorial.state;
     if (this.store.selectedId && !this.store.slotOf(this.store.selectedId)) this.placing = true;
     if (result.exit) void this.exit();
     if (result.teleport) {

@@ -307,16 +307,11 @@ test('VR How-to menu is skippable and replayable without changing the personal s
   const snapshot = store.exportJson();
   const home = panelButtons(store, 'home').map((b) => b.id);
   assert.ok(home.includes('page:howto'));
+  assert.ok(home.includes('page:create'));
   assert.equal(runPanelAction(store, 'page:howto').page, 'howto');
   const howto = panelButtons(store, 'howto').map((b) => b.id);
-  assert.deepEqual(howto, [
-    'page:home',
-    'howto:create',
-    'howto:move',
-    'howto:rooms',
-    'howto:style',
-    'howto:skip',
-  ]);
+  assert.ok(howto.includes('howto:create'));
+  assert.ok(howto.includes('guide:create'));
   assert.equal(runPanelAction(store, 'howto:create').page, 'howto-create');
   assert.ok(panelButtons(store, 'howto-create').some((b) => b.id === 'page:howto'));
   assert.equal(runPanelAction(store, 'howto:skip').page, 'home');

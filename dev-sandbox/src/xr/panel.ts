@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import type { Store } from '../core/store';
 import { inspectPreview, panelButtons, runPanelAction, type NeighborhoodRoom, type PanelActionResult, type PanelPage } from './interaction';
+import { XrCreation } from './creation';
+import type { OnboardingState } from '../core/onboarding';
 
 const W = 1024;
 const H = 1408;
@@ -17,6 +19,8 @@ export class XrPanel {
   private page: PanelPage = 'home';
   private scroll = 0;
   private shown: Array<{ id: string; y: number }> = [];
+  draft = new XrCreation();
+  guide: OnboardingState | null = null;
 
   constructor(
     private store: Store,
@@ -49,6 +53,7 @@ export class XrPanel {
     this.group.visible = true;
     this.page = page;
     this.scroll = 0;
+    if (page === 'create') this.draft = new XrCreation();
     this.redraw();
   }
 
@@ -86,7 +91,7 @@ export class XrPanel {
       this.redraw();
       return;
     }
-    const result = runPanelAction(this.store, button.id, this.rooms);
+    const result = runPanelAction(this.store, button.id, this.rooms, this.draft);
     if (result.page) {
       this.page = result.page;
       this.scroll = 0;
@@ -112,7 +117,7 @@ export class XrPanel {
       c.fillText(this.store.saveError, 48, 194);
     }
 
-    const all = panelButtons(this.store, this.page, this.rooms);
+    const all = panelButtons(this.store, this.page, this.rooms, this.draft, this.guide);
     const capacity = 10;
     const start = this.scroll * capacity;
     const slice = all.slice(start, start + capacity);
