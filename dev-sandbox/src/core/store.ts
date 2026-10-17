@@ -5,6 +5,7 @@ import { lightingFromUnknown, validLighting, type Lighting } from './appearance'
 import { guessType, normalizeRef, safeUrl } from './content';
 import type { BookmarkEntry } from './bookmarks';
 import { DEFAULT_LAYOUT_ID, getLayout, type RoomLayout } from './layout';
+import { chooseSlot } from './placement';
 import {
   CONTENT_TYPES, DEFAULT_OBJECT, OBJECT_KINDS, SCHEMA_VERSION,
   type ContentItem, type ContentType, type ObjectKind, type Representation, type RoomState,
@@ -537,7 +538,15 @@ export class Store {
   }
 
   private placeInFreeSlot(s: RoomState, repId: string): boolean {
-    const slot = this.freeSlotsIn(s)[0];
+    const layout = getLayout(s.layoutId) ?? this.layout;
+    const rep = s.representations.find((r) => r.id === repId);
+    if (!rep) return false;
+    const occupied = new Set(s.placements.map((p) => p.slotId));
+    const occupants = s.placements.flatMap((p) => {
+      const other = s.representations.find((r) => r.id === p.representationId);
+      return other ? [{ kind: other.objectKind, slotId: p.slotId }] : [];
+    });
+    const slot = chooseSlot(rep.objectKind, layout, occupied, occupants);
     if (!slot) return false;
     s.placements.push({ representationId: repId, slotId: slot });
     return true;
