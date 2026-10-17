@@ -28,12 +28,12 @@
     { "id": "r7", "contentItemId": "c7", "objectKind": "coffeeMaker" }
   ],
   "placements": [
-    { "representationId": "r1", "slotId": "loft-1" },
-    { "representationId": "r2", "slotId": "block-1" },
-    { "representationId": "r3", "slotId": "loft-2" },
-    { "representationId": "r4", "slotId": "block-2" },
-    { "representationId": "r5", "slotId": "bench-1" },
-    { "representationId": "r6", "slotId": "bench-2" },
+    { "representationId": "r1", "slotId": "shelf-1" },
+    { "representationId": "r2", "slotId": "bench-1" },
+    { "representationId": "r3", "slotId": "bench-2" },
+    { "representationId": "r4", "slotId": "shelf-2" },
+    { "representationId": "r5", "slotId": "loft-1" },
+    { "representationId": "r6", "slotId": "bench-3" },
     { "representationId": "r7", "slotId": "floor-7" }
   ]
 }

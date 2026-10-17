@@ -75,4 +75,5 @@ test('Matt music destinations use official Spotify albums and three exact YouTub
   assert.equal(room.representations.length, room.contentItems.length);
   assert.equal(room.placements.length, room.contentItems.length);
   assert.equal(room.representations.find((r: {contentItemId:string}) => r.contentItemId === 'matt-youtube').objectKind, 'tv');
+  assert.equal(room.representations.filter((r: {objectKind:string}) => r.objectKind === 'tv').length, 1);
 });

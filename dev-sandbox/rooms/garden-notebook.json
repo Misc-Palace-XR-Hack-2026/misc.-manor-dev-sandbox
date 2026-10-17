@@ -28,12 +28,12 @@
     { "id": "r7", "contentItemId": "c7", "objectKind": "rug" }
   ],
   "placements": [
-    { "representationId": "r1", "slotId": "loft-2" },
-    { "representationId": "r2", "slotId": "block-1" },
-    { "representationId": "r3", "slotId": "loft-1" },
-    { "representationId": "r4", "slotId": "bench-1" },
+    { "representationId": "r1", "slotId": "bench-1" },
+    { "representationId": "r2", "slotId": "bench-2" },
+    { "representationId": "r3", "slotId": "shelf-1" },
+    { "representationId": "r4", "slotId": "floor-1" },
     { "representationId": "r5", "slotId": "floor-5" },
-    { "representationId": "r6", "slotId": "floor-old-12" },
-    { "representationId": "r7", "slotId": "floor-old-11" }
+    { "representationId": "r6", "slotId": "floor-2" },
+    { "representationId": "r7", "slotId": "floor-old-7" }
   ]
 }

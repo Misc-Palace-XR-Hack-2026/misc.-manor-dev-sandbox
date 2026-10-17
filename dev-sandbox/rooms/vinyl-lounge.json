@@ -29,12 +29,12 @@
     { "id": "r7", "contentItemId": "c7", "objectKind": "headphones" }
   ],
   "placements": [
-    { "representationId": "r1", "slotId": "loft-1" },
-    { "representationId": "r2", "slotId": "bench-1" },
-    { "representationId": "r3", "slotId": "block-1" },
-    { "representationId": "r4", "slotId": "floor-old-10" },
-    { "representationId": "r5", "slotId": "loft-2" },
-    { "representationId": "r6", "slotId": "floor-old-9" },
-    { "representationId": "r7", "slotId": "floor-old-8" }
+    { "representationId": "r1", "slotId": "bench-1" },
+    { "representationId": "r2", "slotId": "floor-3" },
+    { "representationId": "r3", "slotId": "bench-2" },
+    { "representationId": "r4", "slotId": "floor-1" },
+    { "representationId": "r5", "slotId": "shelf-1" },
+    { "representationId": "r6", "slotId": "floor-2" },
+    { "representationId": "r7", "slotId": "shelf-2" }
   ]
 }
