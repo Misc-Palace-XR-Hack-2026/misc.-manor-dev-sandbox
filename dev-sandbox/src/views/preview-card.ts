@@ -1,3 +1,4 @@
+import { registerEmbedAudio, supportsEmbedAudio } from './embed-audio';
 import type { Preview } from '../core/preview';
 import type { MediaArt } from '../core/media-art';
 
@@ -28,7 +29,10 @@ export function createEmbedFrame(preview: Extract<Preview, { kind: 'embed' }>): 
   frame.allowFullscreen = !page;
   frame.referrerPolicy = 'strict-origin-when-cross-origin';
   const destination = new URL(preview.src);
-  if (destination.protocol === 'https:' && destination.origin !== globalThis.location?.origin) frame.src = preview.src;
+  if (destination.protocol === 'https:' && destination.origin !== globalThis.location?.origin) {
+    frame.src = preview.src;
+    registerEmbedAudio(frame, preview.provider);
+  }
   return frame;
 }
 
@@ -94,7 +98,6 @@ export class PreviewCardView {
       const frame = createEmbedFrame(p);
       const destination = new URL(p.src);
       if (destination.protocol === 'https:' && destination.origin !== location.origin) {
-        frame.src = p.src;
         body.append(frame);
       }
       body.append(make('div', 'preview-title', p.title));
@@ -103,6 +106,9 @@ export class PreviewCardView {
       open.href = p.src;
       open.target = '_blank';
       open.rel = 'noopener noreferrer';
+      if (!supportsEmbedAudio(p.provider, p.src)) {
+        body.append(make('div', 'preview-text', 'Automatic audio coordination is unavailable for this preview. Mute room music before playing media here, or use Open in browser.'));
+      }
       body.append(guidance, open);
     } else if (p.kind === 'image') {
       const frame = make('div', 'preview-frame');

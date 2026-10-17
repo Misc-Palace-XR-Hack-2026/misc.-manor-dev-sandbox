@@ -1,5 +1,6 @@
 import { currentTrack, trackUrl, type RoomTrack } from '../core/soundtrack';
 import type { Store } from '../core/store';
+import { subscribeEmbedAudio } from './embed-audio';
 
 export interface AudioLike {
   src: string;
@@ -37,26 +38,14 @@ async function defaultFade(from: number, to: number, ms: number, set: (value: nu
   });
 }
 
-export function embedMessageIsPlaying(data: unknown): boolean | null {
-  if (!data || typeof data !== 'object') {
-    if (typeof data !== 'string') return null;
-    if (data.includes('infoDelivery') && data.includes('"playerState":1')) return true;
-    if (data.includes('infoDelivery') && data.includes('"playerState":2')) return false;
-    return null;
-  }
-  const payload = data as { event?: string; method?: string; info?: { playerState?: number }; playing?: boolean };
-  if (payload.event === 'play' || payload.playing === true || payload.info?.playerState === 1) return true;
-  if (payload.event === 'pause' || payload.playing === false || payload.info?.playerState === 2) return false;
-  return null;
-}
-
 export class SoundtrackPlayer {
   private audio: AudioLike;
   private fade: FadeFn;
   private last: RoomTrack | undefined;
   private wanted: RoomTrack | undefined;
   private embedPlaying = false;
-  private away = false;
+  private pauseReasons = new Set<string>();
+  private get away(): boolean { return this.pauseReasons.size > 0; }
   private blocked = false;
   private muted = false;
   /**
@@ -67,9 +56,10 @@ export class SoundtrackPlayer {
   private gestureVersion = 0;
   private listeners = new Set<() => void>();
 
-  get soundState(): 'off' | 'muted' | 'playing' {
+  get soundState(): 'off' | 'muted' | 'playing' | 'paused' {
     if (!currentTrack(this.store.state)) return 'off';
-    return this.muted || this.blocked || this.away || this.embedPlaying || this.audio.paused ? 'muted' : 'playing';
+    if (this.enabled && !this.muted && (this.away || this.embedPlaying)) return 'paused';
+    return this.muted || this.blocked || this.audio.paused ? 'muted' : 'playing';
   }
 
   subscribe(listener: () => void): void {
@@ -83,9 +73,9 @@ export class SoundtrackPlayer {
 
   toggleSound(): void {
     const track = currentTrack(this.store.state);
-    if (!track || this.away) return;
+    if (!track) return;
     this.gestureVersion++;
-    if (this.soundState === 'playing') {
+    if (this.soundState === 'playing' || this.soundState === 'paused') {
       this.muted = true;
       this.audio.pause();
       this.notify();
@@ -93,6 +83,7 @@ export class SoundtrackPlayer {
     }
     this.muted = false;
     this.enabled = true;
+    if (this.away || this.embedPlaying) { this.notify(); return; }
     this.wanted = track;
     if (this.last !== track) this.audio.src = trackUrl(track);
     this.last = track;
@@ -139,22 +130,25 @@ export class SoundtrackPlayer {
   setEmbedPlaying(playing: boolean): void {
     if (this.embedPlaying === playing) return;
     this.embedPlaying = playing;
-    if (playing) this.leave();
-    else if (typeof document === 'undefined' || !document.hidden) this.return();
+    if (playing) this.suspend();
+    else this.sync();
   }
 
-  leave(): void {
-    this.away = true;
-    this.notify();
+  leave(reason = 'outbound'): void {
+    this.pauseReasons.add(reason);
+    this.suspend();
+  }
+
+  private suspend(): void {
+    // Competing media and page departure must stop synchronously, not after a fade.
+    this.gestureVersion++;
     this.wanted = undefined;
-    const version = this.gestureVersion;
-    this.enqueue(async () => {
-      if (version === this.gestureVersion) await this.stop(true);
-    });
+    this.audio.pause();
+    this.notify();
   }
 
-  return(): void {
-    this.away = false;
+  return(reason = 'outbound'): void {
+    this.pauseReasons.delete(reason);
     this.sync();
   }
 
@@ -162,24 +156,25 @@ export class SoundtrackPlayer {
     // Call play in the gesture handler itself, not after a queued fade/await.
     // Safari requires this direct gesture path to unlock audible playback.
     const retry = () => {
-      if (!this.blocked || this.muted || this.away || !this.wanted ||
+      if (!this.blocked || !this.enabled || this.muted || this.away || this.embedPlaying || !this.wanted ||
           this.last !== this.wanted || !this.audio.paused) return;
       this.playFromGesture();
     };
     document.addEventListener('touchend', retry);
     document.addEventListener('click', retry);
     document.addEventListener('keydown', retry);
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) this.leave();
-      else this.return();
-    });
-    window.addEventListener('blur', () => this.leave());
-    window.addEventListener('focus', () => { if (!document.hidden && !this.embedPlaying) this.return(); });
-    window.addEventListener('message', (event) => {
-      const playing = embedMessageIsPlaying(event.data);
-      if (playing === null) return;
-      this.setEmbedPlaying(playing);
-    });
+    const visibility = () => {
+      if (document.hidden) this.leave('hidden');
+      else { this.return('hidden'); if (document.hasFocus()) this.return('outbound'); }
+    };
+    document.addEventListener('visibilitychange', visibility);
+    window.addEventListener('blur', () => this.leave('blur'));
+    window.addEventListener('focus', () => { this.return('blur'); this.return('outbound'); });
+    window.addEventListener('pagehide', () => this.leave('page'));
+    window.addEventListener('pageshow', () => { this.return('page'); visibility(); });
+    if (!document.hasFocus()) this.leave('blur');
+    visibility();
+    subscribeEmbedAudio(playing => this.setEmbedPlaying(playing));
     document.addEventListener('click', (event) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
@@ -192,7 +187,7 @@ export class SoundtrackPlayer {
   }
 
   private sync(): void {
-    const track = this.away ? undefined : currentTrack(this.store.state);
+    const track = this.away || this.embedPlaying ? undefined : currentTrack(this.store.state);
     this.notify();
     if (track === this.wanted) return;
     this.wanted = track;
@@ -212,7 +207,7 @@ export class SoundtrackPlayer {
       if (this.last) await this.stop(true);
       return;
     }
-    if (this.muted || !this.enabled) return;
+    if (this.muted || !this.enabled || this.away || this.embedPlaying) return;
     if (this.last === track && !this.audio.paused) return;
     this.audio.src = trackUrl(track);
     this.audio.volume = 0;
@@ -228,7 +223,7 @@ export class SoundtrackPlayer {
     }
     if (version !== this.gestureVersion) return;
     this.notify();
-    if (track !== this.wanted || this.away || this.muted) {
+    if (track !== this.wanted || this.away || this.embedPlaying || this.muted) {
       await this.stop(false);
       return;
     }
