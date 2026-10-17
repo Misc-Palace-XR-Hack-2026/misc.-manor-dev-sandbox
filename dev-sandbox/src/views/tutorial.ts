@@ -1,5 +1,5 @@
 import { Store } from '../core/store';
-import { advance, beginLesson, currentStep, finish, loadOnboarding, persistOnboarding, progressLabel, skip, type LessonId, type OnboardingState } from '../core/onboarding';
+import { advance, beginLesson, currentStep, finish, loadOnboarding, persistOnboarding, progressLabel, skip, visibleTarget, type LessonId, type OnboardingState } from '../core/onboarding';
 
 export class TutorialView {
   state: OnboardingState;
@@ -85,11 +85,12 @@ export class TutorialView {
       this.onVr?.('home');
     });
     this.card.append(progress, title, prompt, skipBtn);
-    this.placeHighlight(step.target);
+    this.highlight.hidden = true;
+    requestAnimationFrame(() => this.placeHighlight(step.target));
   }
   private placeHighlight(selector: string): void {
-    const node = selector.split(',').map((part) => document.querySelector<HTMLElement>(part.trim())).find(Boolean);
-    if (!node) { this.highlight.hidden = true; return; }
+    const node = visibleTarget(selector);
+    if (!(node instanceof HTMLElement)) { this.highlight.hidden = true; return; }
     const box = node.getBoundingClientRect();
     this.highlight.hidden = false;
     this.highlight.style.left = `${box.left - 6}px`;

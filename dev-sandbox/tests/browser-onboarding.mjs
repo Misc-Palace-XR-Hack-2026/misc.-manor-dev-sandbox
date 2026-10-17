@@ -17,9 +17,20 @@ try {
   await page.screenshot({ path: '/home/dvgpro/.hermes/cache/scratch/welcome-desktop.png' });
   await page.getByRole('button', { name: 'Start tutorial' }).click();
   await page.getByText('1 of 5').waitFor();
+  const firstBox = await page.locator('.tutorial-highlight').boundingBox();
+  assert.ok(firstBox && firstBox.width > 20);
   await page.locator('.fab').click();
   await page.getByRole('button', { name: 'Add object' }).click();
   await page.getByText('2 of 5').waitFor();
+  await page.waitForFunction(() => {
+    const title = document.querySelector('#new-object-title')?.getBoundingClientRect();
+    const highlight = document.querySelector('.tutorial-highlight')?.getBoundingClientRect();
+    return Boolean(title && highlight && Math.abs(highlight.x - (title.x - 6)) < 8 && Math.abs(highlight.y - (title.y - 6)) < 8);
+  });
+  const titleSize = await page.locator('#new-object-title').evaluate((el) => Number(getComputedStyle(el).fontSize.replace('px', '')));
+  const refSize = await page.locator('#new-object-ref').evaluate((el) => Number(getComputedStyle(el).fontSize.replace('px', '')));
+  assert.ok(titleSize >= 16, `title font-size ${titleSize} must be >= 16px so iOS does not zoom`);
+  assert.ok(refSize >= 16, `content font-size ${refSize} must be >= 16px so iOS does not zoom`);
   await page.locator('#new-object-title').fill('Practice link');
   await page.getByText('3 of 5').waitFor();
   await page.locator('#new-object-ref').fill('https://example.com');

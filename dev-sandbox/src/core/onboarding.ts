@@ -63,6 +63,23 @@ export function beginLesson(lesson: LessonId, snapshot: string, roomId: string |
   return { status: 'fresh', lesson, step: 0, snapshot, roomId };
 }
 
+export function visibleTarget(selector: string, root: { querySelector(sel: string): unknown } = document): unknown {
+  return selector.split(',').map((part) => root.querySelector(part.trim())).find((node) => {
+    if (!node || typeof node !== 'object') return false;
+    const el = node as { hidden?: boolean; getBoundingClientRect?: () => { width: number; height: number } };
+    if (el.hidden) return false;
+    if (typeof getComputedStyle === 'function' && node instanceof Element) {
+      const style = getComputedStyle(node);
+      if (style.display === 'none' || style.visibility === 'hidden') return false;
+    }
+    if (typeof el.getBoundingClientRect === 'function') {
+      const box = el.getBoundingClientRect();
+      if ('width' in box && box.width + box.height === 0) return false;
+    }
+    return true;
+  }) ?? null;
+}
+
 export function currentStep(state: OnboardingState): TutorialStep | null {
   if (!state.lesson) return null;
   return LESSONS[state.lesson][state.step] ?? null;

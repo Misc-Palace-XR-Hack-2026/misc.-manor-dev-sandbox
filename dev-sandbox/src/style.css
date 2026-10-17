@@ -63,7 +63,7 @@ h1 { margin: 0; font: italic 600 20px Georgia, serif; }
 .surface-error { color: #ffb9a8; margin: 5px 0; }
 .surface-render-error { position: absolute; bottom: 10px; left: 15px; right: 15px; padding: 10px; background: #392c34; color: #ffb9a8; }
 .appearance small { color: #bcc4b0; line-height: 1.5; margin-top: 3px; }
-input, select, button { font: inherit; color: var(--text); background: #3a3546; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+input, select, button { font: inherit; font-size: 16px; color: var(--text); background: #3a3546; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
 input { width: 100%; }
 button { cursor: pointer; }
 button:hover:not(:disabled) { border-color: var(--accent); }
