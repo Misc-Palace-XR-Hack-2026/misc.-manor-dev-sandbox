@@ -5,9 +5,9 @@
   "layoutId": "cozy-loft",
   "lighting": "emerald",
   "surfaces": {
-    "floor": { "preset": "stone" },
-    "wall": { "preset": "plaster" },
-    "background": { "preset": "sky" }
+    "floor": { "preset": "moss-slate" },
+    "wall": { "preset": "sage-limewash" },
+    "background": { "preset": "forest-mist" }
   },
   "contentItems": [
     { "id": "c1", "type": "article", "title": "Kew Living Collections", "sourceKind": "url", "sourceRef": "https://en.wikipedia.org/wiki/Royal_Botanic_Gardens,_Kew", "tags": ["garden"], "createdAt": "2026-10-08T00:00:00.000Z" },
@@ -16,7 +16,8 @@
     { "id": "c4", "type": "note", "title": "Glasshouse fern", "sourceKind": "note", "sourceRef": "Keep the soil damp and the light filtered.", "tags": ["garden"], "createdAt": "2026-10-08T00:00:00.000Z" },
     { "id": "c5", "type": "note", "title": "Seed tray by the stairs", "sourceKind": "note", "sourceRef": "Label what you planted.", "tags": ["garden"], "createdAt": "2026-10-08T00:00:00.000Z" },
     { "id": "c6", "type": "note", "title": "Watering can stand", "sourceKind": "note", "sourceRef": "A side table for the conservatory tools.", "tags": ["garden"], "createdAt": "2026-10-08T00:00:00.000Z" },
-    { "id": "c7", "type": "note", "title": "Floor cushion under the canopy", "sourceKind": "note", "sourceRef": "Sit among the plants.", "tags": [], "createdAt": "2026-10-08T00:00:00.000Z" }
+    { "id": "c7", "type": "note", "title": "Floor cushion under the canopy", "sourceKind": "note", "sourceRef": "Sit among the plants.", "tags": [], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c8", "type": "note", "title": "Greenhouse cat", "sourceKind": "note", "sourceRef": "Asleep in the fern shade.", "tags": [], "createdAt": "2026-10-08T00:00:00.000Z" }
   ],
   "representations": [
     { "id": "r1", "contentItemId": "c1", "objectKind": "book" },
@@ -25,15 +26,17 @@
     { "id": "r4", "contentItemId": "c4", "objectKind": "plant" },
     { "id": "r5", "contentItemId": "c5", "objectKind": "plant" },
     { "id": "r6", "contentItemId": "c6", "objectKind": "sideTable" },
-    { "id": "r7", "contentItemId": "c7", "objectKind": "cushion" }
+    { "id": "r7", "contentItemId": "c7", "objectKind": "cushion" },
+    { "id": "r8", "contentItemId": "c8", "objectKind": "cat" }
   ],
   "placements": [
     { "representationId": "r1", "slotId": "loft-2" },
     { "representationId": "r2", "slotId": "block-1" },
     { "representationId": "r3", "slotId": "loft-1" },
     { "representationId": "r4", "slotId": "floor-5" },
-    { "representationId": "r5", "slotId": "floor-4" },
-    { "representationId": "r6", "slotId": "floor-2" },
-    { "representationId": "r7", "slotId": "floor-3" }
+    { "representationId": "r5", "slotId": "floor-old-12" },
+    { "representationId": "r6", "slotId": "floor-old-11" },
+    { "representationId": "r7", "slotId": "floor-4" },
+    { "representationId": "r8", "slotId": "bench-3" }
   ]
 }

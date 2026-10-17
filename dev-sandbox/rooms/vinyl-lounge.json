@@ -6,9 +6,9 @@
   "lighting": "twilight",
   "soundtrack": { "mode": "follow" },
   "surfaces": {
-    "floor": { "preset": "wood" },
-    "wall": { "preset": "wood" },
-    "background": { "preset": "gradient" }
+    "floor": { "preset": "indigo-marble" },
+    "wall": { "preset": "violet-linen" },
+    "background": { "preset": "indigo-stars" }
   },
   "contentItems": [
     { "id": "c1", "type": "article", "title": "The Great 78 Project", "sourceKind": "url", "sourceRef": "https://en.wikipedia.org/wiki/Internet_Archive", "tags": ["music"], "createdAt": "2026-10-08T00:00:00.000Z" },
@@ -20,7 +20,7 @@
     { "id": "c7", "type": "note", "title": "Headphones on the table", "sourceKind": "note", "sourceRef": "Quiet listening.", "tags": [], "createdAt": "2026-10-08T00:00:00.000Z" }
   ],
   "representations": [
-    { "id": "r1", "contentItemId": "c1", "objectKind": "record" },
+    { "id": "r1", "contentItemId": "c1", "objectKind": "recordSleeve" },
     { "id": "r2", "contentItemId": "c2", "objectKind": "boombox" },
     { "id": "r3", "contentItemId": "c3", "objectKind": "notebook" },
     { "id": "r4", "contentItemId": "c4", "objectKind": "turntable" },
@@ -30,11 +30,11 @@
   ],
   "placements": [
     { "representationId": "r1", "slotId": "loft-1" },
-    { "representationId": "r2", "slotId": "floor-2" },
+    { "representationId": "r2", "slotId": "bench-1" },
     { "representationId": "r3", "slotId": "block-1" },
-    { "representationId": "r4", "slotId": "floor-3" },
+    { "representationId": "r4", "slotId": "floor-old-10" },
     { "representationId": "r5", "slotId": "loft-2" },
-    { "representationId": "r6", "slotId": "floor-5" },
-    { "representationId": "r7", "slotId": "floor-4" }
+    { "representationId": "r6", "slotId": "floor-old-9" },
+    { "representationId": "r7", "slotId": "floor-old-8" }
   ]
 }

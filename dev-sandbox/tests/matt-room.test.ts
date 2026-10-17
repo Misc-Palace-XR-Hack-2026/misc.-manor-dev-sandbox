@@ -11,19 +11,21 @@ test('Matt dedicated seed includes owner destinations, researched notes, and cyb
   assert.ok(existsSync(path), 'Matt needs a dedicated repo seed');
   const raw = load();
   const manifest = JSON.parse(readFileSync(join(process.cwd(), 'docs/matt-research.json'), 'utf8'));
-  assert.equal(manifest.length, raw.contentItems.length);
+  assert.equal(manifest.length, 16);
   assert.equal(new Set(manifest.map((r: any) => r.suppliedUrl)).size, manifest.length);
   assert.equal(validateRoom(raw), null);
   const room = seedRoom('matt', { matt: raw, 'vinyl-lounge': newRoom() });
   assert.equal(room.id, 'matt');
-  assert.equal(room.contentItems.length, 16);
-  assert.deepEqual(room.contentItems.map(c => c.sourceRef), manifest.map((r: any) => r.suppliedUrl));
+  assert.ok(room.contentItems.length >= 16);
+  assert.deepEqual(room.contentItems.slice(0, 16).map(c => c.sourceRef), manifest.map((r: any) => r.suppliedUrl));
   assert.equal(room.lighting, THEMES['look-cyber'].lighting);
   assert.deepEqual(room.surfaces, THEMES['look-cyber'].surfaces);
-  assert.equal(room.representations.length, 16);
-  assert.equal(room.placements.length, 16);
-  assert.equal(new Set(room.placements.map(p => p.slotId)).size, 16);
-  for (const c of room.contentItems) { assert.equal(c.type, 'link'); assert.equal(c.sourceKind, 'url'); assert.ok((c as any).notes?.length > 50); }
+  assert.equal(room.representations.length, room.contentItems.length);
+  assert.equal(room.placements.length, room.contentItems.length);
+  assert.equal(new Set(room.placements.map(p => p.slotId)).size, room.placements.length);
+  for (const c of room.contentItems.slice(0, 16)) { assert.equal(c.type, 'link'); assert.equal(c.sourceKind, 'url'); assert.ok((c as any).notes?.length > 50); }
+  assert.ok(room.representations.some((r: {objectKind:string}) => r.objectKind === 'armchair'), 'Matt needs a sit-spot');
+  assert.ok(room.placements.some((p: {slotId:string}) => p.slotId.startsWith('bench') || p.slotId.startsWith('shelf')));
 });
 test('Every Matt object can pick up, place, undo and roundtrip without touching other saves', () => {
   assert.ok(existsSync(path), 'Matt needs a dedicated repo seed');

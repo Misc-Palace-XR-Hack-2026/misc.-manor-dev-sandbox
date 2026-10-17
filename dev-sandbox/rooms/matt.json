@@ -226,6 +226,36 @@
         "matt"
       ],
       "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-chair",
+      "type": "note",
+      "title": "Listening chair",
+      "sourceKind": "note",
+      "sourceRef": "Sit with the loft studio.",
+      "notes": "A sit-spot for the loft listening studio. Does not replace any destination URL.",
+      "tags": ["matt", "cozy"],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-rug",
+      "type": "note",
+      "title": "Studio rug",
+      "sourceKind": "note",
+      "sourceRef": "Warm the floor under the TVs.",
+      "notes": "A rug for the media wall. Does not replace any destination URL.",
+      "tags": ["matt", "cozy"],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-lamp",
+      "type": "note",
+      "title": "Neon lamp",
+      "sourceKind": "note",
+      "sourceRef": "A lamp beside the chair.",
+      "notes": "A lamp for the sit-spot. Does not replace any destination URL.",
+      "tags": ["matt", "cozy"],
+      "createdAt": "2026-10-16T00:00:00.000Z"
     }
   ],
   "representations": [
@@ -308,72 +338,42 @@
       "id": "matt-object-youtube-3",
       "contentItemId": "matt-youtube-3",
       "objectKind": "tv"
+    },
+    {
+      "id": "matt-object-chair",
+      "contentItemId": "matt-chair",
+      "objectKind": "armchair"
+    },
+    {
+      "id": "matt-object-rug",
+      "contentItemId": "matt-rug",
+      "objectKind": "rug"
+    },
+    {
+      "id": "matt-object-lamp",
+      "contentItemId": "matt-lamp",
+      "objectKind": "lamp"
     }
   ],
   "placements": [
-    {
-      "representationId": "matt-object-cyber-funk",
-      "slotId": "loft-1"
-    },
-    {
-      "representationId": "matt-object-neon-arcade",
-      "slotId": "block-1"
-    },
-    {
-      "representationId": "matt-object-tree-bar",
-      "slotId": "loft-3"
-    },
-    {
-      "representationId": "matt-object-dvgpro",
-      "slotId": "bench-1"
-    },
-    {
-      "representationId": "matt-object-youtube",
-      "slotId": "floor-7"
-    },
-    {
-      "representationId": "matt-object-clock",
-      "slotId": "bench-3"
-    },
-    {
-      "representationId": "matt-object-apollo",
-      "slotId": "shelf-1"
-    },
-    {
-      "representationId": "matt-object-arcade",
-      "slotId": "floor-9"
-    },
-    {
-      "representationId": "matt-object-solar-book",
-      "slotId": "shelf-2"
-    },
-    {
-      "representationId": "matt-object-refinery",
-      "slotId": "loft-2"
-    },
-    {
-      "representationId": "matt-object-tinker-lab",
-      "slotId": "floor-old-10"
-    },
-    {
-      "representationId": "matt-object-robot-game",
-      "slotId": "floor-11"
-    },
-    {
-      "representationId": "matt-object-pluto",
-      "slotId": "floor-15"
-    },
-    {
-      "representationId": "matt-object-os",
-      "slotId": "bench-2"
-    },
-    {
-      "representationId": "matt-object-youtube-2",
-      "slotId": "floor-old-8"
-    },
-    {
-      "representationId": "matt-object-youtube-3",
-      "slotId": "floor-old-9"
-    }
+    { "representationId": "matt-object-cyber-funk", "slotId": "loft-1" },
+    { "representationId": "matt-object-neon-arcade", "slotId": "block-1" },
+    { "representationId": "matt-object-tree-bar", "slotId": "loft-3" },
+    { "representationId": "matt-object-dvgpro", "slotId": "bench-1" },
+    { "representationId": "matt-object-youtube", "slotId": "floor-old-8" },
+    { "representationId": "matt-object-clock", "slotId": "shelf-3" },
+    { "representationId": "matt-object-apollo", "slotId": "shelf-1" },
+    { "representationId": "matt-object-arcade", "slotId": "shelf-2" },
+    { "representationId": "matt-object-solar-book", "slotId": "block-2" },
+    { "representationId": "matt-object-refinery", "slotId": "loft-2" },
+    { "representationId": "matt-object-tinker-lab", "slotId": "floor-old-10" },
+    { "representationId": "matt-object-robot-game", "slotId": "bench-2" },
+    { "representationId": "matt-object-pluto", "slotId": "floor-15" },
+    { "representationId": "matt-object-os", "slotId": "bench-3" },
+    { "representationId": "matt-object-youtube-2", "slotId": "floor-old-9" },
+    { "representationId": "matt-object-youtube-3", "slotId": "floor-old-7" },
+    { "representationId": "matt-object-chair", "slotId": "floor-3" },
+    { "representationId": "matt-object-rug", "slotId": "floor-6" },
+    { "representationId": "matt-object-lamp", "slotId": "floor-1" }
   ]
 }

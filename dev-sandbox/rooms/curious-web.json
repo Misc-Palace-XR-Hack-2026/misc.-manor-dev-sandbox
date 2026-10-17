@@ -5,29 +5,35 @@
   "layoutId": "cozy-loft",
   "lighting": "daylight",
   "surfaces": {
-    "floor": { "preset": "wood" },
-    "wall": { "preset": "plaster" },
-    "background": { "preset": "neutral" }
+    "floor": { "preset": "gallery-limestone" },
+    "wall": { "preset": "chalk-limewash" },
+    "background": { "preset": "cumulus-sky" }
   },
   "contentItems": [
     { "id": "c1", "type": "link", "title": "The web, explained", "sourceKind": "url", "sourceRef": "https://developer.mozilla.org/", "tags": ["web"], "createdAt": "2026-10-08T00:00:00.000Z" },
     { "id": "c2", "type": "article", "title": "A common place", "sourceKind": "url", "sourceRef": "https://en.wikipedia.org/wiki/Commonplace_book", "tags": ["notes"], "createdAt": "2026-10-08T00:00:00.000Z" },
     { "id": "c3", "type": "article", "title": "Open knowledge", "sourceKind": "url", "sourceRef": "https://www.wikipedia.org/", "tags": ["web"], "createdAt": "2026-10-08T00:00:00.000Z" },
     { "id": "c4", "type": "note", "title": "Field note: follow a curiosity", "sourceKind": "note", "sourceRef": "Collect ideas, connect them, and pass them on.", "tags": ["note"], "createdAt": "2026-10-08T00:00:00.000Z" },
-    { "id": "c5", "type": "tool", "title": "A mug for long reading", "sourceKind": "note", "sourceRef": "Stay awhile.", "tags": [], "createdAt": "2026-10-08T00:00:00.000Z" }
+    { "id": "c5", "type": "tool", "title": "A mug for long reading", "sourceKind": "note", "sourceRef": "Stay awhile.", "tags": [], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c6", "type": "note", "title": "Reading lamp", "sourceKind": "note", "sourceRef": "A lamp beside the chair.", "tags": [], "createdAt": "2026-10-08T00:00:00.000Z" },
+    { "id": "c7", "type": "note", "title": "Side table for the stack", "sourceKind": "note", "sourceRef": "Keep the next page close.", "tags": [], "createdAt": "2026-10-08T00:00:00.000Z" }
   ],
   "representations": [
     { "id": "r1", "contentItemId": "c1", "objectKind": "book" },
     { "id": "r2", "contentItemId": "c2", "objectKind": "notebook" },
     { "id": "r3", "contentItemId": "c3", "objectKind": "book" },
     { "id": "r4", "contentItemId": "c4", "objectKind": "armchair" },
-    { "id": "r5", "contentItemId": "c5", "objectKind": "mug" }
+    { "id": "r5", "contentItemId": "c5", "objectKind": "mug" },
+    { "id": "r6", "contentItemId": "c6", "objectKind": "lamp" },
+    { "id": "r7", "contentItemId": "c7", "objectKind": "sideTable" }
   ],
   "placements": [
-    { "representationId": "r1", "slotId": "loft-2" },
+    { "representationId": "r1", "slotId": "shelf-1" },
     { "representationId": "r2", "slotId": "block-1" },
-    { "representationId": "r3", "slotId": "loft-1" },
+    { "representationId": "r3", "slotId": "shelf-2" },
     { "representationId": "r4", "slotId": "floor-3" },
-    { "representationId": "r5", "slotId": "floor-2" }
+    { "representationId": "r5", "slotId": "bench-1" },
+    { "representationId": "r6", "slotId": "bench-2" },
+    { "representationId": "r7", "slotId": "floor-2" }
   ]
 }

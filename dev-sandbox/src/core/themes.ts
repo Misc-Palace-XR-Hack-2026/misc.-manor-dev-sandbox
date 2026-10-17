@@ -19,27 +19,27 @@ export const THEMES: Record<string, Theme> = {
   },
   'curious-web': {
     label: 'Curious web',
-    surfaces: { floor: { preset: 'wood' }, wall: { preset: 'plaster' }, background: { preset: 'neutral' } },
+    surfaces: { floor: { preset: SURFACE_LOOKS.daylight.floor.id }, wall: { preset: SURFACE_LOOKS.daylight.wall.id }, background: { preset: SURFACE_LOOKS.daylight.background.id } },
     lighting: 'daylight',
   },
   'garden-notebook': {
     label: 'Garden notebook',
-    surfaces: { floor: { preset: 'tile' }, wall: { preset: 'plaster' }, background: { preset: 'sky' } },
+    surfaces: { floor: { preset: SURFACE_LOOKS.dawn.floor.id }, wall: { preset: SURFACE_LOOKS.dawn.wall.id }, background: { preset: SURFACE_LOOKS.dawn.background.id } },
     lighting: 'dawn',
   },
   'greenhouse-conservatory': {
     label: 'Greenhouse conservatory',
-    surfaces: { floor: { preset: 'stone' }, wall: { preset: 'plaster' }, background: { preset: 'sky' } },
+    surfaces: { floor: { preset: SURFACE_LOOKS.emerald.floor.id }, wall: { preset: SURFACE_LOOKS.emerald.wall.id }, background: { preset: SURFACE_LOOKS.emerald.background.id } },
     lighting: 'emerald',
   },
   'creative-atelier': {
     label: 'Creative atelier',
-    surfaces: { floor: { preset: 'wood' }, wall: { preset: 'brick' }, background: { preset: 'gradient' } },
+    surfaces: { floor: { preset: SURFACE_LOOKS.sunset.floor.id }, wall: { preset: SURFACE_LOOKS.sunset.wall.id }, background: { preset: SURFACE_LOOKS.sunset.background.id } },
     lighting: 'sunset',
   },
   'vinyl-lounge': {
     label: 'Vinyl lounge',
-    surfaces: { floor: { preset: 'wood' }, wall: { preset: 'wood' }, background: { preset: 'gradient' } },
+    surfaces: { floor: { preset: SURFACE_LOOKS.twilight.floor.id }, wall: { preset: SURFACE_LOOKS.twilight.wall.id }, background: { preset: SURFACE_LOOKS.twilight.background.id } },
     lighting: 'twilight',
   },
   ...Object.fromEntries(Object.entries(SURFACE_LOOKS).map(([lighting, look]) => [`look-${lighting}`, {
