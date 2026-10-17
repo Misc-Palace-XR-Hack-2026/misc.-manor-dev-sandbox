@@ -421,7 +421,7 @@ export function buildObject(kind: ObjectKind, content?: Pick<ContentItem,'title'
     });
     g.add(part);
   }
-  if (content && (kind === 'tv' || kind === 'photoFrame' || kind === 'record' || kind === 'turntable' || kind === 'book' || kind === 'notebook')) {
+  if (content && (kind === 'tv' || kind === 'photoFrame' || kind === 'recordSleeve' || kind === 'book' || kind === 'notebook')) {
     const map = snapshotTexture(content);
     const face = new THREE.Mesh(new THREE.PlaneGeometry(kind === 'tv' ? 0.36 : 0.28, kind === 'tv' ? 0.26 : 0.28), new THREE.MeshBasicMaterial({ map }));
     face.name = 'preview-snapshot';
@@ -429,7 +429,7 @@ export function buildObject(kind: ObjectKind, content?: Pick<ContentItem,'title'
     else if (kind === 'photoFrame') face.position.set(0, 0.30, 0.041);
     else if (kind === 'book') face.position.set(0, 0.23, 0.096);
     else if (kind === 'notebook') { face.rotation.x = -Math.PI / 2; face.position.set(0, 0.06, 0); }
-    else face.position.set(-0.05, 0.18, 0.12);
+    else if (kind === 'recordSleeve') face.position.set(0, 0.21, 0.061);
     g.add(face);
   }
   if (kind === 'book' && content && !g.getObjectByName('preview-snapshot')) {
@@ -441,7 +441,7 @@ export function buildObject(kind: ObjectKind, content?: Pick<ContentItem,'title'
     face.position.set(0, 0.23, 0.096);
     g.add(face);
   }
-  if (kind === 'notebook' && content) {
+  if (kind === 'notebook' && content && !g.getObjectByName('preview-snapshot')) {
     const face = new THREE.Mesh(
       new THREE.PlaneGeometry(0.28, 0.38),
       new THREE.MeshStandardMaterial({ map: titleTexture(content.title), roughness: 0.85 }),
