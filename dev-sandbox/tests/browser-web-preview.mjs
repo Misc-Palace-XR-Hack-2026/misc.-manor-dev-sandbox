@@ -4,6 +4,7 @@ const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['-
 try {
  const page=await browser.newPage(); await page.goto(process.env.MP_URL ?? 'http://127.0.0.1:5174');
  await page.waitForFunction(()=>window.store);
+ const skip=page.getByRole('button',{name:'Go to room'}); if(await skip.count()) await skip.click();
  await page.evaluate(async()=>{
   const {PreviewCardView}=await import('/src/views/preview-card.ts');
   const host=document.createElement('div');host.id='test-preview'; document.body.append(host);

@@ -14,6 +14,8 @@ try {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(process.env.MP_URL ?? 'http://127.0.0.1:5173');
   await page.waitForFunction(() => window.store, { timeout: 5000 });
+  const skip = page.getByRole('button', { name: 'Go to room' });
+  if (await skip.count()) await skip.click();
 
   const layout = await page.evaluate(() => ({
     scrollWidth: document.documentElement.scrollWidth,

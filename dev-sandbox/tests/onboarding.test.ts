@@ -1,0 +1,30 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {advance,beginLesson,currentStep,finish,LESSONS,loadOnboarding,persistOnboarding,progressLabel,skip,ONBOARDING_KEY} from '../src/core/onboarding';
+
+test('first launch, skip, completion, replay and action gating stay independent of room JSON',()=>{
+ const memory=new Map<string,string>();
+ const storage={getItem:(k:string)=>memory.get(k)??null,setItem:(k:string,v:string)=>{memory.set(k,v);}};
+ assert.equal(loadOnboarding(storage).status,'fresh');
+ persistOnboarding('skipped',storage);
+ assert.equal(JSON.parse(memory.get(ONBOARDING_KEY)!).status,'skipped');
+ persistOnboarding('done',storage);
+ const returning=loadOnboarding(storage);
+ assert.equal(returning.status,'done');
+ assert.equal(returning.lesson,null);
+ const lesson=beginLesson('create','{"safe":true}','guest');
+ assert.equal(progressLabel(lesson),'1 of 5');
+ assert.equal(currentStep(lesson)?.target.includes('add-object'),true);
+ assert.equal(advance(lesson,'typed-title').step,0,'wrong action must not advance');
+ const after=advance(lesson,'open-add');
+ assert.equal(after.step,1);
+ assert.equal(progressLabel(after),'2 of 5');
+ let state=after;
+ for(const event of ['typed-title','typed-content','created','placed']) state=advance(state,event);
+ assert.equal(state.lesson,null);
+ assert.equal(finish(state).status,'done');
+ const replay=beginLesson('move','{"safe":true}',null);
+ assert.equal(replay.step,0);
+ assert.equal(skip(replay).lesson,null);
+ assert.ok(LESSONS.create.length>=4 && LESSONS.move.length>=4);
+});
