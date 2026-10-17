@@ -1,0 +1,23 @@
+// future state- along w the layout changes, we may want to predefine more "furniture" in the room thatisnt like selectable objects, such as the stairs we have or the loft looking bed, those structures defaukt in the room provide space and visual intrigue. maybe concepts like large bookshaleves imbedded in the walls so they dont look like objects just features in the roomc
+could be some components of rooms that we define, also maybe shelves as components or concepts, or other things like that
+- then later we could consider procedural generation for the a layout option or something but each procedural gen should incorporate soeof th estarirs,, windows, shelves, bookshelf thing, etc. in each one in cool ways
+- the reason this i simportant is later we may want objects to visually be organized together in containers and shelves and things like that are maybe good for that, so prep design and feelig of organiation intruced by the layout itself and the space lets consider that
+- the layour of rooms then would impact the experience, layout rooms for example drake and josh one w doors that lead elsewhere doors should just not be considered we can just have rectangular holes in the walls we can see through like we show windows, doors arent necessary rn 
+- when layout changes in rooms, naturally the objects cant just be mapped to where they were in space so when layout changes a cool fetuare would be thatall objects get dropped in the middle of the room fromX feet up when teh layout switches, hence showing we have to organize it now
+- organizing objects could then ahev an auto mode, where we hit a button and all objects magically get sorted somewhere in the room, they fly one by one in nice fashion but not too slwo or fast like magic and swish into place, not just fly vstriaght to the spot they will land, like magic
+
+
+// layout room ideas 
+(all voxelified, colors can be kept or furniture of the room can have the same colors as walls so ppl dont mistake as objetcs?)
+- hey arnold's room 
+    - (https://www.reddit.com/r/90s_kid/comments/1bosqw1/arnolds_room_3d_recreation/)
+    - https://sketchfab.com/3d-models/hey-arnolds-room-daylight-4b4bce59721640cfaf4498e8c75c9484
+    - https://scontent-ord5-2.xx.fbcdn.net/v/t39.99422-6/834285258_1405515474504578_4197612858608268267_n.png?stp=dst-jpg_tt6&cstp=mx2048x1187&ctp=s2048x1187&_nc_cat=102&ccb=1-7&_nc_sid=833d8c&_nc_ohc=z8oEg0RmMqIQ7kNvwE7jt4d&_nc_oc=Adr6biBolrNew59imuzBp7nbeIJ3QBvOWR0gXhoWoNfJGC9bxUDTOFBSGVR4dC277S_npNYja6gl6OpfTtHSqOg8&_nc_zt=14&_nc_ht=scontent-ord5-2.xx&_nc_gid=0erZ00P-LhWp_-jWUOl-Gw&_nc_ss=7b289&oh=00_AQNzhA-BFwhXeg9yFTQRezNrwWATjAYICwrC-mqeJXu1Gw&oe=6AD10836
+    - may need to make slanted wall side removed so we can see better in our setup, since we dont do full room walls, keep ceiling?
+- andy's room toy story
+- the futuristic white room w the glowy floor panels and the big back obelisk thing in 2001 space odyssey
+- drake and josh's room
+- sid's room toy story?
+- scarface room (no cocaine)
+- room from in the mood for love?
+- dumbledore's office room?
