@@ -356,24 +356,24 @@
     }
   ],
   "placements": [
-    { "representationId": "matt-object-cyber-funk", "slotId": "floor-1" },
+    { "representationId": "matt-object-cyber-funk", "slotId": "floor-6" },
     { "representationId": "matt-object-neon-arcade", "slotId": "block-1" },
-    { "representationId": "matt-object-tree-bar", "slotId": "floor-6" },
+    { "representationId": "matt-object-tree-bar", "slotId": "floor-front-loft-2" },
     { "representationId": "matt-object-dvgpro", "slotId": "shelf-1" },
-    { "representationId": "matt-object-youtube", "slotId": "floor-old-7" },
+    { "representationId": "matt-object-youtube", "slotId": "floor-1" },
     { "representationId": "matt-object-clock", "slotId": "shelf-3" },
     { "representationId": "matt-object-apollo", "slotId": "bench-1" },
-    { "representationId": "matt-object-arcade", "slotId": "floor-front-loft-1" },
+    { "representationId": "matt-object-arcade", "slotId": "floor-old-7" },
     { "representationId": "matt-object-solar-book", "slotId": "bench-2" },
-    { "representationId": "matt-object-refinery", "slotId": "floor-7" },
+    { "representationId": "matt-object-refinery", "slotId": "floor-9" },
     { "representationId": "matt-object-tinker-lab", "slotId": "loft-1" },
     { "representationId": "matt-object-robot-game", "slotId": "shelf-2" },
     { "representationId": "matt-object-pluto", "slotId": "floor-8" },
-    { "representationId": "matt-object-os", "slotId": "floor-9" },
+    { "representationId": "matt-object-os", "slotId": "floor-front-loft-1" },
     { "representationId": "matt-object-youtube-2", "slotId": "bench-3" },
     { "representationId": "matt-object-youtube-3", "slotId": "block-2" },
     { "representationId": "matt-object-chair", "slotId": "floor-3" },
-    { "representationId": "matt-object-rug", "slotId": "floor-old-8" },
+    { "representationId": "matt-object-rug", "slotId": "floor-7" },
     { "representationId": "matt-object-lamp", "slotId": "floor-2" }
   ]
 }

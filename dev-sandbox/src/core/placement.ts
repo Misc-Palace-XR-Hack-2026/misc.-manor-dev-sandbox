@@ -7,7 +7,7 @@ export interface Occupant {
 }
 
 const LARGE = new Set<ObjectKind>([
-  'armchair', 'turntable', 'box', 'tv', 'record', 'boombox', 'console', 'fireplace',
+  'armchair', 'turntable', 'box', 'tv', 'record', 'boombox', 'fireplace',
   'guitar', 'synthesizer', 'drum', 'car', 'motorcycle',
 ]);
 const SMALL = new Set<ObjectKind>([
@@ -20,6 +20,30 @@ function posOf(layout: RoomLayout, id: string): [number, number, number] | undef
   return layout.slots.find((s) => s.id === id)?.pos;
 }
 
+function isoFront(from: [number, number, number], to: [number, number, number]): boolean {
+  const [fx, , fz] = from;
+  const [x, y, z] = to;
+  return y < 0.2
+    && x + z > fx + fz + 0.8
+    && Math.abs(x - fx) > 0.5
+    && Math.abs(z - fz) > 0.5;
+}
+
+function isoDist(from: [number, number, number], to: [number, number, number]): number {
+  return Math.abs(to[0] - from[0]) + Math.abs(to[2] - from[2]);
+}
+
+function ofKind(
+  occupants: Occupant[],
+  layout: RoomLayout,
+  kind: ObjectKind,
+): [number, number, number][] {
+  return occupants
+    .filter((o) => o.kind === kind)
+    .map((o) => posOf(layout, o.slotId))
+    .filter((p): p is [number, number, number] => Boolean(p));
+}
+
 /** Pick a free slot for auto-placement. Manual place() still accepts any slot. */
 export function chooseSlot(
   kind: ObjectKind,
@@ -29,14 +53,10 @@ export function chooseSlot(
 ): string | undefined {
   const free = layout.slots.filter((s) => !occupied.has(s.id));
   if (!free.length) return undefined;
-  const chairs = occupants
-    .filter((o) => o.kind === 'armchair')
-    .map((o) => posOf(layout, o.slotId))
-    .filter((p): p is [number, number, number] => Boolean(p));
   let best = free[0];
   let bestScore = -Infinity;
   for (const slot of free) {
-    const score = scoreSlot(kind, slot.id, slot.pos, chairs);
+    const score = scoreSlot(kind, slot.id, slot.pos, occupants, layout);
     if (score > bestScore) {
       bestScore = score;
       best = slot;
@@ -49,18 +69,30 @@ function scoreSlot(
   kind: ObjectKind,
   id: string,
   pos: [number, number, number],
-  chairs: [number, number, number][],
+  occupants: Occupant[],
+  layout: RoomLayout,
 ): number {
   const [x, y, z] = pos;
+  const chairs = ofKind(occupants, layout, 'armchair');
+  const hearths = ofKind(occupants, layout, 'fireplace');
+  const tvs = ofKind(occupants, layout, 'tv');
   let score = 0;
   if (LARGE.has(kind)) {
     score += y < 0.2 ? 80 : -40;
     score += (3 - z) * 12;
+    if (kind === 'tv' && z <= 1.2) score += 40;
+  }
+  if (kind === 'console') {
+    score += y < 0.2 ? 50 : -40;
+    for (const tv of tvs) {
+      if (isoFront(tv, pos)) score += 220 - isoDist(tv, pos);
+    }
   }
   if (kind === 'rug') {
     score += y < 0.2 ? 50 : -80;
-    for (const [cx, , cz] of chairs) {
-      if (z > cz + 0.5 && Math.abs(x - cx) < 1) score += 200 - (z - cz);
+    const anchors = chairs.length ? chairs : hearths;
+    for (const anchor of anchors) {
+      if (isoFront(anchor, pos)) score += 220 - isoDist(anchor, pos);
     }
   }
   if (BESIDE.has(kind)) {

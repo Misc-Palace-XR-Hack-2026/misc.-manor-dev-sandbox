@@ -99,12 +99,30 @@ test('seed rooms follow sit-spot layout rules and Matt has one TV', () => {
     if (chairs.length) {
       const [cx, , cz] = chairs[0].pos;
       for (const p of placed.filter((x: {kind:string}) => x.kind === 'rug')) {
-        assert.ok(p.pos[2] > cz + 0.5, `${name} rug in front of chair`);
-        assert.ok(Math.abs(p.pos[0] - cx) < 1.0, `${name} rug in the chair aisle`);
+        assert.ok(p.pos[0] + p.pos[2] > cx + cz + 0.8, `${name} rug in front of chair`);
+        assert.ok(Math.abs(p.pos[0] - cx) > 0.5 && Math.abs(p.pos[2] - cz) > 0.5, `${name} rug is isometric-diagonal from the chair`);
       }
       for (const p of placed.filter((x: {kind:string}) => x.kind === 'lamp' || x.kind === 'sideTable')) {
         assert.ok(Math.abs(p.pos[0] - cx) > 0.4 && Math.abs(p.pos[0] - cx) < 2.0, `${name} ${p.kind} beside chair`);
         assert.ok(Math.abs(p.pos[2] - cz) < 1.0, `${name} ${p.kind} in the chair row`);
+      }
+    }
+    const hearths = placed.filter((p: {kind:string}) => p.kind === 'fireplace');
+    if (!chairs.length && hearths.length) {
+      const [hx, , hz] = hearths[0].pos;
+      for (const p of placed.filter((x: {kind:string}) => x.kind === 'rug')) {
+        assert.ok(p.pos[0] + p.pos[2] > hx + hz + 0.8, `${name} rug in front of fireplace`);
+        assert.ok(Math.abs(p.pos[0] - hx) > 0.5 && Math.abs(p.pos[2] - hz) > 0.5, `${name} rug is isometric-diagonal from the fireplace`);
+      }
+    }
+    const tvs = placed.filter((p: {kind:string}) => p.kind === 'tv');
+    const consoles = placed.filter((p: {kind:string}) => p.kind === 'console');
+    if (tvs.length && consoles.length) {
+      const [tx, , tz] = tvs[0].pos;
+      assert.ok(tz <= 1.2, `${name} TV stays on the back row`);
+      for (const p of consoles) {
+        assert.ok(p.pos[0] + p.pos[2] > tx + tz + 0.8, `${name} console in front of TV`);
+        assert.ok(Math.abs(p.pos[0] - tx) > 0.5 && Math.abs(p.pos[2] - tz) > 0.5, `${name} console is isometric-diagonal from the TV`);
       }
     }
   }
