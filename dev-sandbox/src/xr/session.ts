@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Store } from '../core/store';
-import { walkStairs, inspectPreview, loftBeaconVisible, objectIdFromRay, overlayIsGranted, spawnPosition, stickForwardTeleport, walkableAt, walkableFloorPad, xrSelect, xrSessionInit, type NeighborhoodRoom, type PanelActionResult } from './interaction';
+import { walkStairs, inspectPreview, loftBeaconVisible, objectIdFromRay, overlayIsGranted, spawnPosition, stairHeight, stickForwardTeleport, walkableAt, walkableFloorPad, xrSelect, xrSessionInit, type NeighborhoodRoom, type PanelActionResult } from './interaction';
 import type { OnboardingState } from '../core/onboarding';
 import { XrPanel } from './panel';
 import { XrHoverLabel } from './hover';
@@ -31,7 +31,6 @@ export class XrSession {
   private overlayCard: PreviewCardView;
   private overlayGranted = false;
   private lastSnap = 0;
-  private stairMode = false;
   private lastWalk = 0;
   private hoverPoint: THREE.Vector3 | null = null;
   private placing = false;
@@ -112,14 +111,13 @@ export class XrSession {
     this.objectMenu.useDomOverlay = this.overlayGranted;
     this.overlay.hidden = !this.overlayGranted;
     const tutorial = (globalThis as unknown as { tutorial?: { state: unknown } }).tutorial;
-    this.panel.guide = (tutorial?.state as typeof this.panel.guide) ?? null;
+    this.panel.setGuide((tutorial?.state as typeof this.panel.guide) ?? null);
     this.panel.show(this.panel.guide?.status === 'fresh' && !this.panel.guide.lesson ? 'welcome' : 'home');
     this.syncGuides();
   }
 
   private onEnd(): void {
     this.presenting = false;
-    this.stairMode = false;
     this.store.select(null);
     this.marker.visible = false;
     this.hoverPoint = null;
@@ -150,7 +148,11 @@ export class XrSession {
     loft.rotation.x = -Math.PI / 2;
     loft.position.set(2.0, 2.32, 1.5);
     loft.userData.walkable = true;
-    this.floors.add(floor, loft, this.loftBeacon);
+    const stair = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 3.7), mat.clone());
+    stair.rotation.x = -Math.atan2(2.3, 2.8);
+    stair.position.set(0.7, 1.15, 4.4);
+    stair.userData.walkable = true;
+    this.floors.add(floor, loft, this.loftBeacon, stair);
     this.floors.visible = false;
   }
 
@@ -198,7 +200,7 @@ export class XrSession {
       return;
     }
     if (hit?.kind === 'panel' && hit.uv) {
-      this.panel.activate(hit.uv);
+      this.panel.activate(hit.uv, hit.target);
       return;
     }
     if (hit?.kind === 'floor' && !this.placing) {
@@ -227,16 +229,14 @@ export class XrSession {
       a.click();
       a.remove();
     }
-    if (result.page) this.panel.show(result.page);
+    if (result.page && result.page !== 'guide') this.panel.show(result.page);
     if (result.tutorialEvent) this.onTutorial?.(result.tutorialEvent);
     const tutorial = (globalThis as unknown as { tutorial?: { state: OnboardingState | null } }).tutorial;
-    if (tutorial) this.panel.guide = tutorial.state;
+    if (tutorial) this.panel.setGuide(tutorial.state);
     if (this.store.selectedId && !this.store.slotOf(this.store.selectedId)) this.placing = true;
     if (result.exit) void this.exit();
     if (result.teleport) {
-      this.stairMode = Boolean(result.stairs);
       this.player.position.set(result.teleport.x, result.teleport.y, result.teleport.z);
-      if (result.stairs) this.panel.hide();
     }
     this.syncGuides();
   }
@@ -244,7 +244,6 @@ export class XrSession {
   private teleport(point: THREE.Vector3): void {
     const landing = walkableAt(point) ?? (point.y > 1.6 ? { x: 2.0, y: 2.3, z: 1.6 } : null);
     if (!landing) return;
-    this.stairMode = false;
     this.player.position.set(landing.x, landing.y, landing.z);
     this.syncGuides();
   }
@@ -278,7 +277,7 @@ export class XrSession {
     }
     for (const controller of this.controllers) {
       const hit = this.pick(controller);
-      if (hit?.kind === 'panel' && hit.uv) this.panel.setHover(hit.uv);
+      if (hit?.kind === 'panel' && hit.uv) this.panel.setHover(hit.uv, hit.target);
       if (hit?.kind === 'action' && hit.target) this.objectMenu.setHover(hit.target);
       if (hit?.kind === 'object' && hit.id && hit.id !== this.store.selectedId) {
         const preview = inspectPreview(this.store, hit.id);
@@ -297,10 +296,15 @@ export class XrSession {
         if (!gp) continue;
         const x = gp.axes[2] ?? gp.axes[0] ?? 0;
         const y = gp.axes[3] ?? gp.axes[1] ?? 0;
-        if (this.stairMode && source.handedness === 'left' && !this.placing && !this.panel.visible) {
-          const p = walkStairs(this.player.position, y, dt);
-          this.player.position.set(p.x,p.y,p.z);
-          continue;
+        if (source.handedness === 'left' && !this.placing) {
+          const onStairs = Math.abs(this.player.position.y - stairHeight(this.player.position.z)) <= .08
+            && this.player.position.x >= .3 && this.player.position.x <= 1.1
+            && this.player.position.z >= 2.6 && this.player.position.z <= 6.2;
+          if (onStairs) {
+            const p = walkStairs(this.player.position, y, dt);
+            this.player.position.set(p.x,p.y,p.z);
+            continue;
+          }
         }
         if (Math.abs(x) > 0.7 && Math.abs(x) >= Math.abs(y) && now - this.lastSnap > 280) {
           this.player.rotateY(-Math.sign(x) * SNAP);
@@ -346,9 +350,9 @@ export class XrSession {
     const ray = this.rayFrom(controller);
     const actionHit = this.objectMenu.hit(ray);
     if (actionHit) return { kind: 'action', point: actionHit.point, target: actionHit.object as THREE.Mesh };
-    const panelHit = ray.intersectObject(this.panel.group, true)[0];
-    if (panelHit && this.panel.group.visible) {
-      return { kind: 'panel', point: panelHit.point, uv: panelHit.uv ? { x: panelHit.uv.x, y: panelHit.uv.y } : undefined };
+    const panelHit = this.panel.hit(ray);
+    if (panelHit) {
+      return { kind: 'panel', point: panelHit.point, uv: panelHit.uv, target: panelHit.mesh };
     }
     if (this.placing && this.store.selectedId) {
       const slot = ray.intersectObjects(this.slots.children, false)[0];

@@ -26,3 +26,15 @@ test('stair walking continuously climbs and descends both landings without leavi
   assert.deepEqual(walk(p, .1, .016), p);
   assert.ok(Math.abs(walk(p,-1,10).z-p.z) <= .05);
 });
+
+test('stairs are walkable like the floor: teleport onto the ramp, not a special stick mode', () => {
+  const mid = interaction.walkableAt({ x: 0.7, y: 1.2, z: 4.4 });
+  assert.ok(mid);
+  assert.equal(mid!.x, 0.7);
+  assert.equal(mid!.z, 4.4);
+  assert.ok(mid!.y > 0.3 && mid!.y < 2.3, `ramp height ${mid!.y}`);
+  assert.deepEqual(interaction.stickForwardTeleport({ x: 0.7, y: 1.2, z: 4.4 }, false, -0.8), mid);
+  assert.deepEqual(interaction.walkableAt({ x: 0.7, y: 0.02, z: 4.4 }), { x: 0.7, y: 0, z: 4.4 }, 'floor under the stairs stays floor');
+  assert.equal(interaction.runPanelAction({} as never, 'stairs:bottom').stairs, undefined, 'stair buttons must not enter a special stick mode');
+  assert.deepEqual(interaction.runPanelAction({} as never, 'stairs:bottom').teleport, { x: .7, y: 0, z: 6.2 });
+});

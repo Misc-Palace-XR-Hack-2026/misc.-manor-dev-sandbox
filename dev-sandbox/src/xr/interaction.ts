@@ -70,6 +70,9 @@ export function walkableFloorPad(): { x: number; z: number; width: number; depth
 export function walkableAt(point: { x: number; y: number; z: number }): { x: number; y: number; z: number } | null {
   const { x, y, z } = point;
   if (y >= 2.0 && y <= 3.8 && x >= 0.4 && x <= 3.6 && z >= 0.4 && z <= 2.6) return { x, y: 2.3, z };
+  if (x >= 0.3 && x <= 1.4 && z >= 2.6 && z <= 6.2 && y > 0.4 && y < 3.0) {
+    return { x, y: stairHeight(z), z };
+  }
   const pad = walkableFloorPad();
   const halfW = pad.width / 2;
   const halfD = pad.depth / 2;
@@ -80,11 +83,15 @@ export function walkableAt(point: { x: number; y: number; z: number }): { x: num
 }
 
 /** Analytic invisible ramp; deliberately absent from render/pick/shadow lists.
- * Optional stair mode: left stick forward/back follows the stair run, not head yaw.
+ * Left stick forward/back follows the stair run when already on it, same as walking the floor.
  * Both ends extend onto level landings. Teleport and snap turn remain available.
  */
+export function stairHeight(z: number): number {
+  return 2.3 * Math.max(0, Math.min(1, (5.8 - z) / 2.8));
+}
+
 export function walkStairs(p: {x:number;y:number;z:number}, stick: number, dt: number): {x:number;y:number;z:number} {
-  const height = (z:number) => 2.3 * Math.max(0, Math.min(1, (5.8-z)/2.8));
+  const height = stairHeight;
   if (![p.x,p.y,p.z,stick,dt].every(Number.isFinite) || p.x < .3 || p.x > 1.1 || p.z < 2.6 || p.z > 6.2 || Math.abs(p.y-height(p.z)) > .06 || Math.abs(stick) < .2) return p;
   const z = Math.max(2.6, Math.min(6.2, p.z + stick * .65 * Math.max(0,Math.min(dt,.05))));
   return {x:p.x, y:height(z), z};
@@ -399,17 +406,17 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   if (id === 'page:create') return { page: 'create', tutorialEvent: 'open-add' };
   if (id === 'page:welcome') return { page: 'welcome' };
   if (id === 'guide:room') return { page: 'home', tutorialEvent: 'skip' };
-  if (id === 'guide:start') return { page: 'guide', tutorialEvent: 'start' };
-  if (id.startsWith('guide:') && ['create','move','rooms','style'].includes(id.slice(6))) return { page: 'guide', tutorialEvent: 'lesson:' + id.slice(6) };
-  if (id === 'guide:skip') return { page: 'home', tutorialEvent: 'skip' };
+  if (id === 'guide:start') return { page: 'home', tutorialEvent: 'start' };
+  if (id.startsWith('guide:') && ['create','move','rooms','style'].includes(id.slice(6))) return { page: 'home', tutorialEvent: 'lesson:' + id.slice(6) };
+  if (id === 'guide:skip') return { tutorialEvent: 'skip' };
   if (id === 'page:howto' || id === 'howto:skip') return { page: id === 'howto:skip' ? 'home' : 'howto' };
   if (id === 'howto:create') return { page: 'howto-create' };
   if (id === 'howto:move') return { page: 'howto-move' };
   if (id === 'howto:rooms') return { page: 'howto-rooms' };
   if (id === 'howto:style') return { page: 'howto-style' };
   if (id === 'howto:copy') return {};
-  if (id === 'stairs:bottom') return { stairs: true, teleport: {x:.7,y:0,z:6.2} };
-  if (id === 'stairs:top') return { stairs: true, teleport: {x:.7,y:2.3,z:2.6} };
+  if (id === 'stairs:bottom') return { teleport: {x:.7,y:0,z:6.2} };
+  if (id === 'stairs:top') return { teleport: {x:.7,y:2.3,z:2.6} };
   if (id === 'go:loft') return { teleport: { x: 2.0, y: 2.3, z: 1.6 } };
   if (id === 'go:floor') return { teleport: spawnPosition() };
   if (id === 'create:cancel') return { page: 'home' };

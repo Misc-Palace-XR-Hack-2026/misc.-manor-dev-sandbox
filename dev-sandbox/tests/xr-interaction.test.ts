@@ -318,3 +318,18 @@ test('VR How-to menu is skippable and replayable without changing the personal s
   assert.equal(runPanelAction(store, 'page:howto').page, 'howto', 'replay after skip');
   assert.equal(store.exportJson(), snapshot, 'tutorials must not mutate the personal room');
 });
+
+test('VR tutorial is a pop-up: starting it keeps the command menu available', () => {
+  const store = new Store(newRoom('Mine'), 'guest');
+  const started = runPanelAction(store, 'guide:start');
+  assert.equal(started.tutorialEvent, 'start');
+  assert.notEqual(started.page, 'guide');
+  const guide = { status: 'fresh' as const, lesson: 'create' as const, step: 0, snapshot: null, roomId: null };
+  const home = panelButtons(store, 'home', [], undefined, guide).map((b) => b.id);
+  assert.ok(home.includes('page:create'), 'commands stay on the home menu during the tutorial');
+  assert.ok(home.includes('page:howto'));
+  const popup = panelButtons(store, 'guide', [], undefined, guide).map((b) => b.id);
+  assert.ok(popup.includes('guide:skip'));
+  assert.ok(popup.includes('guide:status'));
+  assert.ok(!popup.includes('page:create'), 'the tutorial pop-up is not the command menu');
+});
