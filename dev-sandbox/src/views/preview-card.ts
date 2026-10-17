@@ -17,6 +17,21 @@ const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string,
   return e;
 };
 
+/** Same sandboxed player used by desktop and by the VR DOM overlay. */
+export function createEmbedFrame(preview: Extract<Preview, { kind: 'embed' }>): HTMLIFrameElement {
+  const frame = make('iframe', 'preview-iframe');
+  frame.title = `Preview of ${preview.title}`;
+  frame.height = String(preview.height);
+  const page = preview.provider === 'page';
+  frame.setAttribute('sandbox', page ? 'allow-scripts' : 'allow-scripts allow-same-origin allow-presentation allow-popups');
+  frame.allow = page ? '' : 'encrypted-media; picture-in-picture; fullscreen';
+  frame.allowFullscreen = !page;
+  frame.referrerPolicy = 'strict-origin-when-cross-origin';
+  const destination = new URL(preview.src);
+  if (destination.protocol === 'https:' && destination.origin !== globalThis.location?.origin) frame.src = preview.src;
+  return frame;
+}
+
 /** Fallback picture: an icon for the media type, captioned with what it is. */
 function hero(art: PreviewArt): HTMLElement {
   const frame = make('div', 'preview-frame preview-hero');
@@ -76,17 +91,19 @@ export class PreviewCardView {
   private render(p: Preview, art: PreviewArt | null): HTMLElement {
     const body = make('div', `preview-body preview-${p.kind}`);
     if (p.kind === 'embed') {
-      const frame = make('iframe', 'preview-iframe');
-      frame.title = `Preview of ${p.title}`;
-      frame.height = String(p.height);
-      // Scripts + same-origin are needed by the players themselves (their own origin, not ours). No top navigation,
-      // forms or downloads. A referrer is sent because YouTube refuses to play embeds without one.
-      frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-popups');
-      frame.allow = 'encrypted-media; picture-in-picture; fullscreen';
-      frame.allowFullscreen = true;
-      frame.referrerPolicy = 'strict-origin-when-cross-origin';
-      frame.src = p.src;
-      body.append(frame, make('div', 'preview-title', p.title));
+      const frame = createEmbedFrame(p);
+      const destination = new URL(p.src);
+      if (destination.protocol === 'https:' && destination.origin !== location.origin) {
+        frame.src = p.src;
+        body.append(frame);
+      }
+      body.append(make('div', 'preview-title', p.title));
+      const guidance = make('div', 'preview-text', 'Loading or blank? This site may block previews or need browser features.');
+      const open = make('a', 'preview-open', 'Open in browser');
+      open.href = p.src;
+      open.target = '_blank';
+      open.rel = 'noopener noreferrer';
+      body.append(guidance, open);
     } else if (p.kind === 'image') {
       const frame = make('div', 'preview-frame');
       const img = make('img');

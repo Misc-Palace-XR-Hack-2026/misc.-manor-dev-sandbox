@@ -8,6 +8,7 @@ import { SoundtrackPlayer } from './views/soundtrack';
 import { createRoomCapture } from './views/room-capture';
 import { createSoundtrackControl } from './views/soundtrack-control';
 import { createDebugPanel } from './views/debug';
+import { TutorialView } from './views/tutorial';
 
 // Every rooms/*.json committed to the repo is a starter source: dev rooms seed from them, and the
 // toolbar can still load any of them into the current room.
@@ -47,6 +48,8 @@ try {
 
 if (initial) {
   const store = new Store(initial, roomId);
+  const tutorial = new TutorialView(store);
+  (window as unknown as { tutorial: TutorialView }).tutorial = tutorial;
   new MenuView(document.getElementById('menu')!, store, repoRooms);
   const room = new RoomView(document.getElementById('room')!, store, repoRooms);
   document.body.append(createRoomCapture(() => room.capturePhoto()));

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SoundtrackPlayer, type AudioLike } from '../src/views/soundtrack';
+import { SoundtrackPlayer, embedMessageIsPlaying, type AudioLike } from '../src/views/soundtrack';
 import { Store, newRoom } from '../src/core/store';
 import { trackUrl } from '../src/core/soundtrack';
 
@@ -206,4 +206,25 @@ test('after toggleSound() then toggleSound() (muted), changing store lighting mu
   await player.idle();
   assert.equal(audio.plays, plays, 'play must not be called when muted');
   assert.equal(audio.paused, true);
+});
+
+test('an in-environment embed play message pauses room music; mere iframe presence does not', async () => {
+  const store = new Store(newRoom());
+  const { player, audio } = makePlayer(store);
+  await player.idle();
+  player.toggleSound();
+  await player.idle();
+  assert.equal(audio.paused, false);
+  assert.equal(embedMessageIsPlaying({ event: 'play' }), true);
+  player.setEmbedPlaying(true);
+  await player.idle();
+  assert.equal(audio.paused, true, 'actual embed playback pauses room music');
+  player.setEmbedPlaying(false);
+  await player.idle();
+  assert.equal(audio.paused, false, 'stopping embed resumes unless muted');
+  player.toggleSound();
+  player.setEmbedPlaying(true);
+  player.setEmbedPlaying(false);
+  await player.idle();
+  assert.equal(audio.paused, true, 'muted stays muted after embed ends');
 });

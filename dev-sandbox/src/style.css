@@ -63,7 +63,7 @@ h1 { margin: 0; font: italic 600 20px Georgia, serif; }
 .surface-error { color: #ffb9a8; margin: 5px 0; }
 .surface-render-error { position: absolute; bottom: 10px; left: 15px; right: 15px; padding: 10px; background: #392c34; color: #ffb9a8; }
 .appearance small { color: #bcc4b0; line-height: 1.5; margin-top: 3px; }
-input, select, button { font: inherit; color: var(--text); background: #3a3546; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+input, select, button { font: inherit; font-size: 16px; color: var(--text); background: #3a3546; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
 input { width: 100%; }
 button { cursor: pointer; }
 button:hover:not(:disabled) { border-color: var(--accent); }
@@ -106,7 +106,17 @@ button:disabled { opacity: 0.4; cursor: default; }
 .preview-hero[data-type="video"], .preview-hero[data-type="music"] { background: linear-gradient(135deg, #4a3550, #2a2733); }
 .preview-hero[data-type="article"], .preview-hero[data-type="doc"], .preview-hero[data-type="note"] { background: linear-gradient(135deg, #4a4535, #2a2733); }
 .preview-hero[data-type="image"] { background: linear-gradient(135deg, #35484a, #2a2733); }
+.preview-open { display: flex; align-items: center; min-height: 44px; color: #d6e8ff; text-decoration: underline; font: 600 13px/1.3 ui-sans-serif, system-ui, sans-serif; }
 .preview-iframe { display: block; width: 100%; border: 0; border-radius: 8px; background: #2a2733; color-scheme: light; }
+
+.xr-dom-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+.xr-dom-overlay[hidden] { display: none; }
+.xr-dom-overlay .preview-card { pointer-events: auto; }
 .preview-body {
   display: grid;
   gap: 6px;
@@ -434,3 +444,10 @@ body:has(.item-sheet:not([hidden])) .fab-menu { display: none; }
     bottom: 24px;
   }
 }
+
+.tutorial-overlay { position:fixed; inset:0; z-index:40; pointer-events:none; }
+.tutorial-highlight { position:fixed; border:2px solid #dba08f; border-radius:14px; box-shadow:0 0 0 9999px rgba(20,16,24,.35); pointer-events:none; }
+.tutorial-card { pointer-events:auto; position:fixed; left:16px; top:72px; width:min(320px,calc(100vw - 32px)); max-height:40vh; overflow:auto; background:rgba(28,28,32,.94); color:#ece7f5; border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:8px; }
+.tutorial-card button { min-height:44px; }
+.tutorial-progress { margin:0; color:#a39cb5; }
+@media (prefers-reduced-motion: reduce) { .tutorial-highlight { box-shadow:none; } }

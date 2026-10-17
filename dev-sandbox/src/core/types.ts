@@ -7,6 +7,7 @@ export const CONTENT_TYPES = ['link', 'article', 'image', 'video', 'music', 'doc
 export type ContentType = (typeof CONTENT_TYPES)[number];
 
 export const OBJECT_KINDS = [
+  'arDevice', 'vrDevice', 'igniteLogo', 'fireplace',
   'book', 'photoFrame', 'record', 'tv', 'boombox', 'box', 'plant', 'mug', 'notebook', 'trophy',
   'armchair', 'sideTable', 'turntable', 'rug',
   'clock', 'guitar', 'synthesizer', 'drum', 'lamp', 'coffeeMaker',
@@ -16,6 +17,7 @@ export const OBJECT_KINDS = [
 export type ObjectKind = (typeof OBJECT_KINDS)[number];
 
 export const OBJECT_LABELS: Record<ObjectKind, string> = {
+  arDevice: 'Ignite AR glasses', vrDevice: 'Ignite VR headset', igniteLogo: 'Ignite flame', fireplace: 'Cozy fireplace',
   book: 'Book', photoFrame: 'Photo frame', record: 'Record player (classic)', tv: 'TV',
   boombox: 'Boombox', box: 'Storage box', plant: 'Leafy plant', mug: 'Mug',
   notebook: 'Notebook', trophy: 'Trophy', armchair: 'Armchair',

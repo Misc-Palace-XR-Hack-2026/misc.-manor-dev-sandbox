@@ -4,6 +4,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Store, newRoom, validateRoom } from '../src/core/store';
 import { OBJECT_KINDS } from '../src/core/types';
+import { SURFACE_LOOKS } from '../src/core/surface-looks';
+import { getLayout, DEFAULT_LAYOUT_ID } from '../src/core/layout';
 
 const roomsDir = join(process.cwd(), 'rooms');
 const files = readdirSync(roomsDir).filter((f) => f.endsWith('.json'));
@@ -32,13 +34,101 @@ test('neighborhood example rooms are valid JSON configs with themed furnishings'
     }
   }
   assert.equal(rooms['greenhouse-conservatory'].lighting, 'emerald');
-  assert.equal(rooms['greenhouse-conservatory'].surfaces.floor.preset, 'stone');
+  assert.equal(rooms['greenhouse-conservatory'].surfaces.floor.preset, 'moss-slate');
   assert.ok(rooms['greenhouse-conservatory'].representations.some((r: {objectKind: string}) => r.objectKind === 'plant'));
   assert.equal(rooms['vinyl-lounge'].lighting, 'twilight');
   assert.ok(rooms['vinyl-lounge'].representations.some((r: {objectKind: string}) => r.objectKind === 'turntable' || r.objectKind === 'record'));
   assert.equal(rooms['creative-atelier'].lighting, 'sunset');
   assert.equal(rooms['garden-notebook'].lighting, 'dawn');
   assert.equal(rooms['curious-web'].lighting, 'daylight');
+});
+
+const COZY = new Set(['armchair','sideTable','rug','lamp','plant','mug','cat','fireplace','cushion','coffeeMaker']);
+test('starter rooms form sit-spots, use unused cozy kinds, and match lighting finishes', () => {
+  const themed = ['curious-web','garden-notebook','greenhouse-conservatory','creative-atelier','vinyl-lounge','sample','matt'];
+  const used = new Set<string>();
+  const slotSets: string[][] = [];
+  for (const name of themed) {
+    const room = rooms[name];
+    const look = SURFACE_LOOKS[(room.lighting ?? 'daylight') as keyof typeof SURFACE_LOOKS];
+    if (room.lighting) {
+      assert.equal(room.surfaces.floor.preset, look.floor.id, `${name} floor should match ${room.lighting}`);
+      assert.equal(room.surfaces.wall.preset, look.wall.id, `${name} wall should match ${room.lighting}`);
+      assert.equal(room.surfaces.background.preset, look.background.id, `${name} sky should match ${room.lighting}`);
+    }
+    const kinds = room.representations.map((r: {objectKind:string}) => r.objectKind);
+    kinds.forEach((k:string) => used.add(k));
+    assert.ok(kinds.some((k:string) => COZY.has(k)), `${name} needs a sit/cozy object`);
+    const slots = room.placements.map((p: {slotId:string}) => p.slotId);
+    slotSets.push(slots.sort().join(','));
+    assert.ok(slots.some((s:string) => s.startsWith('bench') || s.startsWith('shelf') || s.startsWith('floor-old') || s.startsWith('floor-7')), `${name} should use bench/shelf/east floor, not only loft`);
+    assert.ok(new Set(slots).size === slots.length);
+  }
+  assert.ok(new Set(slotSets).size === themed.length, 'rooms should not share the same placement pattern');
+  for (const kind of ['lamp','rug','cat','fireplace','coffeeMaker']) {
+    assert.ok(used.has(kind), `unused cozy kind ${kind} should appear in a starter room`);
+  }
+});
+
+test('seed rooms follow sit-spot layout rules and Matt has one TV', () => {
+  const layout = getLayout(DEFAULT_LAYOUT_ID)!;
+  const pos = (id: string) => layout.slots.find((s: {id:string}) => s.id === id).pos;
+  const themed = ['curious-web','garden-notebook','greenhouse-conservatory','creative-atelier','vinyl-lounge','sample','matt'];
+  for (const name of themed) {
+    const room = rooms[name];
+    const byRep = Object.fromEntries(room.representations.map((r: {id:string}) => [r.id, r]));
+    const placed = room.placements.map((p: {representationId:string, slotId:string}) => ({
+      kind: byRep[p.representationId].objectKind as string,
+      slotId: p.slotId,
+      pos: pos(p.slotId) as [number, number, number],
+    }));
+    const chairs = placed.filter((p: {kind:string}) => p.kind === 'armchair');
+    for (const p of placed) {
+      if (p.kind === 'armchair' || p.kind === 'turntable' || p.kind === 'box' || p.kind === 'fireplace') {
+        assert.ok(p.pos[1] < 0.2, `${name} ${p.kind} stays on the floor (${p.slotId})`);
+        assert.ok(p.pos[2] <= 2.7, `${name} ${p.kind} goes toward the back (${p.slotId})`);
+      }
+      if (p.kind === 'notebook') {
+        assert.ok(p.pos[1] <= 0.5, `${name} notebook stays low (${p.slotId})`);
+        assert.ok(!p.slotId.startsWith('shelf-'), `${name} notebook is not on a wall shelf`);
+      }
+      if (['mug','cassette','clock','cartridge','headphones'].includes(p.kind)) {
+        assert.match(p.slotId, /^(shelf|block)-/, `${name} ${p.kind} prefers a shelf (${p.slotId})`);
+      }
+    }
+    if (chairs.length) {
+      const [cx, , cz] = chairs[0].pos;
+      for (const p of placed.filter((x: {kind:string}) => x.kind === 'rug')) {
+        assert.ok(p.pos[0] + p.pos[2] > cx + cz + 0.8, `${name} rug in front of chair`);
+        assert.ok(Math.abs(p.pos[0] - cx) > 0.5 && Math.abs(p.pos[2] - cz) > 0.5, `${name} rug is isometric-diagonal from the chair`);
+      }
+      for (const p of placed.filter((x: {kind:string}) => x.kind === 'lamp' || x.kind === 'sideTable')) {
+        assert.ok(Math.abs(p.pos[0] - cx) > 0.4 && Math.abs(p.pos[0] - cx) < 2.0, `${name} ${p.kind} beside chair`);
+        assert.ok(Math.abs(p.pos[2] - cz) < 1.0, `${name} ${p.kind} in the chair row`);
+      }
+    }
+    const hearths = placed.filter((p: {kind:string}) => p.kind === 'fireplace');
+    if (!chairs.length && hearths.length) {
+      const [hx, , hz] = hearths[0].pos;
+      for (const p of placed.filter((x: {kind:string}) => x.kind === 'rug')) {
+        assert.ok(p.pos[0] + p.pos[2] > hx + hz + 0.8, `${name} rug in front of fireplace`);
+        assert.ok(Math.abs(p.pos[0] - hx) > 0.5 && Math.abs(p.pos[2] - hz) > 0.5, `${name} rug is isometric-diagonal from the fireplace`);
+      }
+    }
+    const tvs = placed.filter((p: {kind:string}) => p.kind === 'tv');
+    const consoles = placed.filter((p: {kind:string}) => p.kind === 'console');
+    if (tvs.length && consoles.length) {
+      const [tx, , tz] = tvs[0].pos;
+      assert.ok(tz <= 1.2, `${name} TV stays on the back row`);
+      for (const p of consoles) {
+        assert.ok(p.pos[0] + p.pos[2] > tx + tz + 0.8, `${name} console in front of TV`);
+        assert.ok(Math.abs(p.pos[0] - tx) > 0.5 && Math.abs(p.pos[2] - tz) > 0.5, `${name} console is isometric-diagonal from the TV`);
+      }
+    }
+  }
+  const tvs = rooms.matt.representations.filter((r: {objectKind:string}) => r.objectKind === 'tv');
+  assert.equal(tvs.length, 1, 'Matt should not stack three TVs');
+  assert.equal(tvs[0].contentItemId, 'matt-youtube');
 });
 
 test('visiting a neighborhood room does not overwrite the personal save; return home restores it', () => {

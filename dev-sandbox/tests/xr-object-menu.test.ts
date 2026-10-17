@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { Store, newRoom } from '../src/core/store';
 import { XrObjectMenu } from '../src/xr/object-menu';
-
+import { overlayIsGranted } from '../src/xr/interaction';
 import { XrPreview } from '../src/xr/preview';
 
 const painted: string[] = [];
@@ -62,4 +62,20 @@ test('desktop selection cannot show VR buttons, including after leaving VR', () 
   store.select(id);
   assert.equal(menu.group.visible, false, 'desktop reselection after exit stays hidden');
   assert.equal(menu.hit(new THREE.Raycaster()), null);
+});
+
+test('granted DOM overlay skips the canvas embed so the shared iframe can play', () => {
+  const store = new Store(newRoom());
+  const menu = new XrObjectMenu(store, () => {});
+  menu.useDomOverlay = true;
+  const id = store.addItem({ title: 'Song', sourceRef: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', type: 'video', kind: 'tv' });
+  store.select(id);
+  assert.equal(menu.group.getObjectByName('xr-preview'), undefined);
+  assert.ok(menu.group.children.find(o => o.userData.actionId === 'cancel'));
+});
+
+test('overlay grant is recorded from the WebXR session so a selected embed can open in VR', () => {
+  assert.equal(overlayIsGranted({ domOverlayState: { type: 'screen' } }), true);
+  assert.equal(overlayIsGranted({ domOverlayState: { type: null } }), false);
+  assert.equal(overlayIsGranted({}), false);
 });

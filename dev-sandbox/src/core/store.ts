@@ -5,6 +5,7 @@ import { lightingFromUnknown, validLighting, type Lighting } from './appearance'
 import { guessType, normalizeRef, safeUrl } from './content';
 import type { BookmarkEntry } from './bookmarks';
 import { DEFAULT_LAYOUT_ID, getLayout, type RoomLayout } from './layout';
+import { chooseSlot } from './placement';
 import {
   CONTENT_TYPES, DEFAULT_OBJECT, OBJECT_KINDS, SCHEMA_VERSION,
   type ContentItem, type ContentType, type ObjectKind, type Representation, type RoomState,
@@ -226,13 +227,13 @@ export class Store {
   }
 
   // ---- commands (every one is undoable) ---------------------------------
-  addItem(input: { title: string; sourceRef: string; type?: ContentType | 'auto'; kind?: ObjectKind }): string {
+  addItem(input: { title: string; sourceRef: string; type?: ContentType | 'auto'; kind?: ObjectKind; place?: boolean }): string {
     const ref = normalizeRef(input.sourceRef.trim());
     const type = !input.type || input.type === 'auto' ? guessType(ref) : input.type;
     let repId = '';
     this.commit((s) => {
       repId = this.createItem(s, input.title.trim() || ref || 'Untitled', ref, type, [], input.kind);
-      this.placeInFreeSlot(s, repId);
+      if (input.place !== false) this.placeInFreeSlot(s, repId);
     });
     return repId;
   }
@@ -331,11 +332,11 @@ export class Store {
   place(repId: string, slotId: string): void {
     if (!this.layout.slots.some((sl) => sl.id === slotId)) return;
     if (this.slotOf(repId) === slotId) return;
+    const wasHeld = this.pickup?.repId === repId;
+    const heldFrom = this.pickup?.slotId;
     this.commit((s) => {
       const mine = s.placements.find((p) => p.representationId === repId);
       const other = s.placements.find((p) => p.slotId === slotId);
-      const wasHeld = this.pickup?.repId === repId;
-      const heldFrom = this.pickup?.slotId;
 
       if (other && mine) {
         // Both placed: swap their slots
@@ -382,7 +383,7 @@ export class Store {
       const c = s.contentItems.find((x) => x.id === contentId);
       if (!c || s.representations.some((r) => r.contentItemId === contentId)) return;
       const rep = this.createRep(s, c);
-      this.placeInFreeSlot(s, rep.id);
+      if (!this.placeInFreeSlot(s, rep.id)) s.representations = s.representations.filter((r) => r.id !== rep.id);
     });
   }
 
@@ -537,7 +538,15 @@ export class Store {
   }
 
   private placeInFreeSlot(s: RoomState, repId: string): boolean {
-    const slot = this.freeSlotsIn(s)[0];
+    const layout = getLayout(s.layoutId) ?? this.layout;
+    const rep = s.representations.find((r) => r.id === repId);
+    if (!rep) return false;
+    const occupied = new Set(s.placements.map((p) => p.slotId));
+    const occupants = s.placements.flatMap((p) => {
+      const other = s.representations.find((r) => r.id === p.representationId);
+      return other ? [{ kind: other.objectKind, slotId: p.slotId }] : [];
+    });
+    const slot = chooseSlot(rep.objectKind, layout, occupied, occupants);
     if (!slot) return false;
     s.placements.push({ representationId: repId, slotId: slot });
     return true;

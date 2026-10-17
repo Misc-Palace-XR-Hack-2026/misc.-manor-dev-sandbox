@@ -9,6 +9,7 @@ import {
   snapTurnOffset,
   landingAt,
   objectHitFrom,
+  objectIdFromRay,
   destinationHitFrom,
   xrSelect,
   spawnPosition,
@@ -22,12 +23,21 @@ import {
   objectMenuAnchor,
   objectMenuHit,
   dedicatedRooms,
+  stickForwardTeleport,
+  xrSessionInit,
 } from '../src/xr/interaction';
 import { OBJECT_KINDS } from '../src/core/types';
 import { LIGHTING_PRESETS } from '../src/core/appearance';
 import { ROOM_TRACKS } from '../src/core/soundtrack';
 
 globalThis.localStorage = { getItem: () => null, setItem: () => {} } as unknown as Storage;
+
+test('Enter VR requests a DOM overlay so browser iframe previews can play in-headset', () => {
+  const root = { id: 'xr-dom-overlay' } as HTMLElement;
+  const init = xrSessionInit(root);
+  assert.deepEqual(init.optionalFeatures, ['local-floor', 'dom-overlay']);
+  assert.equal(init.domOverlay?.root, root);
+});
 
 test('Enter VR is disabled until a secure immersive-vr session is available', async () => {
   assert.equal(canEnterVr({ isSecureContext: false, xr: null }), false);
@@ -70,6 +80,15 @@ test('VR teleport covers the extended floor, not only the original 6.3 room', ()
   assert.ok(pad.x > 4.5, 'pad center follows the expanded room, not the old 3.3 midpoint');
 });
 
+test('stick-forward teleport uses same-frame floor hover and ignores placing mode', () => {
+  const hover = { x: 3.1, y: 0.02, z: 2.8 };
+  assert.deepEqual(stickForwardTeleport(hover, false, -0.8), { x: 3.1, y: 0, z: 2.8 });
+  assert.equal(stickForwardTeleport(null, false, -0.8), null, 'cleared hover never teleports');
+  assert.equal(stickForwardTeleport(hover, true, -0.8), null, 'placing must not steal the stick');
+  assert.equal(stickForwardTeleport(hover, false, -0.2), null, 'needs a forward deflection');
+  assert.deepEqual(stickForwardTeleport({ x: 2.0, y: 2.35, z: 1.6 }, false, -1), { x: 2.0, y: 2.3, z: 1.6 });
+});
+
 test('loft beacon is only visible in VR while standing on the floor', () => {
   assert.equal(loftBeaconVisible(false, 0), false);
   assert.equal(loftBeaconVisible(true, 0), true);
@@ -101,6 +120,11 @@ test('object and destination hits stay on separate rays; place uses Store', () =
   const destinations = [{ id: to }];
   assert.equal(objectHitFrom(objects, { throughWall: true }), null);
   assert.equal(objectHitFrom(objects, { throughWall: false }), repId);
+  assert.equal(objectIdFromRay({ id: repId, distance: 4 }, null), repId, 'unobstructed object hit');
+  assert.equal(objectIdFromRay({ id: repId, distance: 4 }, { distance: 1.2 }), null, 'closer wall blocks the object');
+  assert.equal(objectIdFromRay({ id: repId, distance: 3.4 }, { distance: 3.4 }), repId, 'equal distance still counts as the object');
+  assert.equal(objectIdFromRay({ id: repId, distance: 2.6 }, { distance: 1.8 }), null, 'loft slab from below occludes');
+  assert.equal(objectIdFromRay(null, { distance: 1 }), null);
   assert.equal(destinationHitFrom(destinations.concat([{ id: 'object-volume' }]), { holding: false }), null);
   assert.equal(destinationHitFrom([{ id: to }], { holding: true }), to);
 
@@ -196,6 +220,42 @@ test('selected objects grow Edit, Move, Put away, and Open buttons', () => {
   assert.equal(store.slotOf(noteId), from);
 });
 
+test('VR Move uses pickUp so cancel, disconnect, and session end restore the original slot', () => {
+  const store = new Store(newRoom());
+  const noteId = store.addItem({ title: 'Note', sourceRef: 'just a note', type: 'note', kind: 'notebook' });
+  const from = store.slotOf(noteId);
+  assert.ok(from);
+  store.select(noteId);
+  runPanelAction(store, 'move');
+  assert.equal(store.holding, noteId, 'Move must remember pickup, not commit an unplaced object');
+  assert.equal(store.slotOf(noteId), undefined);
+  store.select(null);
+  assert.equal(store.slotOf(noteId), from, 'session end / deselect restores the source slot');
+  assert.equal(store.holding, null);
+
+  store.select(noteId);
+  runPanelAction(store, 'move');
+  store.select(noteId);
+  assert.equal(store.holding, noteId, 're-selecting the held object keeps pickup');
+  store.select(null);
+  assert.equal(store.slotOf(noteId), from);
+});
+
+test('VR Move onto an occupied slot swaps instead of unplacing the occupant', () => {
+  const store = new Store(newRoom());
+  const moving = store.addItem({ title: 'Moving', sourceRef: 'note:a', type: 'note', kind: 'notebook' });
+  const occupant = store.addItem({ title: 'Occupant', sourceRef: 'note:b', type: 'note', kind: 'book' });
+  const from = store.slotOf(moving)!;
+  const to = store.slotOf(occupant)!;
+  assert.notEqual(from, to);
+  store.select(moving);
+  runPanelAction(store, 'move');
+  xrSelect(store, { kind: 'destination', id: to });
+  assert.equal(store.slotOf(moving), to);
+  assert.equal(store.slotOf(occupant), from, 'occupant keeps a slot (the remembered source)');
+  assert.ok(store.state.representations.some((r) => r.id === occupant));
+});
+
 test('object action pills sit above the object, not on the controller ray', () => {
   const origin = { x: 1, y: 0.4, z: 2 };
   const ray = { origin: { x: 4.2, y: 1.4, z: 3.4 }, direction: { x: 0, y: 0, z: -1 } };
@@ -240,4 +300,36 @@ test('Change object and Edit open the object list, and dedicated rooms stay visi
   const themed = runPanelAction(store, 'theme:vinyl-lounge');
   assert.equal(themed.page, undefined);
   assert.equal(store.state.lighting, 'twilight');
+});
+
+test('VR How-to menu is skippable and replayable without changing the personal save', () => {
+  const store = new Store(newRoom('Mine'), 'guest');
+  const snapshot = store.exportJson();
+  const home = panelButtons(store, 'home').map((b) => b.id);
+  assert.ok(home.includes('page:howto'));
+  assert.ok(home.includes('page:create'));
+  assert.equal(runPanelAction(store, 'page:howto').page, 'howto');
+  const howto = panelButtons(store, 'howto').map((b) => b.id);
+  assert.ok(howto.includes('howto:create'));
+  assert.ok(howto.includes('guide:create'));
+  assert.equal(runPanelAction(store, 'howto:create').page, 'howto-create');
+  assert.ok(panelButtons(store, 'howto-create').some((b) => b.id === 'page:howto'));
+  assert.equal(runPanelAction(store, 'howto:skip').page, 'home');
+  assert.equal(runPanelAction(store, 'page:howto').page, 'howto', 'replay after skip');
+  assert.equal(store.exportJson(), snapshot, 'tutorials must not mutate the personal room');
+});
+
+test('VR tutorial is a pop-up: starting it keeps the command menu available', () => {
+  const store = new Store(newRoom('Mine'), 'guest');
+  const started = runPanelAction(store, 'guide:start');
+  assert.equal(started.tutorialEvent, 'start');
+  assert.notEqual(started.page, 'guide');
+  const guide = { status: 'fresh' as const, lesson: 'create' as const, step: 0, snapshot: null, roomId: null };
+  const home = panelButtons(store, 'home', [], undefined, guide).map((b) => b.id);
+  assert.ok(home.includes('page:create'), 'commands stay on the home menu during the tutorial');
+  assert.ok(home.includes('page:howto'));
+  const popup = panelButtons(store, 'guide', [], undefined, guide).map((b) => b.id);
+  assert.ok(popup.includes('guide:skip'));
+  assert.ok(popup.includes('guide:status'));
+  assert.ok(!popup.includes('page:create'), 'the tutorial pop-up is not the command menu');
 });

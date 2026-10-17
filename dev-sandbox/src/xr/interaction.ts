@@ -6,6 +6,8 @@ import { SURFACE_PRESETS, type SurfaceTarget } from '../core/surfaces';
 import { ROOM_DIRECTORY, seedRoom } from '../core/rooms';
 import { THEMES } from '../core/themes';
 import { safeUrl } from '../core/content';
+import { creationButtons, XrCreation } from './creation';
+import { currentStep, progressLabel, type OnboardingState } from '../core/onboarding';
 
 export interface XrProbe {
   isSecureContext: boolean;
@@ -33,6 +35,17 @@ export function enterReason(probe: XrProbe): string {
   return '';
 }
 
+export function overlayIsGranted(session: { domOverlayState?: { type?: string | null } } | null | undefined): boolean {
+  return Boolean(session?.domOverlayState?.type);
+}
+
+export function xrSessionInit(overlayRoot: HTMLElement): XRSessionInit {
+  return {
+    optionalFeatures: ['local-floor', 'dom-overlay'],
+    domOverlay: { root: overlayRoot },
+  };
+}
+
 export function canEnterVr(probe: XrProbe): boolean | Promise<boolean> {
   if (enterReason(probe)) return false;
   return probe.xr!.isSessionSupported('immersive-vr');
@@ -57,6 +70,9 @@ export function walkableFloorPad(): { x: number; z: number; width: number; depth
 export function walkableAt(point: { x: number; y: number; z: number }): { x: number; y: number; z: number } | null {
   const { x, y, z } = point;
   if (y >= 2.0 && y <= 3.8 && x >= 0.4 && x <= 3.6 && z >= 0.4 && z <= 2.6) return { x, y: 2.3, z };
+  if (x >= 0.3 && x <= 1.4 && z >= 2.6 && z <= 6.2 && y > 0.4 && y < 3.0) {
+    return { x, y: stairHeight(z), z };
+  }
   const pad = walkableFloorPad();
   const halfW = pad.width / 2;
   const halfD = pad.depth / 2;
@@ -66,8 +82,33 @@ export function walkableAt(point: { x: number; y: number; z: number }): { x: num
   return null;
 }
 
+/** Analytic invisible ramp; deliberately absent from render/pick/shadow lists.
+ * Left stick forward/back follows the stair run when already on it, same as walking the floor.
+ * Both ends extend onto level landings. Teleport and snap turn remain available.
+ */
+export function stairHeight(z: number): number {
+  return 2.3 * Math.max(0, Math.min(1, (5.8 - z) / 2.8));
+}
+
+export function walkStairs(p: {x:number;y:number;z:number}, stick: number, dt: number): {x:number;y:number;z:number} {
+  const height = stairHeight;
+  if (![p.x,p.y,p.z,stick,dt].every(Number.isFinite) || p.x < .3 || p.x > 1.1 || p.z < 2.6 || p.z > 6.2 || Math.abs(p.y-height(p.z)) > .06 || Math.abs(stick) < .2) return p;
+  const z = Math.max(2.6, Math.min(6.2, p.z + stick * .65 * Math.max(0,Math.min(dt,.05))));
+  return {x:p.x, y:height(z), z};
+}
+
 export function loftBeaconVisible(presenting: boolean, playerY: number): boolean {
   return presenting && playerY < 1.5;
+}
+
+/** Same-frame stick teleport: needs a walkable hover and must not run while placing. */
+export function stickForwardTeleport(
+  hover: { x: number; y: number; z: number } | null,
+  placing: boolean,
+  stickY: number,
+): { x: number; y: number; z: number } | null {
+  if (placing || !hover || stickY > -0.7) return null;
+  return walkableAt(hover);
 }
 
 export function nearestLanding(point: { x: number; y: number; z: number }, max = 0.55): Landing | null {
@@ -103,6 +144,16 @@ export function objectHitFrom(
   return hit && !hit.throughWall ? hit.id : null;
 }
 
+/** Object picks lose to a closer opaque room mesh (wall, loft slab, stair). Equal distance still counts as the object. */
+export function objectIdFromRay(
+  object: { id: string; distance: number } | null,
+  occluder: { distance: number } | null,
+): string | null {
+  if (!object) return null;
+  if (occluder && occluder.distance < object.distance) return null;
+  return object.id;
+}
+
 export function destinationHitFrom(
   destinations: Array<{ id: string }>,
   query: { holding: boolean },
@@ -127,7 +178,23 @@ export function xrSelect(store: Store, hit: { kind: 'object' | 'destination' | '
   }
 }
 
-export type PanelPage = 'home' | 'lighting' | 'music' | 'surfaces' | 'object' | 'inbox' | 'rooms' | 'themes';
+export type PanelPage =
+  | 'home'
+  | 'lighting'
+  | 'music'
+  | 'surfaces'
+  | 'object'
+  | 'inbox'
+  | 'rooms'
+  | 'themes'
+  | 'howto'
+  | 'howto-create'
+  | 'howto-move'
+  | 'howto-rooms'
+  | 'howto-style'
+  | 'create'
+  | 'welcome'
+  | 'guide';
 
 export interface PanelButton {
   id: string;
@@ -138,7 +205,9 @@ export interface PanelActionResult {
   page?: PanelPage;
   teleport?: { x: number; y: number; z: number };
   exit?: boolean;
+  stairs?: boolean;
   openUrl?: string;
+  tutorialEvent?: string;
 }
 
 export interface InspectPreview {
@@ -202,7 +271,7 @@ export function objectActions(store: Store): PanelButton[] {
   return actions;
 }
 
-export function panelButtons(store: Store, page: PanelPage, _rooms: NeighborhoodRoom[] = []): PanelButton[] {
+export function panelButtons(store: Store, page: PanelPage, _rooms: NeighborhoodRoom[] = [], draft?: XrCreation, guide?: OnboardingState | null): PanelButton[] {
   const selected = store.selectedId
     ? store.state.representations.find((r) => r.id === store.selectedId)
     : undefined;
@@ -259,7 +328,50 @@ export function panelButtons(store: Store, page: PanelPage, _rooms: Neighborhood
       ...Object.entries(THEMES).map(([id, theme]) => ({ id: 'theme:' + id, label: theme.label })),
     ];
   }
+  if (page === 'welcome') {
+    return [
+      { id: 'guide:start', label: 'Start tutorial' },
+      { id: 'guide:room', label: 'Go to room' },
+    ];
+  }
+  if (page === 'guide' && guide?.lesson) {
+    const step = currentStep(guide);
+    return [
+      { id: 'guide:status', label: `${progressLabel(guide)} · ${step?.title ?? ''}` },
+      { id: 'guide:copy', label: step?.prompt ?? '' },
+      { id: 'guide:skip', label: 'Skip / Exit' },
+    ];
+  }
+  if (page === 'create' && draft) return creationButtons(draft);
+  if (page === 'howto') {
+    return [
+      { id: 'page:home', label: 'Back' },
+      { id: 'guide:create', label: 'Practice: create' },
+      { id: 'guide:move', label: 'Practice: move' },
+      { id: 'guide:rooms', label: 'Practice: rooms' },
+      { id: 'guide:style', label: 'Practice: style' },
+      { id: 'howto:create', label: 'Create an item' },
+      { id: 'howto:move', label: 'Move and put away' },
+      { id: 'howto:rooms', label: 'Visit rooms' },
+      { id: 'howto:style', label: 'Change the look' },
+      { id: 'howto:skip', label: 'Skip how-to' },
+    ];
+  }
+  if (page.startsWith('howto-')) {
+    const copy: Record<string, string> = {
+      'howto-create': 'Desktop: tap + then Add object. VR: assign a kind, then place it on a pad.',
+      'howto-move': 'Select an object, choose Move, then a pad. Put away sends it to Inbox. Cancel restores it.',
+      'howto-rooms': 'Open Rooms, pick a saved room, then Return home. Visiting does not overwrite your save.',
+      'howto-style': 'Lighting, Surfaces, and Theme change this room only. Music is independent.',
+    };
+    return [
+      { id: 'page:howto', label: 'Back' },
+      { id: 'howto:copy', label: copy[page] ?? '' },
+    ];
+  }
   const home: PanelButton[] = [
+    { id: 'stairs:bottom', label: 'Walk stairs ↑ (left stick)' },
+    { id: 'stairs:top', label: 'Walk stairs ↓ (left stick)' },
     { id: 'go:loft', label: 'Go to loft' },
     { id: 'go:floor', label: 'Go to floor' },
   ];
@@ -271,6 +383,8 @@ export function panelButtons(store: Store, page: PanelPage, _rooms: Neighborhood
     { id: 'page:themes', label: 'Theme' },
     { id: 'page:object', label: 'Change object' },
     { id: 'page:rooms', label: 'Rooms' },
+    { id: 'page:create', label: 'Add object' },
+    { id: 'page:howto', label: 'How-to' },
     { id: 'undo', label: store.canUndo ? 'Undo' : 'Undo (nothing yet)' },
     { id: 'cancel', label: 'Cancel selection' },
   );
@@ -280,17 +394,42 @@ export function panelButtons(store: Store, page: PanelPage, _rooms: Neighborhood
   return home;
 }
 
-export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom[] = []): PanelActionResult {
+export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom[] = [], draft?: XrCreation): PanelActionResult {
   if (id === 'page:home') return { page: 'home' };
-  if (id === 'page:lighting') return { page: 'lighting' };
+  if (id === 'page:lighting') return { page: 'lighting', tutorialEvent: 'open-style' };
   if (id === 'page:music') return { page: 'music' };
   if (id === 'page:surfaces') return { page: 'surfaces' };
   if (id === 'page:object') return { page: 'object' };
-  if (id === 'page:inbox') return { page: 'inbox' };
+  if (id === 'page:inbox') return { page: 'inbox', tutorialEvent: 'restored' };
   if (id === 'page:rooms') return { page: 'rooms' };
   if (id === 'page:themes') return { page: 'themes' };
+  if (id === 'page:create') return { page: 'create', tutorialEvent: 'open-add' };
+  if (id === 'page:welcome') return { page: 'welcome' };
+  if (id === 'guide:room') return { page: 'home', tutorialEvent: 'skip' };
+  if (id === 'guide:start') return { page: 'home', tutorialEvent: 'start' };
+  if (id.startsWith('guide:') && ['create','move','rooms','style'].includes(id.slice(6))) return { page: 'home', tutorialEvent: 'lesson:' + id.slice(6) };
+  if (id === 'guide:skip') return { tutorialEvent: 'skip' };
+  if (id === 'page:howto' || id === 'howto:skip') return { page: id === 'howto:skip' ? 'home' : 'howto' };
+  if (id === 'howto:create') return { page: 'howto-create' };
+  if (id === 'howto:move') return { page: 'howto-move' };
+  if (id === 'howto:rooms') return { page: 'howto-rooms' };
+  if (id === 'howto:style') return { page: 'howto-style' };
+  if (id === 'howto:copy') return {};
+  if (id === 'stairs:bottom') return { teleport: {x:.7,y:0,z:6.2} };
+  if (id === 'stairs:top') return { teleport: {x:.7,y:2.3,z:2.6} };
   if (id === 'go:loft') return { teleport: { x: 2.0, y: 2.3, z: 1.6 } };
   if (id === 'go:floor') return { teleport: spawnPosition() };
+  if (id === 'create:cancel') return { page: 'home' };
+  if (id === 'create:done' || id === 'create:title' || id === 'create:text' || id === 'guide:status' || id === 'guide:copy') return {};
+  if (draft && id.startsWith('key:')) { draft.key(id.slice(4)); return { tutorialEvent: draft.field === 'title' ? 'typed-title' : 'typed-content' }; }
+  if (draft && id === 'create:field-title') { draft.field = 'title'; return {}; }
+  if (draft && id === 'create:field-text') { draft.field = 'text'; return {}; }
+  if (draft && id === 'create:mode') { draft.mode = draft.mode === 'link' ? 'note' : 'link'; return {}; }
+  if (draft && id.startsWith('create-kind:')) { draft.kind = (id.slice(12) || '') as ObjectKind | ''; return {}; }
+  if (draft && id === 'create:submit') {
+    const created = draft.create(store);
+    return created ? { tutorialEvent: 'created' } : {};
+  }
   if (id === 'exit') return { exit: true };
   if (id === 'home:return') {
     store.returnHome();
@@ -300,7 +439,7 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
     const roomId = id.slice(5);
     const repo = Object.fromEntries(rooms.map((room) => [room.name, room.data]));
     store.switchRoom(roomId, seedRoom(roomId, repo));
-    return { page: 'home' };
+    return { page: 'home', tutorialEvent: 'switched' };
   }
   if (id.startsWith('theme:')) {
     const theme = THEMES[id.slice(6)];
@@ -312,13 +451,13 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
     return href ? { openUrl: href, exit: true } : {};
   }
   if (id === 'move' && store.selectedId) {
-    store.unplace(store.selectedId);
-    return {};
+    store.pickUp(store.selectedId);
+    return { tutorialEvent: 'picked' };
   }
   if (id === 'undo') store.undo();
   else if (id === 'cancel') store.select(null);
   else if (id.startsWith('kind:') && store.selectedId) store.setKind(store.selectedId, id.slice(5) as ObjectKind);
-  else if (id.startsWith('light:')) store.setLighting((id.slice(6) || undefined) as Lighting | undefined);
+  else if (id.startsWith('light:')) { store.setLighting((id.slice(6) || undefined) as Lighting | undefined); return { tutorialEvent: 'styled' }; }
   else if (id.startsWith('stash:') && store.selectedId) store.stash(store.selectedId);
   else if (id.startsWith('out:')) store.bringOut(id.slice(4));
   else if (id.startsWith('music:')) {

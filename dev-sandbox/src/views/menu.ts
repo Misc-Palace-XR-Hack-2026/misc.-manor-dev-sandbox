@@ -53,6 +53,7 @@ export class MenuView {
   private chrome = el('nav', { class: 'chrome', ariaLabel: 'Room actions' });
   private editBtn = el('button', { type: 'button', textContent: 'Edit room' });
   private roomsBtn = el('button', { type: 'button', textContent: 'Rooms', title: 'Switch room' });
+  private helpBtn = el('button', { type: 'button', textContent: 'Help', title: 'Replay tutorial' });
   private editorClose = el('button', { type: 'button', class: 'sheet-close', textContent: 'Close editor' });
   private itemClose = el('button', { type: 'button', class: 'sheet-close icon-close', textContent: '×', ariaLabel: 'Close' });
   private backdrop = el('button', { type: 'button', class: 'sheet-backdrop', hidden: true, ariaLabel: 'Close sheet' });
@@ -81,12 +82,20 @@ export class MenuView {
       if (!this.itemSheet.hidden && this.store.selectedId && !this.placing) this.store.select(null);
       this.closeSheets();
     });
-    this.editBtn.addEventListener('click', () => this.openEditor());
+    this.editBtn.addEventListener('click', () => {
+      this.openEditor();
+      document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'open-style' }));
+    });
+    this.editBtn.dataset.tutorial = 'edit-room';
     this.roomsBtn.addEventListener('click', () => {
       this.refreshRooms();
       this.openDialog(this.roomsSheet);
+      document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'open-rooms' }));
     });
-    this.chrome.append(this.editBtn, this.roomsBtn);
+    this.roomsBtn.dataset.tutorial = 'rooms';
+    this.helpBtn.addEventListener('click', () => document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'replay' })));
+    this.editBtn.dataset.tutorial = 'style';
+    this.chrome.append(this.editBtn, this.roomsBtn, this.helpBtn);
     this.itemSheet.setAttribute('role', 'dialog');
     this.itemSheet.setAttribute('aria-label', 'Item');
     this.itemSheet.append(
@@ -165,6 +174,7 @@ export class MenuView {
       const label = slot.id === current ? this.store.state.owner : (Store.savedName(slot.id) ?? slot.defaultName);
       const b = el('button', { type: 'button', textContent: label });
       b.setAttribute('aria-current', String(slot.id === current));
+      b.dataset.tutorial = slot.id === current ? 'home-room' : 'room-pick';
       b.addEventListener('click', () => this.switchTo(slot.id, label));
       return b;
     }));
@@ -174,6 +184,7 @@ export class MenuView {
     if (id === this.store.roomId) { this.closeSheets(); return; }
     try {
       this.store.switchRoom(id, seedRoom(id, this.repo));
+      document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'switched' }));
       this.flash(`Switched to ${label}.`);
       this.closeSheets();
     } catch (e) {
@@ -189,9 +200,10 @@ export class MenuView {
       return b;
     };
     this.fabMenu.append(
-      item('Add object', () => { this.openDialog(this.addSheet); }),
+      item('Add object', () => { this.openDialog(this.addSheet); document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'open-add' })); }),
       item('Import from bookmarks / files', () => { this.openDialog(this.importSheet); }),
     );
+    this.fab.dataset.tutorial = 'add-object';
     this.fab.addEventListener('click', () => {
       const open = this.fabMenu.hidden;
       this.closeSheets();
@@ -257,7 +269,12 @@ export class MenuView {
   private buildLighting(): HTMLElement {
     this.lighting.append(el('option', {value:'', textContent:'Original lighting'}));
     for (const [value,p] of Object.entries(LIGHTING_PRESETS)) this.lighting.append(el('option',{value,textContent:p.label}));
-    this.lighting.addEventListener('change', () => this.store.setLighting((this.lighting.value || undefined) as Lighting | undefined));
+    this.lighting.id = 'lighting-preset';
+    this.lighting.dataset.tutorial = 'style-choice';
+    this.lighting.addEventListener('change', () => {
+      this.store.setLighting((this.lighting.value || undefined) as Lighting | undefined);
+      document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'styled' }));
+    });
     this.soundtrack.append(el('option', {value:'follow', textContent:'Follow lighting'}));
     this.soundtrack.append(el('option', {value:'off', textContent:'No music'}));
     for (const track of ROOM_TRACKS) this.soundtrack.append(el('option', {value:track, textContent:TRACK_LABELS[track]}));
@@ -320,8 +337,8 @@ export class MenuView {
   }
 
   private buildAddForm(): HTMLElement {
-    const title = el('input', { placeholder: 'Title (optional)' });
-    const ref = el('input', { placeholder: 'Paste a link, or a file name' });
+    const title = el('input', { placeholder: 'Title (optional)', id: 'new-object-title' });
+    const ref = el('input', { placeholder: 'Paste a link, or a file name', id: 'new-object-ref' });
     const type = el('select');
     type.append(el('option', { value: 'link', textContent: 'type: link' }));
     for (const t of CONTENT_TYPES.filter((value) => value !== 'link')) type.append(el('option', { value: t, textContent: t }));
@@ -338,13 +355,17 @@ export class MenuView {
       },
     });
     const add = el('button', { textContent: 'Add to room' });
+    add.dataset.tutorial = 'add-submit';
     const submit = () => {
       if (!ref.value.trim() && !title.value.trim()) return;
       this.store.addItem({ title: title.value, sourceRef: ref.value, type: type.value as ContentType | 'auto', kind: (kind.value || undefined) as ObjectKind | undefined });
       title.value = ref.value = '';
       this.flash('Added to the room.');
       this.closeSheets();
+      document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'created' }));
     };
+    title.addEventListener('input', () => document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'typed-title' })));
+    ref.addEventListener('input', () => document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'typed-content' })));
     add.addEventListener('click', submit);
     for (const i of [title, ref]) i.addEventListener('keydown', (e) => e.key === 'Enter' && submit());
     const photo = el('input', {type:'file',accept:'image/png,image/jpeg',id:'local-photo'});

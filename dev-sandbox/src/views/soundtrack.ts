@@ -37,11 +37,25 @@ async function defaultFade(from: number, to: number, ms: number, set: (value: nu
   });
 }
 
+export function embedMessageIsPlaying(data: unknown): boolean | null {
+  if (!data || typeof data !== 'object') {
+    if (typeof data !== 'string') return null;
+    if (data.includes('infoDelivery') && data.includes('"playerState":1')) return true;
+    if (data.includes('infoDelivery') && data.includes('"playerState":2')) return false;
+    return null;
+  }
+  const payload = data as { event?: string; method?: string; info?: { playerState?: number }; playing?: boolean };
+  if (payload.event === 'play' || payload.playing === true || payload.info?.playerState === 1) return true;
+  if (payload.event === 'pause' || payload.playing === false || payload.info?.playerState === 2) return false;
+  return null;
+}
+
 export class SoundtrackPlayer {
   private audio: AudioLike;
   private fade: FadeFn;
   private last: RoomTrack | undefined;
   private wanted: RoomTrack | undefined;
+  private embedPlaying = false;
   private away = false;
   private blocked = false;
   private muted = false;
@@ -55,7 +69,7 @@ export class SoundtrackPlayer {
 
   get soundState(): 'off' | 'muted' | 'playing' {
     if (!currentTrack(this.store.state)) return 'off';
-    return this.muted || this.blocked || this.away || this.audio.paused ? 'muted' : 'playing';
+    return this.muted || this.blocked || this.away || this.embedPlaying || this.audio.paused ? 'muted' : 'playing';
   }
 
   subscribe(listener: () => void): void {
@@ -122,6 +136,13 @@ export class SoundtrackPlayer {
     return this.chain;
   }
 
+  setEmbedPlaying(playing: boolean): void {
+    if (this.embedPlaying === playing) return;
+    this.embedPlaying = playing;
+    if (playing) this.leave();
+    else if (typeof document === 'undefined' || !document.hidden) this.return();
+  }
+
   leave(): void {
     this.away = true;
     this.notify();
@@ -152,8 +173,13 @@ export class SoundtrackPlayer {
       if (document.hidden) this.leave();
       else this.return();
     });
-    window.addEventListener('pagehide', () => this.leave());
-    window.addEventListener('pageshow', () => this.return());
+    window.addEventListener('blur', () => this.leave());
+    window.addEventListener('focus', () => { if (!document.hidden && !this.embedPlaying) this.return(); });
+    window.addEventListener('message', (event) => {
+      const playing = embedMessageIsPlaying(event.data);
+      if (playing === null) return;
+      this.setEmbedPlaying(playing);
+    });
     document.addEventListener('click', (event) => {
       const target = event.target;
       if (!(target instanceof Element)) return;

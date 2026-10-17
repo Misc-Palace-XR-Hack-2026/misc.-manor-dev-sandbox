@@ -4,6 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { Store } from '../core/store';
 import type { ObjectKind } from '../core/types';
 import type { RoomLayout } from '../core/layout';
+import { animateIgnite } from './ignite-objects';
 import { buildObject } from './objects';
 import { applyLampLightBudget } from './cozy-objects';
 import { disposeGroup } from './resources';
@@ -114,7 +115,9 @@ export class RoomView {
 
     this.store.subscribe(() => this.sync());
     this.sync();
-    this.xr = new XrSession(this.renderer, this.scene, this.store, this.objectsGroup, this.markerGroup, this.roomGroup, rooms);
+    this.xr = new XrSession(this.renderer, this.scene, this.store, this.objectsGroup, this.markerGroup, this.roomGroup, rooms, (event) => {
+      document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: event }));
+    });
     this.vrButton.type = 'button';
     this.vrButton.className = 'vr-enter';
     this.vrButton.textContent = 'Enter VR';
@@ -328,6 +331,7 @@ export class RoomView {
   }
 
   private tick(t: number): void {
+    animateIgnite(this.objectsGroup, t, window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     const selected = this.store.selectedId;
     for (const [id, e] of this.objects) {
       const presenting = Boolean(this.xr?.presenting);

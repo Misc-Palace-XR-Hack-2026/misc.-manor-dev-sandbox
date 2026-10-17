@@ -1,9 +1,13 @@
 import * as THREE from 'three';
 import type { Store } from '../core/store';
 import { inspectPreview, panelButtons, runPanelAction, type NeighborhoodRoom, type PanelActionResult, type PanelPage } from './interaction';
+import { XrCreation } from './creation';
+import type { OnboardingState } from '../core/onboarding';
 
 const W = 1024;
 const H = 1408;
+const GW = 768;
+const GH = 640;
 const ROW = 92;
 const TOP = 220;
 
@@ -12,11 +16,18 @@ export class XrPanel {
   private canvas = document.createElement('canvas');
   private texture: THREE.CanvasTexture;
   private mesh: THREE.Mesh;
+  private guideCanvas = document.createElement('canvas');
+  private guideTexture: THREE.CanvasTexture;
+  private guideMesh: THREE.Mesh;
   private open = false;
   private hover = -1;
+  private guideHover = -1;
   private page: PanelPage = 'home';
   private scroll = 0;
   private shown: Array<{ id: string; y: number }> = [];
+  private guideShown: Array<{ id: string; y: number }> = [];
+  draft = new XrCreation();
+  guide: OnboardingState | null = null;
 
   constructor(
     private store: Store,
@@ -32,12 +43,26 @@ export class XrPanel {
       new THREE.MeshBasicMaterial({ map: this.texture, transparent: true, side: THREE.DoubleSide }),
     );
     this.mesh.position.set(0, 1.28, -1.15);
-    this.group.add(this.mesh);
+    this.mesh.name = 'xr-menu';
+    this.guideCanvas.width = GW;
+    this.guideCanvas.height = GH;
+    this.guideTexture = new THREE.CanvasTexture(this.guideCanvas);
+    this.guideTexture.colorSpace = THREE.SRGBColorSpace;
+    this.guideMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.62, 0.52),
+      new THREE.MeshBasicMaterial({ map: this.guideTexture, transparent: true, side: THREE.DoubleSide }),
+    );
+    this.guideMesh.position.set(0.78, 1.42, -1.05);
+    this.guideMesh.name = 'xr-tutorial';
+    this.guideMesh.visible = false;
+    this.group.add(this.mesh, this.guideMesh);
     this.group.visible = false;
     this.store.subscribe(() => {
       if (this.open) this.redraw();
+      this.redrawGuide();
     });
     this.redraw();
+    this.redrawGuide();
   }
 
   get visible(): boolean {
@@ -45,25 +70,55 @@ export class XrPanel {
   }
 
   show(page: PanelPage = 'home'): void {
+    if (page === 'guide') {
+      this.redrawGuide();
+      this.syncVisible();
+      return;
+    }
     this.open = true;
-    this.group.visible = true;
     this.page = page;
     this.scroll = 0;
+    if (page === 'create') this.draft = new XrCreation();
     this.redraw();
+    this.syncVisible();
   }
 
   hide(): void {
     this.open = false;
-    this.group.visible = false;
+    this.syncVisible();
   }
 
   toggle(): void {
     if (this.open) this.hide();
-    else this.show();
+    else this.show(this.page === 'guide' ? 'home' : this.page);
   }
 
-  setHover(uv: { x: number; y: number } | null): void {
-    if (!uv || !this.open) {
+  setGuide(guide: OnboardingState | null): void {
+    this.guide = guide;
+    this.redrawGuide();
+    this.syncVisible();
+  }
+
+  hit(ray: THREE.Raycaster): { uv: { x: number; y: number }; mesh: THREE.Mesh; point: THREE.Vector3 } | null {
+    const hits = ray.intersectObjects([this.mesh, this.guideMesh], false);
+    const hit = hits.find((h) => h.object.visible);
+    if (!hit?.uv) return null;
+    return { uv: { x: hit.uv.x, y: hit.uv.y }, mesh: hit.object as THREE.Mesh, point: hit.point };
+  }
+
+  setHover(uv: { x: number; y: number } | null, mesh?: THREE.Mesh): void {
+    if (!uv) {
+      this.hover = -1;
+      this.guideHover = -1;
+      return;
+    }
+    if (mesh === this.guideMesh) {
+      const y = (1 - uv.y) * GH;
+      this.guideHover = this.guideShown.findIndex((b) => Math.abs(b.y - y) < ROW / 2);
+      this.redrawGuide();
+      return;
+    }
+    if (!this.open) {
       this.hover = -1;
       return;
     }
@@ -72,7 +127,16 @@ export class XrPanel {
     this.redraw();
   }
 
-  activate(uv: { x: number; y: number }): void {
+  activate(uv: { x: number; y: number }, mesh?: THREE.Mesh): void {
+    if (mesh === this.guideMesh) {
+      const y = (1 - uv.y) * GH;
+      const button = this.guideShown.find((b) => Math.abs(b.y - y) < ROW / 2);
+      if (!button) return;
+      const result = runPanelAction(this.store, button.id, this.rooms, this.draft);
+      this.onAction(result);
+      this.redrawGuide();
+      return;
+    }
     const y = (1 - uv.y) * H;
     const button = this.shown.find((b) => Math.abs(b.y - y) < ROW / 2);
     if (!button) return;
@@ -86,13 +150,21 @@ export class XrPanel {
       this.redraw();
       return;
     }
-    const result = runPanelAction(this.store, button.id, this.rooms);
-    if (result.page) {
+    const result = runPanelAction(this.store, button.id, this.rooms, this.draft);
+    if (result.page && result.page !== 'guide') {
       this.page = result.page;
       this.scroll = 0;
     }
     this.onAction(result);
     this.redraw();
+    this.redrawGuide();
+  }
+
+  private syncVisible(): void {
+    const guideOn = Boolean(this.guide?.lesson);
+    this.mesh.visible = this.open;
+    this.guideMesh.visible = guideOn;
+    this.group.visible = this.open || guideOn;
   }
 
   private redraw(): void {
@@ -112,7 +184,7 @@ export class XrPanel {
       c.fillText(this.store.saveError, 48, 194);
     }
 
-    const all = panelButtons(this.store, this.page, this.rooms);
+    const all = panelButtons(this.store, this.page, this.rooms, this.draft, this.guide);
     const capacity = 10;
     const start = this.scroll * capacity;
     const slice = all.slice(start, start + capacity);
@@ -131,5 +203,36 @@ export class XrPanel {
     if (start > 0) draw('ui:prev', 'Previous', slice.length);
     if (start + capacity < all.length) draw('ui:next', 'More', this.shown.length);
     this.texture.needsUpdate = true;
+  }
+
+  private redrawGuide(): void {
+    const c = this.guideCanvas.getContext('2d')!;
+    if (typeof c.clearRect === 'function') c.clearRect(0, 0, GW, GH);
+    else c.fillRect(0, 0, GW, GH);
+    this.guideShown = [];
+    if (!this.guide?.lesson) {
+      this.guideTexture.needsUpdate = true;
+      this.syncVisible();
+      return;
+    }
+    const buttons = panelButtons(this.store, 'guide', this.rooms, this.draft, this.guide);
+    c.fillStyle = 'rgba(28, 28, 32, 0.94)';
+    c.fillRect(0, 0, GW, GH);
+    c.fillStyle = '#ece7f5';
+    c.font = '700 36px system-ui, sans-serif';
+    c.fillText('Tutorial', 36, 52);
+    c.font = '26px system-ui, sans-serif';
+    let y = 120;
+    buttons.forEach((button, i) => {
+      const active = i === this.guideHover;
+      c.fillStyle = active ? '#dba08f' : '#3a3546';
+      c.fillRect(28, y - 32, 712, 72);
+      c.fillStyle = '#ece7f5';
+      c.fillText(button.label.slice(0, 42), 48, y + 12);
+      this.guideShown.push({ id: button.id, y });
+      y += 88;
+    });
+    this.guideTexture.needsUpdate = true;
+    this.syncVisible();
   }
 }

@@ -10,6 +10,8 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(process.env.MP_URL ?? 'http://127.0.0.1:5173');
   await page.waitForFunction(() => window.store);
+  const skip = page.getByRole('button', { name: 'Go to room' });
+  if (await skip.count()) await skip.click();
   const result = await page.evaluate(async () => {
     const THREE = await import('/node_modules/three/build/three.module.js');
     const { Store, newRoom } = await import('/src/core/store.ts');

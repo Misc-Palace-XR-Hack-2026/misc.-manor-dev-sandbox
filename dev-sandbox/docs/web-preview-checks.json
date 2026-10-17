@@ -1,0 +1,612 @@
+{
+  "checkedAt": "2026-10-16",
+  "count": 14,
+  "checks": [
+    {
+      "id": "matt-cyber-funk",
+      "suppliedUrl": "https://distrokid.com/hyperfollow/mattdavisandhisatomicrollerskates/cyber-funk",
+      "headerChain": [
+        "HTTP/2 200",
+        "x-frame-options: SAMEORIGIN"
+      ],
+      "browserFrame": {
+        "text": "distrokid.com refused to connect.",
+        "title": "distrokid.com",
+        "url": "chrome-error://chromewebdata/"
+      },
+      "browserErrors": [
+        "Refused to display 'https://distrokid.com/' in a frame because it set 'X-Frame-Options' to 'sameorigin'."
+      ],
+      "result": "site-blocked",
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        }
+      ]
+    },
+    {
+      "id": "matt-neon-arcade",
+      "suppliedUrl": "https://distrokid.com/hyperfollow/mattdavisandhisatomicrollerskates/neon-arcade-1984",
+      "headerChain": [
+        "HTTP/2 200",
+        "x-frame-options: SAMEORIGIN"
+      ],
+      "browserFrame": {
+        "text": "distrokid.com refused to connect.",
+        "title": "distrokid.com",
+        "url": "chrome-error://chromewebdata/"
+      },
+      "browserErrors": [
+        "Refused to display 'https://distrokid.com/' in a frame because it set 'X-Frame-Options' to 'sameorigin'."
+      ],
+      "result": "site-blocked",
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        }
+      ]
+    },
+    {
+      "id": "matt-tree-bar",
+      "suppliedUrl": "https://distrokid.com/hyperfollow/mattdavisandhisatomicrollerskates/fm1m",
+      "headerChain": [
+        "HTTP/2 200",
+        "x-frame-options: SAMEORIGIN"
+      ],
+      "browserFrame": {
+        "text": "distrokid.com refused to connect.",
+        "title": "distrokid.com",
+        "url": "chrome-error://chromewebdata/"
+      },
+      "browserErrors": [
+        "Refused to display 'https://distrokid.com/' in a frame because it set 'X-Frame-Options' to 'sameorigin'."
+      ],
+      "result": "site-blocked",
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        }
+      ]
+    },
+    {
+      "id": "matt-dvgpro",
+      "suppliedUrl": "Https://dvgpro.com",
+      "headerChain": [
+        "HTTP/2 200"
+      ],
+      "browserFrame": {
+        "text": "Skip to content\nDVGPro\nDavis Video & Graphic Productions\nServices\nPortfolio\nBlog\nShop\nContact\n\nVIDEO, GRAPHICS, WEB, PRINT, AND CREATIVE PRODUCTION\n\nDavis Video & Graphic Productions\n\nA cleaner, faster DVGPro.com rebuilt around services, portfolio work, useful articles, and referral resources without the old WordPress spam surface.\n\nView Services\nSee Portfolio\n\nCORE WORK\n\nProduction services and portfolio areas\n\nPAGE\n\nServices\n\nDavis Video & Graphic Productions provides services to central Ohio and the surrounding area. Some of services include... Architecture Business/Product Advertising Large Format Design Pho...\n\nMay 14, 2012\n\nPAGE\n\nWeb & Print Portfolio\n\nMedia Portfolio\n\nMay 14, 2012\n\nPAGE\n\nLarge Format Design\n\nMay 15, 2012\n\nPAGE\n\nPhotography\n\nMay 15, 2012\n\nPAGE\n\nPrint\n\nMay 15, 2012\n\nPAGE\n\nBusiness/Product Advertising\n\nMay 15, 2012\n\nPAGE\n\nArchitecture\n\nMay 15, 2012\n\nPAGE\n\nE-Learning ",
+        "title": "Davis Video & Graphic Productions",
+        "url": "https://dvgpro.com/"
+      },
+      "browserErrors": [],
+      "result": "document-rendered",
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://dvgpro.com/",
+          "title": "Davis Video & Graphic Productions",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://dvgpro.com/",
+          "title": "Davis Video & Graphic Productions",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
+    },
+    {
+      "id": "matt-youtube",
+      "suppliedUrl": "https://youtube.com/@thescoobmeisterm?si=OhKSvxgjvCemFI3Z",
+      "headerChain": [
+        "HTTP/2 301",
+        "location: https://www.youtube.com/@thescoobmeisterm?si=OhKSvxgjvCemFI3Z",
+        "x-frame-options: SAMEORIGIN",
+        "content-security-policy: base-uri 'self';object-src 'none';script-src 'nonce-abKSV8Cu5xiPgpECKg-2dA' 'unsafe-inline' 'strict-dynamic' https: http: 'unsafe-eval';report-uri https://csp.withgoogle.com/csp/youtube_main/strict",
+        "content-security-policy: require-trusted-types-for 'script'",
+        "HTTP/2 200",
+        "x-frame-options: SAMEORIGIN",
+        "content-security-policy: require-trusted-types-for 'script'",
+        "content-security-policy: base-uri 'self';object-src 'none';script-src 'nonce-xowDuJTT4dC235MRlZgSUQ' 'unsafe-inline' 'strict-dynamic' https: http: 'unsafe-eval';report-uri https://csp.withgoogle.com/csp/youtube_main/strict"
+      ],
+      "browserFrame": {
+        "text": "www.youtube.com refused to connect.",
+        "title": "www.youtube.com",
+        "url": "chrome-error://chromewebdata/"
+      },
+      "browserErrors": [
+        "Refused to display 'https://www.youtube.com/' in a frame because it set 'X-Frame-Options' to 'sameorigin'."
+      ],
+      "result": "site-blocked",
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        }
+      ]
+    },
+    {
+      "id": "matt-clock",
+      "suppliedUrl": "https://davisclockservices.com/",
+      "headerChain": [
+        "HTTP/2 200"
+      ],
+      "browserFrame": {
+        "text": "Skip to content\n\nDavis Clock Services\n\nHome\nOur Services\nOur Team\nReviews\nSchedule Service\nProviding Clock Repair For Over 45 Years\n\nContact us at 614-878-0154\n\nSchedule Service\n\nWelcome to Davis Clock Services, where the art of grandfather clock repair is our specialty. Each timepiece tells a unique story, and our mission is to ensure it continues to resonate within your home. With precise skill and dedicated care, we bring longevity and renewed splendor to your cherished heirlooms. Trust in our expertise for a service that goes beyond repair \u2014 it\u2019s a commitment to preserving history.\n\nOur Services\n\nSince 1974\n\nModern Grandfather Clocks\n\nRevitalize your contemporary timekeeper with our precise repair services, merging modern techniques with traditional craftsmanship.\n\nAntique Clocks\n\nOur delicate touch breathes new life into antique clocks, honoring their history while restoring their t",
+        "title": "Davis Clock Services \u2013 Providing Clock Repair For Over 45 Years",
+        "url": "https://davisclockservices.com/"
+      },
+      "browserErrors": [
+        "Access to font at 'https://davisclockservices.com/wp-content/themes/twentytwentyfour/assets/fonts/cardo/cardo_italic_400.woff2' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+        "Failed to load resource: net::ERR_FAILED",
+        "Access to font at 'https://davisclockservices.com/wp-content/themes/twentytwentyfour/assets/fonts/cardo/cardo_normal_400.woff2' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+        "Failed to load resource: net::ERR_FAILED",
+        "Access to font at 'https://davisclockservices.com/wp-content/themes/twentytwentyfour/assets/fonts/cardo/cardo_normal_700.woff2' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+        "Failed to load resource: net::ERR_FAILED",
+        "Access to font at 'https://davisclockservices.com/wp-content/themes/twentytwentyfour/assets/fonts/inter/Inter-VariableFont_slnt,wght.woff2' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+        "Failed to load resource: net::ERR_FAILED",
+        "Access to script at 'https://davisclockservices.com/wp-includes/js/dist/script-modules/interactivity/index.min.js?ver=efaa5193bbad9c60ffd1' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+        "Failed to load resource: net::ERR_FAILED",
+        "Access to script at 'https://davisclockservices.com/wp-includes/js/dist/script-modules/block-library/navigation/view.min.js?ver=1bf28ded04f9f188bdcb' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "result": "document-rendered",
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://davisclockservices.com/",
+          "title": "Davis Clock Services \u2013 Providing Clock Repair For Over 45 Years",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://davisclockservices.com/",
+          "title": "Davis Clock Services \u2013 Providing Clock Repair For Over 45 Years",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
+    },
+    {
+      "id": "matt-apollo",
+      "suppliedUrl": "https://apolloslearningcorner.com",
+      "headerChain": [
+        "HTTP/2 200"
+      ],
+      "browserFrame": {
+        "text": "Skip to content\nActivities\nArcade\nVideos\nParents Corner\nWelcome to Apollo\u2019s Learning Corner,\n\nwhere curiosity leads to learning and play transforms into knowledge! Dive into our world of books, explore new ideas with our video adventures, create rhythms with educational tunes, and challenge your skills with fun games. Let\u2019s embark on this joyful journey of discovery together!\n\nKeep Kids Happy and Learning Indoors When Bad Weather Strikes\nPARENT\u2019S CORNER\nFitness Fun\nACTIVITIES\nMusic Maker\nACTIVITIES\n\nObjective: Introduction to music and rhythm. Materials Needed: Instructions:\n\nArt Studio\nACTIVITIES\nMath Treasure Hunt\nACTIVITIES\n\nNature Explorer\nACTIVITIES\nHistory Detective\nACTIVITIES\nKitchen Science Lab\nACTIVITIES\nRecycle Rush\nACTIVITIES\nWelcome to Apollo\u2019s Learning Corner\nUNCATEGORIZED\n1 2\nNext Page\n\nApollo's Learning Corner",
+        "title": "Apollo's Learning Corner",
+        "url": "https://apolloslearningcorner.com/"
+      },
+      "browserErrors": [
+        "Access to font at 'https://apolloslearningcorner.com/wp-content/themes/twentytwentyfive/assets/fonts/manrope/Manrope-VariableFont_wght.woff2' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+        "Failed to load resource: net::ERR_FAILED",
+        "Access to script at 'https://apolloslearningcorner.com/wp-includes/js/dist/script-modules/block-library/navigation/view.min.js?ver=1bf28ded04f9f188bdcb' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+        "Failed to load resource: net::ERR_FAILED",
+        "Access to script at 'https://apolloslearningcorner.com/wp-includes/js/dist/script-modules/interactivity/index.min.js?ver=efaa5193bbad9c60ffd1' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "result": "document-rendered",
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://apolloslearningcorner.com/",
+          "title": "Apollo's Learning Corner",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://apolloslearningcorner.com/",
+          "title": "Apollo's Learning Corner",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
+    },
+    {
+      "id": "matt-arcade",
+      "suppliedUrl": "https://apolloslearningcorner.com/Games/",
+      "headerChain": [
+        "HTTP/2 200"
+      ],
+      "browserFrame": {
+        "text": "\ud83c\udfae APOLLO'S\nLEARNING CORNER\nArt Studio\n\nCreate digital masterpieces with paint and fun elements\n\nREADY TO PLAY\nMusic Maker\n\nMake music with everyday objects and instruments\n\nREADY TO PLAY\nFitness Fun\n\nStay active with fun fitness challenges\n\nREADY TO PLAY\nPatchy's Mathy Treasure\n\nSolve math problems to find hidden treasures\n\nREADY TO PLAY\nWord Wizard\n\nMaster vocabulary through magical word games\n\nCOMING SOON\nScience Explorer\n\nDiscover the wonders of science through experiments\n\nCOMING SOON\n\n\u00a9 2024 Apollo's Learning Corner\n\nMade with \u2764\ufe0f for young learners",
+        "title": "Apollo's Learning Corner - Game Launcher",
+        "url": "https://apolloslearningcorner.com/Games/"
+      },
+      "browserErrors": [],
+      "result": "document-rendered",
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://apolloslearningcorner.com/Games/",
+          "title": "Apollo's Learning Corner - Game Launcher",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://apolloslearningcorner.com/Games/",
+          "title": "Apollo's Learning Corner - Game Launcher",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
+    },
+    {
+      "id": "matt-solar-book",
+      "suppliedUrl": "https://amzn.to/3Snypsv",
+      "headerChain": [
+        "HTTP/2 301",
+        "content-security-policy: referrer always;",
+        "location: https://www.amazon.com/dp/B0BW35Y9XK?tag=davvidgrapr09-20",
+        "HTTP/2 500"
+      ],
+      "browserFrame": {
+        "text": "www.amazon.com refused to connect.",
+        "title": "www.amazon.com",
+        "url": "chrome-error://chromewebdata/"
+      },
+      "browserErrors": [
+        "Refused to display 'https://www.amazon.com/' in a frame because it set 'X-Frame-Options' to 'sameorigin'."
+      ],
+      "result": "site-blocked",
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 0,
+          "frameUrl": null,
+          "title": null,
+          "bounds": null,
+          "noOverflow": true
+        }
+      ]
+    },
+    {
+      "id": "matt-refinery",
+      "suppliedUrl": "https://thescoobmeisterm.github.io/novation-bs2-worship-ambient/index.html",
+      "headerChain": [
+        "HTTP/2 200"
+      ],
+      "browserFrame": {
+        "text": "Refinery Creative\nBSII EDITION\n\nThe Refinery Church \u2022 Worship Arts\n\n\u2605\n0\nRefinery\n60 Patches in Sequential Bank Order (Slots 000\u2013059)\nNovation Bass Station II\nWorship, Ambient & Post-Rock\n\nThe official interactive sound manual, audio showcase, and browser-based Web Audio synthesizer for the 60-patch collection. Built for live worship services, altar prayer swells, driving 16th anthems, post-rock swells, shoegaze walls of sound, and gospel funk grooves.\n\nLaunch Virtual Bass Station\nExplore 60 Patches\nDownload Bank (.syx)\nPrint Hardware Sticker\nSLOT 001 & 003\nSELECT \u25be\nRefinery Special\nDual Saw Bedrock + \"Heaven\" Arp\nWEB AUDIO ENGINE\nPATCHES \u25be\nAnalog Emulation\nClassic OTA + Acid Diode Filter\nWEB MIDI INPUT\nUSB Controllers\nVelocity, Aftertouch & Pitch Bend\nPIANO ROLL / SEQ\n16-Step Patterns\nWorship, Anthem & Slap Presets\nInteractive Bass Station II Hardware Emulator\n\nReal-time Web Audio synthe",
+        "title": "Refinery Creative \u2014 Novation Bass Station II Patch Manual & Synthesizer",
+        "url": "https://thescoobmeisterm.github.io/novation-bs2-worship-ambient/index.html"
+      },
+      "browserErrors": [],
+      "result": "document-rendered",
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://thescoobmeisterm.github.io/novation-bs2-worship-ambient/index.html",
+          "title": "Refinery Creative \u2014 Novation Bass Station II Patch Manual & Synthesizer",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://thescoobmeisterm.github.io/novation-bs2-worship-ambient/index.html",
+          "title": "Refinery Creative \u2014 Novation Bass Station II Patch Manual & Synthesizer",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
+    },
+    {
+      "id": "matt-tinker-lab",
+      "suppliedUrl": "https://thescoobmeisterm.github.io/TinkerWorkbench/",
+      "headerChain": [
+        "HTTP/2 200"
+      ],
+      "browserFrame": {
+        "text": "\u03df\nignite\nTINKERERS SPARK TABLE\nTable guide \u2197\nYOUR LEARNING PATH\nSmall sparks.\nBig discoveries.\n\nFive little builds. One new superpower.\n\n1\nLight an LED\nYour first circuit\n2\nBlink LED\nMake a rhythm\n3\nButton LED\nAdd an input\n4\nServo sweep\nMake it move\n5\nPotentiometer servo\nYou\u2019re in control\n\u221e\nSandbox\nPurple smoke allowed\n0 of 5 experiments complete\n\nNo rush. Try it. Break it. Try again.\n\n\u2733\nMade for curious hands.\n\nTap two labeled pins to connect a wire. No dragging needed.\n\nEXPERIMENT 01 / 05 \u00b7 START SOMETHING\nLight an LED\n\nBuild your first complete circuit\n\n01 Connect your circuit\nReset build \u21ba\nNext wire UNO 5V \u2192 + rail \u00b7 tap both pins\nARDUINO\nUNO\nATmega328P\n5V\nGND\nD13\nMINI BREADBOARD\n+ POWER\n\u2212 GROUND\na b c d e center gap f g h i j\nRED LED\n+ long\n\u2212 short\n220 \u03a9 RESISTOR\nIN\nOUT\nYour connections \u00b7 0 wires (tap to review or remove)\n\u24d8\nGuided circuit model \u2014 practice here before building on the",
+        "title": "Ignite \u00b7 Tinkerer's Robot Lab",
+        "url": "https://thescoobmeisterm.github.io/TinkerWorkbench/"
+      },
+      "browserErrors": [],
+      "result": "document-rendered",
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://thescoobmeisterm.github.io/TinkerWorkbench/",
+          "title": "Ignite \u00b7 Tinkerer's Robot Lab",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://thescoobmeisterm.github.io/TinkerWorkbench/",
+          "title": "Ignite \u00b7 Tinkerer's Robot Lab",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
+    },
+    {
+      "id": "matt-robot-game",
+      "suppliedUrl": "https://thescoobmeisterm.github.io/SparkTinkerGame/",
+      "headerChain": [
+        "HTTP/2 200"
+      ],
+      "browserFrame": {
+        "text": "\u2692\ntinkerer's table\n.\nA LITTLE CURIOSITY GOES A LONG WAY\n\u266a On\n\u26f6\nTHE ROBOT PARTS CHALLENGE\nSmall parts.\nBig brain energy.\n\nThink you know what makes a robot tick?\nMeet a mystery part. Pick its name.\nBeat the clock.\n\n\u25ce \u00a05 mystery parts\n\u25f7 \u00a08 seconds each\n\u2197 \u00a0All curious minds welcome\nLet's tinker\n\u2197\n\nTap to play. No sign-up. Just your brain.\n\nON THE WORKBENCH / 001\n?\nLOOK FAMILIAR?\nLET'S FIND OUT \u2197\nHOW IT WORKS\n01\nSpot the part\n\nOne component. Take a good look.\n\n02\nMake your pick\n\nFour options. Only one fits.\n\n03\nKeep it moving\n\nQuick rounds. Then pass it on.\n\nMADE FOR CURIOUS HANDS & CURIOUS MINDS\nBuild. Break. Learn. Repeat.",
+        "title": "Who's That Robot Part? \u2014 Tinkerer's Table",
+        "url": "https://thescoobmeisterm.github.io/SparkTinkerGame/"
+      },
+      "browserErrors": [],
+      "result": "document-rendered",
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://thescoobmeisterm.github.io/SparkTinkerGame/",
+          "title": "Who's That Robot Part? \u2014 Tinkerer's Table",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://thescoobmeisterm.github.io/SparkTinkerGame/",
+          "title": "Who's That Robot Part? \u2014 Tinkerer's Table",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
+    },
+    {
+      "id": "matt-pluto",
+      "suppliedUrl": "https://theplutollc.com/",
+      "headerChain": [
+        "HTTP/2 200"
+      ],
+      "browserFrame": {
+        "text": "Skip to content\nTOGGLE MOBILE MENU\nWelcome to Pluto L.L.C.\n\nWelcome to Pluto LLC \u2014 Central Ohio\u2019s Trusted Peer-to-Peer Car Rental Service\n\nAffordable, Convenient, and Reliable Car Rentals \u2014 Powered by Turo, Personalized by Pluto\n\nWhether you\u2019re flying into Columbus, commuting locally, or planning a weekend road trip, Pluto LLC connects you with quality vehicles at budget-friendly rates. We\u2019re a peer-to-peer car-sharing service currently operating through the Turo platform \u2014 but with our local focus and hands-on support, you\u2019ll always get more than just a car.\n\nIn the meantime, you can read some of our articles about traveling in Ohio and book one of our vehicles on Turo.\n\nWhy Choose Us\n\n\ud83d\ude97 Clean, reliable cars ready when you need them\n\ud83d\udcb0 Affordable daily and weekly rates\n\ud83d\udee0\ufe0f Professionally maintained and safety checked\n\u2708\ufe0f Convenient pickup at CMH and around Columbus\n\ud83e\uddd1\ud83c\udffd\u200d\ud83d\udcbc Local support",
+        "title": "Welcome to Pluto L.L.C. - Pluto L.L.C.",
+        "url": "https://theplutollc.com/"
+      },
+      "browserErrors": [
+        "Access to font at 'https://theplutollc.com/wp-content/fonts/work-sans/QGYsz_wNahGAdqQ43Rh_fKDp.woff2' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "result": "document-rendered",
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://theplutollc.com/",
+          "title": "Welcome to Pluto L.L.C. - Pluto L.L.C.",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://theplutollc.com/",
+          "title": "Welcome to Pluto L.L.C. - Pluto L.L.C.",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
+    },
+    {
+      "id": "matt-os",
+      "suppliedUrl": "https://os.dvgpro.com/",
+      "headerChain": [
+        "HTTP/2 200"
+      ],
+      "browserFrame": {
+        "text": "DVGProOS\u2122\nMenu\nONE CONNECTED BUSINESS TOOLKIT\nTell us what is slowing your business down.\n\nWe will match your problem to the simplest practical system that can fix it, then keep your tools, projects, team access, and billing connected as your business grows.\n\nFind My Solution \u2192\nTRY SEARCHING:\n10+\nIntegrated Apps\n1\nUnified Account\nInstant\nSolution Match\nQUICK START\nStart with what's getting in your way\n\nYou don't need to know which app you need. Pick your business challenge.\n\n\ud83d\udee0\ufe0f\nI want to build a SaaS\n\nGenerate complete, runnable Next.js SaaS applications directly from feature descriptions with SaaSForge.\n\nCreate SaaS Scaffold \u2192\n\ud83d\udcda\nI need to publish a book\n\nOutline chapters, validate topics, and generate KDP-ready manuscripts aligned with your voice using Bookloom.\n\nPublish Manuscript \u2192\n\ud83c\udf10\nI want a local business site\n\nGenerate high-converting local service site copy, service pages, and ",
+        "title": "DVGProOS Portal - Interconnected Business Operating System",
+        "url": "https://os.dvgpro.com/"
+      },
+      "browserErrors": [
+        "Access to fetch at 'https://os.dvgpro.com/?_rsc=tXyZJ52UQVBCVsD3' from origin 'null' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+        "Failed to load resource: net::ERR_FAILED",
+        "Access to fetch at 'https://os.dvgpro.com/api/platform/apps/dvgproos/content' from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "result": "document-rendered",
+      "scope": "Chromium desktop and phone viewport; document rendering, not all site interactions",
+      "liveViewports": [
+        {
+          "device": "desktop",
+          "iframeCount": 1,
+          "frameUrl": "https://os.dvgpro.com/",
+          "title": "DVGProOS Portal - Interconnected Business Operating System",
+          "bounds": {
+            "x": 1125,
+            "y": 355,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        },
+        {
+          "device": "phone",
+          "iframeCount": 1,
+          "frameUrl": "https://os.dvgpro.com/",
+          "title": "DVGProOS Portal - Interconnected Business Operating System",
+          "bounds": {
+            "x": 87,
+            "y": 207,
+            "width": 282,
+            "height": 220
+          },
+          "noOverflow": true
+        }
+      ]
+    }
+  ],
+  "livePreview": "https://omarchy-1.tail589b59.ts.net",
+  "browser": "Chromium 152.0.7977.82 on Arch Linux; phone viewport emulation, not physical phone"
+}

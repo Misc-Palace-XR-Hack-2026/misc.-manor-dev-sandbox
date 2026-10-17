@@ -4,10 +4,9 @@ import { validPhotoData } from './photos';
 
 // What the floating card above a selected object shows. Pure data: no DOM, so it is testable.
 //
-// A browser cannot read another site's X-Frame-Options / frame-ancestors, so "does this page allow framing?" can't be
-// answered per URL (GitHub and MDN, for example, send `X-Frame-Options: deny`). Instead only hosts that are known to
-// allow framing get an iframe: providers that publish an embed URL, plus Wikipedia (sends no frame-blocking headers).
-// Everything else falls back to a thumbnail when one is available, else an info card.
+// A browser cannot reliably inspect another site's frame-blocking policy. This conservative policy opts in
+// provider players and specific page hosts, not arbitrary URLs. An opt-in is only permission to TRY a preview:
+// the destination/browser can still refuse it. No proxy, response rewriting or load-event success detection.
 
 export type EmbedProvider = 'youtube' | 'vimeo' | 'spotify' | 'soundcloud' | 'wikipedia' | 'page';
 
@@ -23,6 +22,9 @@ const BLOCKED_SITES: ReadonlySet<string> = new Set([
 const FRAMABLE_SITES: ReadonlySet<string> = new Set([
   'gungo.dev', 'medium.com', 'substack.com', 'codepen.io', 'jsfiddle.net', 'glitch.com',
   'trinket.io', 'replit.com', 'codesandbox.io',
+  // User-owned sites checked with response headers and real sandboxed frames; see docs/web-previews.md.
+  'dvgpro.com', 'davisclockservices.com', 'apolloslearningcorner.com',
+  'thescoobmeisterm.github.io', 'theplutollc.com', 'os.dvgpro.com',
 ]);
 
 export type Preview =
@@ -50,6 +52,7 @@ export function youtubeId(url: URL): string | null {
 
 /** An iframe-safe embed for hosts known to allow framing, else null. Only ever returns https URLs on those hosts. */
 export function embedFor(url: URL): { src: string; provider: EmbedProvider; height: number } | null {
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.port) return null;
   const host = url.hostname.replace(/^www\./, '');
 
   const yt = youtubeId(url);
@@ -77,8 +80,9 @@ export function embedFor(url: URL): { src: string; provider: EmbedProvider; heig
   // Skip known frame-blockers.
   if (BLOCKED_SITES.has(host)) return null;
 
-  // Whole sites we have confirmed send no X-Frame-Options / frame-ancestors. The page is framed as given.
-  if (FRAMABLE_SITES.has(host)) return { provider: 'page', src: `https://${host}${url.pathname}${url.search}`, height: 220 };
+  // Exact host opt-in, not a guarantee: the browser still enforces the destination's frame policy.
+  // Do not silently rewrite HTTP, www, ports, query strings or fragments for ordinary pages.
+  if (url.protocol === 'https:' && FRAMABLE_SITES.has(host)) return { provider: 'page', src: url.href, height: 220 };
 
   return null;
 }

@@ -1,9 +1,13 @@
 import * as THREE from 'three';
 import type { Store } from '../core/store';
-import { inspectPreview, loftBeaconVisible, spawnPosition, walkableAt, walkableFloorPad, xrSelect, type NeighborhoodRoom, type PanelActionResult } from './interaction';
+import { walkStairs, inspectPreview, loftBeaconVisible, objectIdFromRay, overlayIsGranted, spawnPosition, stairHeight, stickForwardTeleport, walkableAt, walkableFloorPad, xrSelect, xrSessionInit, type NeighborhoodRoom, type PanelActionResult } from './interaction';
+import type { OnboardingState } from '../core/onboarding';
 import { XrPanel } from './panel';
 import { XrHoverLabel } from './hover';
 import { XrObjectMenu } from './object-menu';
+import { buildPreview } from '../core/preview';
+import { mediaArt } from '../core/media-art';
+import { PreviewCardView } from '../views/preview-card';
 
 const SNAP = Math.PI / 4;
 const RAY_LENGTH = 10;
@@ -23,7 +27,11 @@ export class XrSession {
   private panel: XrPanel;
   private hoverLabel = new XrHoverLabel();
   private objectMenu: XrObjectMenu;
+  private overlay: HTMLElement;
+  private overlayCard: PreviewCardView;
+  private overlayGranted = false;
   private lastSnap = 0;
+  private lastWalk = 0;
   private hoverPoint: THREE.Vector3 | null = null;
   private placing = false;
   presenting = false;
@@ -34,8 +42,9 @@ export class XrSession {
     private store: Store,
     private objects: THREE.Group,
     private slots: THREE.Group,
-    _room: THREE.Group,
+    private room: THREE.Group,
     rooms: NeighborhoodRoom[] = [],
+    private onTutorial?: (event: string) => void,
   ) {
     this.renderer.xr.enabled = true;
     this.renderer.xr.setReferenceSpaceType('local-floor');
@@ -53,6 +62,12 @@ export class XrSession {
     this.scene.add(this.player, this.floors, this.marker, this.hoverLabel.group);
     this.panel = new XrPanel(store, (result) => this.onPanel(result), rooms);
     this.objectMenu = new XrObjectMenu(store, (result) => this.onPanel(result));
+    this.overlay = document.createElement('div');
+    this.overlay.id = 'xr-dom-overlay';
+    this.overlay.className = 'xr-dom-overlay';
+    this.overlay.hidden = true;
+    document.body.append(this.overlay);
+    this.overlayCard = new PreviewCardView(this.overlay);
     this.player.add(this.panel.group);
     this.scene.add(this.objectMenu.group);
     this.buildFloors();
@@ -67,7 +82,10 @@ export class XrSession {
     if (!xr) throw new Error('WebXR is not available in this browser.');
     const ok = await xr.isSessionSupported('immersive-vr');
     if (!ok) throw new Error('This headset/browser does not support immersive VR.');
-    const session = await xr.requestSession('immersive-vr', { optionalFeatures: ['local-floor'] });
+    const session = await xr.requestSession('immersive-vr', xrSessionInit(this.overlay));
+    this.overlayGranted = overlayIsGranted(session);
+    this.objectMenu.useDomOverlay = this.overlayGranted;
+    this.overlay.hidden = !this.overlayGranted;
     await this.renderer.xr.setSession(session);
   }
 
@@ -89,7 +107,12 @@ export class XrSession {
     this.player.position.set(spawn.x, spawn.y, spawn.z);
     this.player.rotation.set(0, 0, 0);
     this.store.select(null);
-    this.panel.show();
+    this.overlayGranted = this.overlayGranted || overlayIsGranted(this.renderer.xr.getSession());
+    this.objectMenu.useDomOverlay = this.overlayGranted;
+    this.overlay.hidden = !this.overlayGranted;
+    const tutorial = (globalThis as unknown as { tutorial?: { state: unknown } }).tutorial;
+    this.panel.setGuide((tutorial?.state as typeof this.panel.guide) ?? null);
+    this.panel.show(this.panel.guide?.status === 'fresh' && !this.panel.guide.lesson ? 'welcome' : 'home');
     this.syncGuides();
   }
 
@@ -101,6 +124,10 @@ export class XrSession {
     this.panel.hide();
     this.hoverLabel.hide();
     this.objectMenu.hide();
+    this.overlayCard.show(null);
+    this.overlay.hidden = true;
+    this.overlayGranted = false;
+    this.objectMenu.useDomOverlay = false;
     this.placing = false;
     this.syncGuides();
   }
@@ -121,7 +148,11 @@ export class XrSession {
     loft.rotation.x = -Math.PI / 2;
     loft.position.set(2.0, 2.32, 1.5);
     loft.userData.walkable = true;
-    this.floors.add(floor, loft, this.loftBeacon);
+    const stair = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 3.7), mat.clone());
+    stair.rotation.x = -Math.atan2(2.3, 2.8);
+    stair.position.set(0.7, 1.15, 4.4);
+    stair.userData.walkable = true;
+    this.floors.add(floor, loft, this.loftBeacon, stair);
     this.floors.visible = false;
   }
 
@@ -169,7 +200,7 @@ export class XrSession {
       return;
     }
     if (hit?.kind === 'panel' && hit.uv) {
-      this.panel.activate(hit.uv);
+      this.panel.activate(hit.uv, hit.target);
       return;
     }
     if (hit?.kind === 'floor' && !this.placing) {
@@ -180,6 +211,7 @@ export class XrSession {
       if (hit?.kind === 'slot') {
         xrSelect(this.store, { kind: 'destination', id: hit.id });
         this.placing = false;
+        this.onTutorial?.('placed');
       }
       return;
     }
@@ -197,10 +229,15 @@ export class XrSession {
       a.click();
       a.remove();
     }
-    if (result.page) this.panel.show(result.page);
+    if (result.page && result.page !== 'guide') this.panel.show(result.page);
+    if (result.tutorialEvent) this.onTutorial?.(result.tutorialEvent);
+    const tutorial = (globalThis as unknown as { tutorial?: { state: OnboardingState | null } }).tutorial;
+    if (tutorial) this.panel.setGuide(tutorial.state);
     if (this.store.selectedId && !this.store.slotOf(this.store.selectedId)) this.placing = true;
     if (result.exit) void this.exit();
-    if (result.teleport) this.player.position.set(result.teleport.x, result.teleport.y, result.teleport.z);
+    if (result.teleport) {
+      this.player.position.set(result.teleport.x, result.teleport.y, result.teleport.z);
+    }
     this.syncGuides();
   }
 
@@ -219,31 +256,13 @@ export class XrSession {
 
   private updateControllers(): void {
     const now = performance.now();
+    const dt = Math.min(.05, (now-this.lastWalk)/1000);
+    this.lastWalk = now;
     const session = this.renderer.xr.getSession();
     this.hoverPoint = null;
     this.marker.visible = false;
     this.hoverLabel.hide();
     if (!this.store.selectedId) this.placing = false;
-    if (session) {
-      for (const source of session.inputSources) {
-        const gp = source.gamepad;
-        if (!gp) continue;
-        const x = gp.axes[2] ?? gp.axes[0] ?? 0;
-        const y = gp.axes[3] ?? gp.axes[1] ?? 0;
-        if (Math.abs(x) > 0.7 && Math.abs(x) >= Math.abs(y) && now - this.lastSnap > 280) {
-          this.player.rotateY(-Math.sign(x) * SNAP);
-          this.lastSnap = now;
-        } else if (y < -0.7 && now - this.lastSnap > 280 && this.hoverPoint && !this.placing) {
-          this.teleport(this.hoverPoint);
-          this.lastSnap = now;
-        }
-        const menu = gp.buttons[5] ?? gp.buttons[4] ?? gp.buttons[1];
-        if (menu?.pressed && now - this.lastSnap > 400) {
-          this.panel.toggle();
-          this.lastSnap = now;
-        }
-      }
-    }
     let menuAt: THREE.Vector3 | null = null;
     if (this.store.selectedId) {
       let selected: THREE.Object3D | undefined;
@@ -258,7 +277,7 @@ export class XrSession {
     }
     for (const controller of this.controllers) {
       const hit = this.pick(controller);
-      if (hit?.kind === 'panel' && hit.uv) this.panel.setHover(hit.uv);
+      if (hit?.kind === 'panel' && hit.uv) this.panel.setHover(hit.uv, hit.target);
       if (hit?.kind === 'action' && hit.target) this.objectMenu.setHover(hit.target);
       if (hit?.kind === 'object' && hit.id && hit.id !== this.store.selectedId) {
         const preview = inspectPreview(this.store, hit.id);
@@ -271,8 +290,58 @@ export class XrSession {
         this.marker.visible = true;
       }
     }
+    if (session) {
+      for (const source of session.inputSources) {
+        const gp = source.gamepad;
+        if (!gp) continue;
+        const x = gp.axes[2] ?? gp.axes[0] ?? 0;
+        const y = gp.axes[3] ?? gp.axes[1] ?? 0;
+        if (source.handedness === 'left' && !this.placing) {
+          const onStairs = Math.abs(this.player.position.y - stairHeight(this.player.position.z)) <= .08
+            && this.player.position.x >= .3 && this.player.position.x <= 1.1
+            && this.player.position.z >= 2.6 && this.player.position.z <= 6.2;
+          if (onStairs) {
+            const p = walkStairs(this.player.position, y, dt);
+            this.player.position.set(p.x,p.y,p.z);
+            continue;
+          }
+        }
+        if (Math.abs(x) > 0.7 && Math.abs(x) >= Math.abs(y) && now - this.lastSnap > 280) {
+          this.player.rotateY(-Math.sign(x) * SNAP);
+          this.lastSnap = now;
+        } else {
+          const landing = stickForwardTeleport(this.hoverPoint, this.placing, y);
+          if (landing && now - this.lastSnap > 280) {
+            this.teleport(new THREE.Vector3(landing.x, landing.y, landing.z));
+            this.lastSnap = now;
+          }
+        }
+        const menu = gp.buttons[5] ?? gp.buttons[4] ?? gp.buttons[1];
+        if (menu?.pressed && now - this.lastSnap > 400) {
+          this.panel.toggle();
+          this.lastSnap = now;
+        }
+      }
+    }
     // Pickup keeps the destination ray clear and hides the selected preview.
     this.objectMenu.follow(this.placing ? null : menuAt, this.camera);
+    this.syncOverlay();
+  }
+
+  private syncOverlay(): void {
+    if (!this.presenting || !this.overlayGranted || this.placing || !this.store.selectedId) {
+      this.overlayCard.show(null);
+      return;
+    }
+    const rep = this.store.state.representations.find((r) => r.id === this.store.selectedId);
+    const content = rep ? this.store.content(rep.contentItemId) : undefined;
+    if (!content) {
+      this.overlayCard.show(null);
+      return;
+    }
+    const preview = buildPreview(content);
+    this.overlayCard.show(preview, mediaArt(content));
+    this.overlayCard.moveTo(this.overlay.clientWidth / 2 || 160, (this.overlay.clientHeight || 240) * 0.42);
   }
 
   private pick(controller: THREE.Group):
@@ -281,9 +350,9 @@ export class XrSession {
     const ray = this.rayFrom(controller);
     const actionHit = this.objectMenu.hit(ray);
     if (actionHit) return { kind: 'action', point: actionHit.point, target: actionHit.object as THREE.Mesh };
-    const panelHit = ray.intersectObject(this.panel.group, true)[0];
-    if (panelHit && this.panel.group.visible) {
-      return { kind: 'panel', point: panelHit.point, uv: panelHit.uv ? { x: panelHit.uv.x, y: panelHit.uv.y } : undefined };
+    const panelHit = this.panel.hit(ray);
+    if (panelHit) {
+      return { kind: 'panel', point: panelHit.point, uv: panelHit.uv, target: panelHit.mesh };
     }
     if (this.placing && this.store.selectedId) {
       const slot = ray.intersectObjects(this.slots.children, false)[0];
@@ -296,10 +365,15 @@ export class XrSession {
     }
     const object = ray.intersectObjects(this.objects.children, true)[0];
     const floor = ray.intersectObjects(this.floors.children, false)[0];
-    if (object && (!floor || object.distance <= floor.distance + 0.02)) {
+    const occluder = ray.intersectObjects(this.room.children, true)[0];
+    let objectId: string | undefined;
+    if (object) {
       let o: THREE.Object3D | null = object.object;
       while (o && !o.userData.repId) o = o.parent;
-      if (o?.userData.repId) return { kind: 'object', id: o.userData.repId, point: object.point };
+      objectId = o?.userData.repId;
+    }
+    if (objectId && objectIdFromRay({ id: objectId, distance: object.distance }, occluder ? { distance: occluder.distance } : null)) {
+      if (!floor || object.distance <= floor.distance + 0.02) return { kind: 'object', id: objectId, point: object.point };
     }
     if (floor && walkableAt(floor.point)) return { kind: 'floor', point: floor.point };
     return null;

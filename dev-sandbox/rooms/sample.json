@@ -3,6 +3,12 @@
   "id": "room_sample",
   "owner": "Sample",
   "layoutId": "cozy-loft",
+  "lighting": "candlelight",
+  "surfaces": {
+    "floor": { "preset": "smoked-walnut" },
+    "wall": { "preset": "hearth-brick" },
+    "background": { "preset": "fireside-night" }
+  },
   "contentItems": [
     { "id": "c1", "type": "article", "title": "Method of loci (memory palaces)", "sourceKind": "url", "sourceRef": "https://en.wikipedia.org/wiki/Method_of_loci", "tags": ["memory"], "createdAt": "2026-10-06T00:00:00.000Z" },
     { "id": "c2", "type": "video", "title": "Something worth rewatching", "sourceKind": "url", "sourceRef": "https://www.youtube.com", "tags": [], "createdAt": "2026-10-06T00:00:00.000Z" },
@@ -11,7 +17,8 @@
     { "id": "c5", "type": "tool", "title": "three.js docs", "sourceKind": "url", "sourceRef": "https://threejs.org/docs/", "tags": ["dev"], "createdAt": "2026-10-06T00:00:00.000Z" },
     { "id": "c6", "type": "link", "title": "A site I keep coming back to", "sourceKind": "url", "sourceRef": "https://example.com", "tags": [], "createdAt": "2026-10-06T00:00:00.000Z" },
     { "id": "c7", "type": "file", "title": "notes.md", "sourceKind": "file", "sourceRef": "notes.md", "tags": [], "createdAt": "2026-10-06T00:00:00.000Z" },
-    { "id": "c8", "type": "link", "title": "Saved for later (in the inbox)", "sourceKind": "url", "sourceRef": "https://example.org", "tags": [], "createdAt": "2026-10-06T00:00:00.000Z" }
+    { "id": "c8", "type": "link", "title": "Saved for later (in the inbox)", "sourceKind": "url", "sourceRef": "https://example.org", "tags": [], "createdAt": "2026-10-06T00:00:00.000Z" },
+    { "id": "c9", "type": "note", "title": "Hearth", "sourceKind": "note", "sourceRef": "A fireplace for the sample room.", "tags": [], "createdAt": "2026-10-06T00:00:00.000Z" }
   ],
   "representations": [
     { "id": "r1", "contentItemId": "c1", "objectKind": "notebook" },
@@ -20,15 +27,17 @@
     { "id": "r4", "contentItemId": "c4", "objectKind": "photoFrame" },
     { "id": "r5", "contentItemId": "c5", "objectKind": "mug" },
     { "id": "r6", "contentItemId": "c6", "objectKind": "plant" },
-    { "id": "r7", "contentItemId": "c7", "objectKind": "box" }
+    { "id": "r7", "contentItemId": "c7", "objectKind": "box" },
+    { "id": "r9", "contentItemId": "c9", "objectKind": "fireplace" }
   ],
   "placements": [
-    { "representationId": "r1", "slotId": "loft-2" },
-    { "representationId": "r2", "slotId": "floor-2" },
-    { "representationId": "r3", "slotId": "floor-3" },
+    { "representationId": "r1", "slotId": "bench-1" },
+    { "representationId": "r2", "slotId": "floor-3" },
+    { "representationId": "r3", "slotId": "floor-2" },
     { "representationId": "r4", "slotId": "block-1" },
-    { "representationId": "r5", "slotId": "loft-3" },
+    { "representationId": "r5", "slotId": "shelf-1" },
     { "representationId": "r6", "slotId": "floor-5" },
-    { "representationId": "r7", "slotId": "floor-4" }
+    { "representationId": "r7", "slotId": "floor-6" },
+    { "representationId": "r9", "slotId": "floor-1" }
   ]
 }
