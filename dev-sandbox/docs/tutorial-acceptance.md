@@ -1,6 +1,6 @@
 # Guided tutorial acceptance
 
-Scope: authorized #43 first, then #40/#41/#42/#44, shared #77. All six issue bodies and comments were read with `gh issue view --json number,title,body,comments`. PR #82 was read with `gh pr diff 82` for integration planning only; none of its implementation was incorporated. No merge, issue close, board update, commit or push. Work is confined to this isolated checkout.
+Scope: #43 first, then #40/#41/#42/#44, shared #77. PR #83 remains independent of PR #82. Hardening and compatibility work uses isolated worktrees only; no remote merge, issue close, public preview change, or live-checkout modification.
 
 ## Architecture and preservation
 
@@ -51,7 +51,15 @@ Evidence screenshots and logs are in the worktree's `evidence/` directory. Scree
 
 Outstanding real-device checks (#26): headset ray target/guide readability and pagination; full XR creation with keyboard/kind/validation/cancel; move, occupied pads, cancellation, controller loss and session exit; desktop bookmark handoff and XR post-import recovery; Rooms return; themes/all surfaces; entering/exiting immersive during practice; Skip/replay; personal data preservation. Actual iOS Safari picker behavior, viewport/keyboard/safe-area geometry and touch scene placement are unverified. Do not close hardware acceptance based on browser/synthetic tests.
 
-## PR #82 future integration (diff review only)
+## Mobile hardening follow-up
+
+- Reproduced clipped Skip / Exit with a failing full-button/card-boundary check (a center-point hit test alone missed partial clipping). The lesson now scrolls its body independently while Show control and Skip / Exit stay in a nonshrinking footer.
+- Expanded the complete tutorial browser suite to 1440×1000, 390×844, 360×640 and 844×390. The smaller phone exposed a Rooms target bug: the highlight selected the current room and the card covered the actual destination. The target now excludes the original room.
+- Browser checks spy on Storage writes, not only final values, and reject delayed imports after Exit → replay as well as panel cancellation. All five lesson flows pass at all four dimensions; personal rooms/backups/preferences remain untouched. Screenshots in `../evidence/*-bookmarks.png` show the fixed footer and real Import target.
+- `npm test`: 198 passed; TypeScript/Vite build passes with the existing >500 kB warning. Isolated hardening server: `127.0.0.1:5293` (not the public preview).
+- A separate local-only integration worktree combines #82 with these changes, resolving Store, MenuView, TutorialView and content-editor conflicts. It preserves Preview command guards, epoch + edit-session async invalidation, practice pause/resume and read-only tutorial rejection. Integration-only tests and conflict resolutions are deliberately not included in this PR.
+
+## PR #82 integration constraints
 
 Likely conflicts: Store (new mode guards vs practice lifecycle), MenuView (mode chrome, async guards, sheet lifecycle, row actions), TutorialView (mode checks vs practice runner), content editor (Preview draft cancellation vs epoch cancellation), RoomView (VR entry restrictions vs scene cues), CSS and browser tests. No Preview feature or patch from #82 is included here.
 

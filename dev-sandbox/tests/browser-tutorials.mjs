@@ -13,9 +13,11 @@ try {
  await page.evaluate(()=>{window.store.addItem({title:'Personal keeper',sourceRef:'https://personal.example'});window.store.setLighting('dawn');window.store.setSurface('wall',{preset:'brick'});localStorage.setItem('mp-sandbox:rooms:matt',window.store.exportJson());localStorage.setItem('mp-sandbox:rooms:matt:backup',window.store.exportJson());localStorage.setItem('mp-sandbox:rooms:unreadable','BROKEN');localStorage.setItem('mp-sandbox:active-room','guest');});
  const saved=await page.evaluate(()=>Object.fromEntries(Object.entries(localStorage).filter(([k])=>k!=='mp-sandbox:onboarding')));
  const personal=await page.evaluate(()=>window.store.exportJson());
+ const trackWrites=()=>{window.personalWrites=[];const set=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k!=='mp-sandbox:onboarding')window.personalWrites.push(k);return set.call(this,k,v);};};
+ await page.evaluate(trackWrites);await page.addInitScript(trackWrites);
  const step=async id=>(console.log(name,id),page.waitForFunction(id=>window.tutorial.state.lesson && document.querySelector('.tutorial-card h2')?.textContent===id,id));
  const show=async()=>page.getByRole('button',{name:'Show control',exact:true}).click();
- const preserved=async()=>assert.deepEqual(await page.evaluate(()=>Object.fromEntries(Object.entries(localStorage).filter(([k])=>k!=='mp-sandbox:onboarding'))),saved);
+ const preserved=async()=>{assert.deepEqual(await page.evaluate(()=>Object.fromEntries(Object.entries(localStorage).filter(([k])=>k!=='mp-sandbox:onboarding'))),saved);assert.deepEqual(await page.evaluate(()=>window.personalWrites),[],'no transient personal writes');};
  await page.getByRole('button',{name:'Help',exact:true}).click();await page.getByRole('button',{name:'Import bookmarks',exact:true}).click();
  await page.evaluate(()=>{for(const event of ['created','placed','restored','styled'])window.tutorial.notice(event);});assert.equal(await page.evaluate(()=>window.tutorial.state.step),0);
  await page.getByRole('button',{name:'Export or sample ready',exact:true}).click();await step('Try an empty or malformed file');
@@ -60,7 +62,7 @@ try {
  let pad=await page.locator('[data-tutorial=place-pad]').boundingBox();await page.mouse.click(pad.x+pad.width/2,pad.y+pad.height/2);
  await page.waitForFunction(()=>!window.tutorial.state.lesson);await preserved();
  await lesson('Move, stash and restore');await show();
- await page.locator('.row').filter({has:page.getByText('Occupied pad',{exact:true})}).first().click();assert.equal(await page.evaluate(()=>window.tutorial.state.step),0);await show();
+ await page.locator('.row').filter({has:page.getByText('Occupied pad',{exact:true})}).first().locator('.title').click();assert.equal(await page.evaluate(()=>window.tutorial.state.step),0);await show();
  await page.locator('.row').filter({has:page.getByText('Practice object',{exact:true})}).first().click();await step('Pick it up');
  await page.locator('.item-sheet [data-action=pick-up]').click();await step('Cancel the move');
  await page.locator('[data-tutorial=cancel-move]').click();await step('Pick up again');
@@ -86,7 +88,8 @@ try {
  await lesson('Import bookmarks');await page.getByRole('button',{name:'Export or sample ready',exact:true}).click();await show();
  await page.evaluate(()=>{const original=File.prototype.text;File.prototype.text=function(){File.prototype.text=original;return new Promise(resolve=>window.finishImport=()=>resolve('<a href="https://late.example">Late</a>'));};});
  await page.locator('input[type=file][accept=".html,text/html"]').setInputFiles({name:'late.html',mimeType:'text/html',buffer:Buffer.from('late')});await page.waitForFunction(()=>window.finishImport);
- await page.getByRole('button',{name:'Skip / Exit',exact:true}).click();await page.evaluate(()=>window.finishImport());await page.waitForTimeout(100);await preserved();
+ await page.getByRole('button',{name:'Skip / Exit',exact:true}).click();await lesson('Import bookmarks');await page.evaluate(()=>window.finishImport());await page.waitForTimeout(100);await preserved();
+ assert.equal(await page.evaluate(()=>window.store.state.contentItems.length),0);await page.getByRole('button',{name:'Skip / Exit',exact:true}).click();
  // Closing a picker panel also cancels its pending file read within the same practice session.
  await lesson('Import bookmarks');await page.getByRole('button',{name:'Export or sample ready',exact:true}).click();await show();
  await page.evaluate(()=>{const original=File.prototype.text;File.prototype.text=function(){File.prototype.text=original;return new Promise(resolve=>window.finishImport=()=>resolve('<a href="https://cancelled.example">Cancelled</a>'));};});
@@ -96,6 +99,7 @@ try {
  await page.getByRole('button',{name:'Skip / Exit',exact:true}).click();await preserved();
  assert.equal(await page.evaluate(()=>window.store.exportJson()),personal);
  console.log(`PASS ${name} create validation/cancel/kind/scene placement; move/cancel/stash/restore; room return; theme/lighting/all surfaces/revert; stale async import`);
+ assert.deepEqual(await page.evaluate(()=>window.personalWrites),[],'practice never writes personal storage, even transiently');
  assert.deepEqual(errors,[]); console.log(`PASS ${name} bookmarks: actual picker, malformed, overflow/tags/counts/dedupe, stash/restore/undo, highlights, skip/replay/reload, all saves preserved`);
  await context.close();
  }
