@@ -51,6 +51,10 @@ export class MenuView {
   private soundtrack = el('select', { id: 'room-soundtrack' });
   private theme = el('select', { id: 'room-theme' });
   private chrome = el('nav', { class: 'chrome', ariaLabel: 'Room actions' });
+  private previewBtn = el('button', { type: 'button', textContent: 'Preview' });
+  private modeNote = el('p', { class: 'mode-note', hidden: true, textContent: 'Preview · desktop/mobile only. Return to Edit room for VR.' });
+  private lastMode: Store['mode'] = 'edit';
+  private editGeneration = 0;
   private editBtn = el('button', { type: 'button', textContent: 'Edit room' });
   private roomsBtn = el('button', { type: 'button', textContent: 'Rooms', title: 'Switch room' });
   private helpBtn = el('button', { type: 'button', textContent: 'Help', title: 'Replay tutorial' });
@@ -70,8 +74,8 @@ export class MenuView {
   private placing = false;
   private sheetVersion = 0;
   private inputGuard(): () => boolean {
-    const current = this.store.sessionGuard(), version = this.sheetVersion;
-    return () => current() && version === this.sheetVersion;
+    const current = this.store.sessionGuard(), edit = this.currentEdit(), version = this.sheetVersion;
+    return () => current() && edit() && version === this.sheetVersion;
   }
   private itemKey = '';
 
@@ -87,7 +91,10 @@ export class MenuView {
       if (!this.itemSheet.hidden && this.store.selectedId && !this.placing) this.store.select(null);
       this.closeSheets();
     });
+    this.previewBtn.addEventListener('click', () => store.setMode('preview'));
     this.editBtn.addEventListener('click', () => {
+      store.setMode('edit');
+      store.select(null);
       this.openEditor();
       document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'open-style' }));
     });
@@ -104,7 +111,7 @@ export class MenuView {
     cancelMove.dataset.tutorial='cancel-move';
     cancelMove.addEventListener('click',()=>store.select(null));
     store.subscribe(()=>{ cancelMove.hidden=!store.holding; });
-    this.chrome.append(this.editBtn, this.roomsBtn, this.helpBtn, cancelMove);
+    this.chrome.append(this.editBtn, this.previewBtn, this.roomsBtn, this.helpBtn, cancelMove);
     this.itemSheet.setAttribute('role', 'dialog');
     this.itemSheet.setAttribute('aria-label', 'Item');
     this.itemSheet.append(
@@ -118,8 +125,10 @@ export class MenuView {
     this.fillDialog(this.importSheet, 'Import', this.buildImport());
     this.buildFab();
 
+    const previewFromEditor = el('button', { type: 'button', textContent: 'Preview room' });
+    previewFromEditor.addEventListener('click', () => store.setMode('preview'));
     root.append(
-      this.editorClose,
+      this.editorClose, previewFromEditor,
       el('h1', { textContent: 'Misc. Palace sandbox' }),
       this.ownerInput,
       this.buildLighting(),
@@ -128,7 +137,7 @@ export class MenuView {
       this.status,
       this.list,
     );
-    document.body.append(this.chrome, this.fab, this.fabMenu, this.backdrop, this.roomsSheet, this.addSheet, this.importSheet, this.itemSheet);
+    document.body.append(this.chrome, this.modeNote, this.fab, this.fabMenu, this.backdrop, this.roomsSheet, this.addSheet, this.importSheet, this.itemSheet);
     this.ownerInput.title = 'Room name';
     this.ownerInput.addEventListener('change', () => store.setOwner(this.ownerInput.value));
     let epoch = store.epoch;
@@ -154,8 +163,10 @@ export class MenuView {
     this.render();
   }
 
-  private overlayChrome(): boolean {
-    return true;
+  /** Async imports/uploads belong to the edit session and room that started them. */
+  private currentEdit(): () => boolean {
+    const generation = this.editGeneration, state = this.store.state;
+    return () => this.store.canEdit && generation === this.editGeneration && state === this.store.state;
   }
 
   private dialogs(): HTMLElement[] {
@@ -171,12 +182,14 @@ export class MenuView {
   }
 
   private openDialog(sheet: HTMLElement): void {
+    if (sheet !== this.roomsSheet && !this.store.canEdit) return;
     this.closeSheets();
     sheet.hidden = false;
     this.backdrop.hidden = false;
   }
 
   private openEditor(): void {
+    if (!this.store.canEdit) return;
     this.closeSheets();
     this.root.classList.add('sheet-open');
     this.backdrop.hidden = false;
@@ -240,6 +253,7 @@ export class MenuView {
     );
     this.fab.dataset.tutorial = 'add-object';
     this.fab.addEventListener('click', () => {
+      if (!this.store.canEdit) return;
       const open = this.fabMenu.hidden;
       this.closeSheets();
       this.fabMenu.hidden = !open;
@@ -490,7 +504,18 @@ export class MenuView {
 
   // ---- dynamic pieces ---------------------------------------------------
   private render(): void {
-    const { state, selectedId } = this.store;
+    const { state, selectedId, canEdit, mode } = this.store;
+    if (mode !== this.lastMode) {
+      this.editGeneration++;
+      this.closeSheets();
+      this.lastMode = mode;
+    }
+    this.root.inert = !canEdit;
+    this.fab.hidden = !canEdit;
+    this.helpBtn.hidden = !canEdit;
+    this.previewBtn.hidden = !canEdit;
+    this.modeNote.hidden = canEdit;
+    this.editBtn.title = canEdit ? 'Open room editor' : 'Leave Preview and edit this room';
     if (document.activeElement !== this.ownerInput) this.ownerInput.value = state.owner;
     this.lighting.value = state.lighting ?? '';
     const soundtrack = state.soundtrack;
@@ -526,8 +551,9 @@ export class MenuView {
     const slotId = rep ? store.slotOf(rep.id) : undefined;
     const slotLabel = slotId ? store.layout.slots.find((s) => s.id === slotId)?.label : undefined;
 
-    const title = el('span', { class: 'title', textContent: c.title, title: 'Double-click to rename' });
+    const title = el('span', { class: 'title', textContent: c.title, title: store.canEdit ? 'Double-click to rename' : '' });
     title.addEventListener('dblclick', () => {
+      if (!store.canEdit) return;
       const next = window.prompt('Rename', c.title);
       if (next) store.renameItem(c.id, next);
     });
@@ -549,28 +575,30 @@ export class MenuView {
       });
       actions.append(b);
     };
-    act('Edit', () => openContentEditor(store, c.id));
-    if (rep) {
-      const kind = el('select', { class: 'kind-select', title: 'Which object shows this media' });
-      for (const k of OBJECT_KINDS) kind.append(el('option', { value: k, textContent: OBJECT_LABELS[k], selected: k === rep.objectKind }));
-      kind.addEventListener('click', (e) => e.stopPropagation());
-      kind.addEventListener('change', () => store.setKind(rep.id, kind.value as ObjectKind));
-      const picker = buildKindInventory({
-        value: rep.objectKind,
-        onChange: (next) => store.setKind(rep.id, next),
-      });
-      actions.append(kind, picker);
-      if (slotId) act('Pick up', () => {
-        // pickUp remembers the spot, so a missed click or Esc puts it back instead of losing it.
-        this.placing = true;
-        store.pickUp(rep.id);
-        this.closeSheets();
-      });
-      act('Stash', () => store.stash(rep.id));
-    } else {
-      act('Bring out', () => store.bringOut(c.id));
+    if (store.canEdit) {
+      act('Edit', () => openContentEditor(store, c.id));
+      if (rep) {
+        const kind = el('select', { class: 'kind-select', title: 'Which object shows this media' });
+        for (const k of OBJECT_KINDS) kind.append(el('option', { value: k, textContent: OBJECT_LABELS[k], selected: k === rep.objectKind }));
+        kind.addEventListener('click', (e) => e.stopPropagation());
+        kind.addEventListener('change', () => store.setKind(rep.id, kind.value as ObjectKind));
+        const picker = buildKindInventory({
+          value: rep.objectKind,
+          onChange: (next) => store.setKind(rep.id, next),
+        });
+        actions.append(kind, picker);
+        if (slotId) act('Pick up', () => {
+          // pickUp remembers the spot, so a missed click or Esc puts it back instead of losing it.
+          this.placing = true;
+          store.pickUp(rep.id);
+          this.closeSheets();
+        });
+        act('Stash', () => store.stash(rep.id));
+      } else {
+        act('Bring out', () => store.bringOut(c.id));
+      }
+      act('Delete', () => store.deleteContent(c.id));
     }
-    act('Delete', () => store.deleteContent(c.id));
 
     const row = el('div', { class: 'row' }, title, meta, where, actions);
     row.dataset.contentId = contentId;
@@ -584,7 +612,7 @@ export class MenuView {
   private syncItemSheet(selectedId: string | null): void {
     // Placing = the object is in hand (store.holding), however it got there, so the sheet stays out of the way.
     this.placing = selectedId !== null && this.store.holding === selectedId;
-    if (!this.overlayChrome() || !selectedId) {
+    if (!selectedId) {
       this.placing = false;
       this.itemSheet.hidden = true;
       this.itemKey = '';
@@ -601,7 +629,7 @@ export class MenuView {
     this.fabMenu.hidden = true;
     this.itemSheet.hidden = false;
     this.backdrop.hidden = true;
-    const key = `${selectedId}:${this.store.exportJson()}`;
+    const key = `${this.store.mode}:${selectedId}:${this.store.exportJson()}`;
     if (key === this.itemKey) return;
     this.itemKey = key;
     const contentId = this.store.state.representations.find((r) => r.id === selectedId)?.contentItemId;
