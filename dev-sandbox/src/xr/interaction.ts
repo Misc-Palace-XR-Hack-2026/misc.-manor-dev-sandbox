@@ -339,6 +339,7 @@ export function panelButtons(store: Store, page: PanelPage, _rooms: Neighborhood
     return [
       { id: 'guide:status', label: `${progressLabel(guide)} · ${step?.title ?? ''}` },
       { id: 'guide:copy', label: step?.prompt ?? '' },
+      { id: 'guide:reveal', label:'Show controls' },
       { id: 'guide:skip', label: 'Skip / Exit' },
     ];
   }
@@ -346,6 +347,7 @@ export function panelButtons(store: Store, page: PanelPage, _rooms: Neighborhood
   if (page === 'howto') {
     return [
       { id: 'page:home', label: 'Back' },
+      { id: 'guide:bookmarks', label:'Practice: bookmarks (desktop import)' },
       { id: 'guide:create', label: 'Practice: create' },
       { id: 'guide:move', label: 'Practice: move' },
       { id: 'guide:rooms', label: 'Practice: rooms' },
@@ -400,14 +402,15 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   if (id === 'page:music') return { page: 'music' };
   if (id === 'page:surfaces') return { page: 'surfaces' };
   if (id === 'page:object') return { page: 'object' };
-  if (id === 'page:inbox') return { page: 'inbox', tutorialEvent: 'restored' };
-  if (id === 'page:rooms') return { page: 'rooms' };
+  if (id === 'page:inbox') return { page: 'inbox', tutorialEvent: 'inbox-open' };
+  if (id === 'page:rooms') return { page: 'rooms', tutorialEvent:'open-rooms' };
   if (id === 'page:themes') return { page: 'themes' };
   if (id === 'page:create') return { page: 'create', tutorialEvent: 'open-add' };
   if (id === 'page:welcome') return { page: 'welcome' };
   if (id === 'guide:room') return { page: 'home', tutorialEvent: 'skip' };
   if (id === 'guide:start') return { page: 'home', tutorialEvent: 'start' };
-  if (id.startsWith('guide:') && ['create','move','rooms','style'].includes(id.slice(6))) return { page: 'home', tutorialEvent: 'lesson:' + id.slice(6) };
+  if (id.startsWith('guide:') && ['create','move','rooms','style','bookmarks'].includes(id.slice(6))) return { page: 'home', tutorialEvent: 'lesson:' + id.slice(6) };
+  if (id === 'guide:reveal') return {page:'home'};
   if (id === 'guide:skip') return { tutorialEvent: 'skip' };
   if (id === 'page:howto' || id === 'howto:skip') return { page: id === 'howto:skip' ? 'home' : 'howto' };
   if (id === 'howto:create') return { page: 'howto-create' };
@@ -419,16 +422,16 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   if (id === 'stairs:top') return { teleport: {x:.7,y:2.3,z:2.6} };
   if (id === 'go:loft') return { teleport: { x: 2.0, y: 2.3, z: 1.6 } };
   if (id === 'go:floor') return { teleport: spawnPosition() };
-  if (id === 'create:cancel') return { page: 'home' };
+  if (id === 'create:cancel') return { page: 'home', tutorialEvent:'create-cancel' };
   if (id === 'create:done' || id === 'create:title' || id === 'create:text' || id === 'guide:status' || id === 'guide:copy') return {};
-  if (draft && id.startsWith('key:')) { draft.key(id.slice(4)); return { tutorialEvent: draft.field === 'title' ? 'typed-title' : 'typed-content' }; }
+  if (draft && id.startsWith('key:')) { draft.key(id.slice(4)); return { tutorialEvent: draft.field === 'title' ? (draft.title.trim() ? 'typed-title' : '') : (draft.text.trim() ? 'typed-content' : '') }; }
   if (draft && id === 'create:field-title') { draft.field = 'title'; return {}; }
   if (draft && id === 'create:field-text') { draft.field = 'text'; return {}; }
   if (draft && id === 'create:mode') { draft.mode = draft.mode === 'link' ? 'note' : 'link'; return {}; }
-  if (draft && id.startsWith('create-kind:')) { draft.kind = (id.slice(12) || '') as ObjectKind | ''; return {}; }
+  if (draft && id.startsWith('create-kind:')) { draft.kind = (id.slice(12) || '') as ObjectKind | ''; return {tutorialEvent:'kind-chosen'}; }
   if (draft && id === 'create:submit') {
     const created = draft.create(store);
-    return created ? { tutorialEvent: 'created' } : {};
+    return created ? { tutorialEvent: 'created' } : {tutorialEvent:'create-invalid'};
   }
   if (id === 'exit') return { exit: true };
   if (id === 'home:return') {
@@ -443,7 +446,7 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   }
   if (id.startsWith('theme:')) {
     const theme = THEMES[id.slice(6)];
-    if (theme) store.applyLook({ surfaces: theme.surfaces, lighting: theme.lighting });
+    if (theme) { store.applyLook({ surfaces: theme.surfaces, lighting: theme.lighting }); return {tutorialEvent:'theme-applied'}; }
     return {};
   }
   if (id === 'open:link') {
@@ -470,4 +473,19 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
     store.setSurface(target, preset ? { preset } : undefined);
   }
   return {};
+}
+
+/** Highlights actual canvas buttons; shared lesson IDs remain the single source of progression. */
+export function guideActionMatches(stepId: string, action: string): boolean {
+  const targets: Record<string,string[]> = {
+    'create-open':['page:create'], 'create-reopen':['page:create'], 'create-invalid':['create:submit'],
+    'create-title':['create:field-title','key:'], 'create-content':['create:field-text','key:'],
+    'create-kind':['create-kind:'], 'create-save':['create:submit'], 'create-cancel':['create:cancel'],
+    'move-pick':['move'], 'move-pick-again':['move'], 'move-cancel':['cancel'], 'move-stash':['stash:'], 'move-restore':['page:inbox','out:'],
+    'rooms-open':['page:rooms'], 'rooms-switch':['room:'], 'rooms-home':['page:rooms','room:'],
+    'style-open':['page:lighting'], 'style-theme':['page:themes','theme:'], 'style-change':['page:lighting','light:'],
+    'style-wall':['page:surfaces','surface:wall:'], 'style-floor':['page:surfaces','surface:floor:'], 'style-background':['page:surfaces','surface:background:'],
+    'style-revert':['undo'], 'import-inbox':['page:inbox'], 'import-stash':['stash:'], 'import-restore':['page:inbox','out:'], 'import-undo':['undo'],
+  };
+  return (targets[stepId] ?? []).some(prefix=>prefix.endsWith(':') ? action.startsWith(prefix) : action===prefix);
 }

@@ -333,3 +333,9 @@ test('VR tutorial is a pop-up: starting it keeps the command menu available', ()
   assert.ok(popup.includes('guide:status'));
   assert.ok(!popup.includes('page:create'), 'the tutorial pop-up is not the command menu');
 });
+
+test('tutorial Inbox opening is not restoration and room opening has its own event',()=>{
+ const store=new Store(newRoom());
+ assert.equal(runPanelAction(store,'page:inbox').tutorialEvent,'inbox-open');
+ assert.equal(runPanelAction(store,'page:rooms').tutorialEvent,'open-rooms');
+});

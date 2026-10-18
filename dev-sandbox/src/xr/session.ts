@@ -96,6 +96,8 @@ export class XrSession {
 
   tick(): THREE.Camera | null {
     if (!this.renderer.xr.isPresenting) return null;
+    const tutorial=(globalThis as unknown as {tutorial?:{state:OnboardingState}}).tutorial;
+    if(tutorial) this.panel.setGuide(tutorial.state);
     this.updateControllers();
     this.syncGuides();
     return this.camera;

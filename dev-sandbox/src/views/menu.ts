@@ -68,6 +68,11 @@ export class MenuView {
   private itemTitle = el('h2', { textContent: 'Item' });
   private itemBody = el('div', { class: 'item-body' });
   private placing = false;
+  private sheetVersion = 0;
+  private inputGuard(): () => boolean {
+    const current = this.store.sessionGuard(), version = this.sheetVersion;
+    return () => current() && version === this.sheetVersion;
+  }
   private itemKey = '';
 
   constructor(private root: HTMLElement, private store: Store, repoRooms: RepoRoom[]) {
@@ -95,7 +100,11 @@ export class MenuView {
     this.roomsBtn.dataset.tutorial = 'rooms';
     this.helpBtn.addEventListener('click', () => document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'replay' })));
     this.editBtn.dataset.tutorial = 'style';
-    this.chrome.append(this.editBtn, this.roomsBtn, this.helpBtn);
+    const cancelMove = el('button',{type:'button',textContent:'Cancel move', hidden:true});
+    cancelMove.dataset.tutorial='cancel-move';
+    cancelMove.addEventListener('click',()=>store.select(null));
+    store.subscribe(()=>{ cancelMove.hidden=!store.holding; });
+    this.chrome.append(this.editBtn, this.roomsBtn, this.helpBtn, cancelMove);
     this.itemSheet.setAttribute('role', 'dialog');
     this.itemSheet.setAttribute('aria-label', 'Item');
     this.itemSheet.append(
@@ -122,7 +131,26 @@ export class MenuView {
     document.body.append(this.chrome, this.fab, this.fabMenu, this.backdrop, this.roomsSheet, this.addSheet, this.importSheet, this.itemSheet);
     this.ownerInput.title = 'Room name';
     this.ownerInput.addEventListener('change', () => store.setOwner(this.ownerInput.value));
-    store.subscribe(() => this.render());
+    let epoch = store.epoch;
+    store.subscribe(() => {
+      if (epoch !== store.epoch) { epoch = store.epoch; this.closeSheets();
+        for (const input of this.addSheet.querySelectorAll('input')) input.value = '';
+      }
+      this.render();
+    });
+    document.addEventListener('palace-reveal', event => {
+      const target = (event as CustomEvent<string>).detail;
+      if (target === 'import') this.openDialog(this.importSheet);
+      else if (target === 'add') { this.openDialog(this.addSheet); document.dispatchEvent(new CustomEvent('palace-tutorial',{detail:'open-add'})); }
+      else if (target === 'rooms') { this.refreshRooms(); this.openDialog(this.roomsSheet); document.dispatchEvent(new CustomEvent('palace-tutorial',{detail:'open-rooms'})); }
+      else if (target === 'close') this.closeSheets();
+      else {
+        this.store.select(null); this.openEditor();
+        const details = this.root.querySelector('details'); if (details) details.open = true;
+        document.dispatchEvent(new CustomEvent('palace-tutorial', {detail:'open-style'}));
+        if (this.store.state.contentItems.some(c=>!this.store.repFor(c.id))) document.dispatchEvent(new CustomEvent('palace-tutorial', {detail:'inbox-open'}));
+      }
+    });
     this.render();
   }
 
@@ -155,6 +183,11 @@ export class MenuView {
   }
 
   private closeSheets(): void {
+    this.sheetVersion++;
+    if (!this.addSheet.hidden) {
+      for (const input of this.addSheet.querySelectorAll('input')) input.value = '';
+      document.dispatchEvent(new CustomEvent('palace-tutorial',{detail:'create-cancel'}));
+    }
     this.root.classList.remove('sheet-open');
     for (const d of this.dialogs()) d.hidden = true;
     this.fabMenu.hidden = true;
@@ -171,10 +204,11 @@ export class MenuView {
   private refreshRooms(): void {
     const current = this.store.roomId;
     this.roomList.replaceChildren(...ROOM_DIRECTORY.map((slot) => {
-      const label = slot.id === current ? this.store.state.owner : (Store.savedName(slot.id) ?? slot.defaultName);
+      const label = this.store.practicing ? `Practice · ${slot.defaultName}` : slot.id === current ? this.store.state.owner : (Store.savedName(slot.id) ?? slot.defaultName);
       const b = el('button', { type: 'button', textContent: label });
       b.setAttribute('aria-current', String(slot.id === current));
-      b.dataset.tutorial = slot.id === current ? 'home-room' : 'room-pick';
+      b.dataset.tutorial = 'room-pick';
+      b.dataset.roomId = slot.id;
       b.addEventListener('click', () => this.switchTo(slot.id, label));
       return b;
     }));
@@ -196,6 +230,7 @@ export class MenuView {
   private buildFab(): void {
     const item = (label: string, fn: () => void) => {
       const b = el('button', { type: 'button', textContent: label });
+      if (label === 'Add object') b.dataset.tutorial = 'open-add';
       b.addEventListener('click', fn);
       return b;
     };
@@ -232,9 +267,14 @@ export class MenuView {
     const done = (msg: string) => { this.flash(msg); this.closeSheets(); };
 
     const bookmarks = input('.html,text/html', false, false, async ([file]) => {
+      const current = this.inputGuard();
       try {
-        const { added, placed } = this.store.importBookmarks(parseBookmarksHtml(await file.text()));
-        done(`Imported ${added} bookmarks (${placed} placed in the room, the rest are in the inbox).`);
+        const text = await file.text();
+        if (!current()) return;
+        const entries = parseBookmarksHtml(text);
+        const { added, placed } = this.store.importBookmarks(entries);
+        done(`Imported ${added} bookmarks (${placed} placed, ${added - placed} in inbox).`);
+        document.dispatchEvent(new CustomEvent('palace-import', {detail:{entries, added, placed}}));
       } catch (e) {
         this.flash(`Could not import bookmarks: ${e instanceof Error ? e.message : String(e)}`);
       }
@@ -249,6 +289,7 @@ export class MenuView {
     });
     const button = (label: string, target: HTMLInputElement) => {
       const b = el('button', { type: 'button', textContent: label });
+      if (target === bookmarks) b.dataset.tutorial = 'bookmark-file';
       b.addEventListener('click', () => target.click());
       return b;
     };
@@ -291,7 +332,7 @@ export class MenuView {
     this.theme.addEventListener('change', () => {
       const t = THEMES[this.theme.value];
       this.theme.value = '';
-      if (t) { this.store.applyLook({ surfaces: t.surfaces, lighting: t.lighting }); this.flash(`Applied ${t.label}. Undo brings the old look back.`); }
+      if (t) { this.store.applyLook({ surfaces: t.surfaces, lighting: t.lighting }); document.dispatchEvent(new CustomEvent('palace-tutorial',{detail:'theme-applied'})); this.flash(`Applied ${t.label}. Undo brings the old look back.`); }
     });
     return el('section',{class:'appearance'},el('h2',{textContent:'Room atmosphere'}),
       el('label',{htmlFor:'room-theme',textContent:'Theme (floor, wall, background, lighting)'}),this.theme,
@@ -318,12 +359,13 @@ export class MenuView {
       const upload = el('input',{type:'file',accept:'image/png,image/jpeg',id:`upload-${target}`});
       upload.addEventListener('change',async()=>{
         const file=upload.files?.[0]; if(!file)return;
+        const current = this.inputGuard();
         const token=++generation, state=this.store.state, snapshot=this.store.exportJson();
         upload.disabled=true;error.hidden=true;
         try {
           const imageData=await preparePhoto(file);
           // Undo/import or another edit during decode must not be overwritten by late work.
-          if(token!==generation || this.store.state!==state || this.store.exportJson()!==snapshot) return;
+          if(!current() || token!==generation || this.store.state!==state || this.store.exportJson()!==snapshot) return;
           this.store.setSurface(target,{preset:'custom',imageData});
           if(this.store.saveError) {error.textContent='Image changed in memory only. Export your room before leaving: '+this.store.saveError;error.hidden=false;}
         } catch(e) { error.textContent=`Image not changed: ${e instanceof Error ? e.message : String(e)}`;error.hidden=false; }
@@ -337,9 +379,9 @@ export class MenuView {
   }
 
   private buildAddForm(): HTMLElement {
-    const title = el('input', { placeholder: 'Title (optional)', id: 'new-object-title' });
+    const title = el('input', { placeholder: 'Title (required)', id: 'new-object-title' });
     const ref = el('input', { placeholder: 'Paste a link, or a file name', id: 'new-object-ref' });
-    const type = el('select');
+    const type = el('select', {id:'new-object-type', ariaLabel:'Content type'});
     type.append(el('option', { value: 'link', textContent: 'type: link' }));
     for (const t of CONTENT_TYPES.filter((value) => value !== 'link')) type.append(el('option', { value: t, textContent: t }));
     type.append(el('option', { value: 'auto', textContent: 'type: auto' }));
@@ -356,31 +398,38 @@ export class MenuView {
     });
     const add = el('button', { textContent: 'Add to room' });
     add.dataset.tutorial = 'add-submit';
+    const notify = (detail:string) => document.dispatchEvent(new CustomEvent('palace-tutorial',{detail}));
+    kind.addEventListener('change',()=>notify('kind-chosen'));
+    const valid = () => Boolean(title.value.trim() && ref.value.trim() && (type.value !== 'link' || safeUrl(ref.value.trim())));
     const submit = () => {
-      if (!ref.value.trim() && !title.value.trim()) return;
-      this.store.addItem({ title: title.value, sourceRef: ref.value, type: type.value as ContentType | 'auto', kind: (kind.value || undefined) as ObjectKind | undefined });
+      if (!valid()) { this.flash('Enter a title and content; links require a valid http or https URL.'); notify('create-invalid'); return; }
+      const id = this.store.addItem({ title: title.value, sourceRef: ref.value, type: type.value as ContentType | 'auto', kind: (kind.value || undefined) as ObjectKind | undefined });
+      if (this.store.practicing && this.store.slotOf(id)) this.store.pickUp(id);
       title.value = ref.value = '';
       this.flash('Added to the room.');
       this.closeSheets();
       document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'created' }));
     };
-    title.addEventListener('input', () => document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'typed-title' })));
-    ref.addEventListener('input', () => document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'typed-content' })));
+    title.addEventListener('input', () => { if(title.value.trim()) notify('typed-title'); });
+    ref.addEventListener('input', () => { if(valid()) notify('typed-content'); });
     add.addEventListener('click', submit);
     for (const i of [title, ref]) i.addEventListener('keydown', (e) => e.key === 'Enter' && submit());
     const photo = el('input', {type:'file',accept:'image/png,image/jpeg',id:'local-photo'});
     photo.addEventListener('change',async()=>{
       const file=photo.files?.[0];if(!file)return;
+      const current = this.inputGuard();
       photo.disabled=true;this.flash('Preparing photo locally…');
       try {
         const data=await preparePhoto(file);
+        if (!current()) return;
         this.store.addPhoto(title.value.trim() || file.name.replace(/\.[^.]+$/, ''), data);
         this.flash(this.store.saveError ? 'Photo added in memory only. Export your room before leaving.' : 'Photo added. Stored on this device and included in room exports.');
         this.closeSheets();
       } catch(e) {this.flash(`Photo not added: ${e instanceof Error ? e.message : String(e)}`);}
       finally {photo.disabled=false;photo.value='';}
     });
-    return el('div', { class: 'add' }, ref, title, el('label', {htmlFor:'new-object-kind',textContent:'Object representation'}), kind, picker, el('div', { class: 'row-inline' }, type, add),
+    const cancel = el('button',{type:'button',textContent:'Cancel'}); cancel.dataset.tutorial='create-cancel'; cancel.addEventListener('click',()=>this.closeSheets());
+    return el('div', { class: 'add' }, cancel, ref, title, el('label', {htmlFor:'new-object-kind',textContent:'Object representation'}), kind, picker, el('div', { class: 'row-inline' }, type, add),
       el('label',{htmlFor:'local-photo',textContent:'Upload local photo'}),photo,
       el('small',{textContent:'PNG / JPEG · up to 12 MB · resized to 1024 px. No upload to a server.'}));
   }
@@ -391,7 +440,8 @@ export class MenuView {
       input.addEventListener('change', async () => {
         const f = input.files?.[0];
         input.value = '';
-        if (f) onFile(await f.text());
+        const current = this.inputGuard();
+        if (f) { const text = await f.text(); if (current()) onFile(text); }
       });
       return input;
     };
@@ -409,6 +459,7 @@ export class MenuView {
       b.addEventListener('click', fn);
       return b;
     };
+    this.undoBtn.dataset.tutorial = 'undo';
     this.undoBtn.addEventListener('click', () => this.store.undo());
 
     const repo = el('select', { title: 'Rooms committed in the repo (rooms/*.json)' });
@@ -491,6 +542,7 @@ export class MenuView {
     const actions = el('div', { class: 'actions' });
     const act = (label: string, fn: () => void) => {
       const b = el('button', { textContent: label });
+      b.dataset.action = label.toLowerCase().replace(/ /g, '-');
       b.addEventListener('click', (e) => {
         e.stopPropagation();
         fn();
@@ -512,6 +564,7 @@ export class MenuView {
         // pickUp remembers the spot, so a missed click or Esc puts it back instead of losing it.
         this.placing = true;
         store.pickUp(rep.id);
+        this.closeSheets();
       });
       act('Stash', () => store.stash(rep.id));
     } else {
@@ -520,6 +573,8 @@ export class MenuView {
     act('Delete', () => store.deleteContent(c.id));
 
     const row = el('div', { class: 'row' }, title, meta, where, actions);
+    row.dataset.contentId = contentId;
+    if (rep) row.dataset.repId = rep.id;
     row.classList.toggle('selected', Boolean(rep && rep.id === selectedId));
     row.classList.toggle('inbox', !rep);
     if (rep && !inspect) row.addEventListener('click', () => store.select(rep.id === selectedId ? null : rep.id));
