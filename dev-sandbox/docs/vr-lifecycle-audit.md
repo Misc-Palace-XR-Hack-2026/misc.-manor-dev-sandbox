@@ -19,10 +19,19 @@ Regression-first evidence: malformed input failed with an unexpected new represe
 
 ## Remaining software follow-ups (not hardware excuses)
 
-- XR keyboard currently lowercases content and lacks `:`, `=`, `&`, `_`, `%`, `#`, `+`, `@`. Arbitrary case-sensitive media URLs cannot be entered faithfully. A proper keyboard/input slice needs case/symbol controls and URL round-trip tests.
-- On stairs, `updateControllers` continues after left-stick walking, skipping that controller's menu and snap-turn handling. Unit ramp tests do not cover that dispatch path; add synthetic gamepad coverage before changing it.
-- `XrSession.enter` has no explicit cleanup around rejected `renderer.xr.setSession` after a granted overlay. Add a rejected-session lifecycle fixture before changing grant/session ownership.
 - Expanded onboarding/practice transitions must be integrated and retested with unmerged PR #83, rather than adding a competing runner on main.
+
+## Follow-up on `fix/xr-input-session-followup` (stacked on PR #85)
+
+Base/dependency: PR #85 `fix/xr-creation-lifecycle` at `01dfbe808918427d9b67a31b4774b1cdcc0f650d`. Do not merge this follow-up into main independently of #85. PR #84 (#81–#83) is separate and unchanged.
+
+Software gaps closed here:
+
+- World-space keyboard inserts the pressed glyph as-is. Caps toggles letter case; URL punctuation includes `:&=?%#_+@` plus the previous `.,-/'!`. Mixed-case titles and query-rich URLs round-trip through `safeUrl` without lowercasing. Hostnames still follow URL serialization (`Example.com` → `example.com`); path, query, and hash case are kept.
+- Stair walking no longer `continue`s past the same controller's snap-turn and menu button. Stick-forward teleport stays off while on the ramp so Y-axis walking does not also teleport.
+- Rejected `renderer.xr.setSession` after a granted overlay hides the overlay, clears grant/menu overlay flags, ends the unused session, and leaves `presenting` false so a later Enter VR can retry.
+
+Evidence: unit keyboard round-trip plus real Chromium synthetic XR/gamepad/setSession fixtures. Not headset acceptance.
 
 ## Verification / rerun
 
@@ -32,13 +41,14 @@ From `dev-sandbox`:
 npm ci
 npm test
 npm run build
-npm run dev -- --host 127.0.0.1 --port 5297 --strictPort
-MP_URL=http://127.0.0.1:5297 node tests/browser-xr-creation.mjs
-MP_URL=http://127.0.0.1:5297 node tests/browser-xr-preview.mjs
-MP_URL=http://127.0.0.1:5297 node tests/browser-onboarding.mjs
+npm run dev -- --host 127.0.0.1 --port 5298 --strictPort
+MP_URL=http://127.0.0.1:5298 node tests/browser-xr-creation.mjs
+MP_URL=http://127.0.0.1:5298 node tests/browser-xr-preview.mjs
+MP_URL=http://127.0.0.1:5298 node tests/browser-onboarding.mjs
+MP_URL=http://127.0.0.1:5298 node tests/browser-xr-input-lifecycle.mjs
 ```
 
-Browser scripts require Playwright (`PLAYWRIGHT_MODULE` may point at an existing install) and Chromium (`CHROMIUM_PATH`, default `/usr/bin/chromium`). Explicitly set MP_URL: inherited session environments can point at a different running worktree. Initial port 5193 was occupied; final verification used this isolated worktree at 5297. Baseline: 189 unit tests passed; final: 190 passed. Build passes with existing large-chunk advisory. No dependency/lockfile change.
+Browser scripts require Playwright (`PLAYWRIGHT_MODULE` may point at an existing install) and Chromium (`CHROMIUM_PATH`, default `/usr/bin/chromium`). Explicitly set MP_URL: inherited session environments can point at a different running worktree.
 
 ## User / headset check
 
@@ -46,6 +56,9 @@ Browser scripts require Playwright (`PLAYWRIGHT_MODULE` may point at an existing
 2. Enter a title and malformed link: URL error; switch to Note and create. Completion explanation and Close must appear immediately, not after repeated Previous taps.
 3. Point at a pad and place; repeat Create rapidly and confirm only one item. Start another creation and Cancel before submit.
 4. Create and disconnect controller / exit before placing: item remains at its automatic fallback pad. Full room: new content is in Inbox, with an explanation.
-5. Still required separately: physical keyboard/ray usability, controller mapping, headset input/comfort on both stair directions, actual overlay grants and provider play/pause/volume, immersive tutorial transitions. Synthetic callbacks and mobile Chromium emulation are not this proof.
+5. Type a mixed-case title and a URL with `?&=%#_:` through the world-space keyboard, including Caps. The stored link must keep path/query/hash characters; do not expect host case to survive URL parsing.
+6. While walking stairs, snap-turn and the menu button on the same controller must still work.
+7. If Enter VR grants overlay then `setSession` fails, overlay chrome must clear and a later Enter VR must be retryable.
+8. Still required separately: physical keyboard/ray usability, controller mapping, headset input/comfort on both stair directions, actual overlay grants and provider play/pause/volume, immersive tutorial transitions. Synthetic callbacks and mobile Chromium emulation are not this proof.
 
-Live checkout and personal saves were not touched. PRs #81/#82/#83 remain separate, unmerged, and unchanged.
+Live checkout and personal saves were not touched. PRs #81/#82/#83/#84 remain separate, unmerged, and unchanged.

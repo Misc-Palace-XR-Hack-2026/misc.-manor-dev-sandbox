@@ -14,6 +14,23 @@ test('headset draft validates, cancels without orphan, creates once and safely c
  s.select(null);assert.ok(s.slotOf(id));assert.equal(s.state.representations[0].objectKind,'fireplace');
  const cancelled=new Draft();cancelled.title='discard';assert.equal(s.state.contentItems.length,1);
 });
+test('keyboard preserves mixed case and every printable URL symbol through creation',()=>{
+ const d=new creation.XrCreation(); const s=new Store(newRoom());
+ for(const c of 'My Link') d.key(c);
+ assert.equal(d.title,'My Link');
+ d.field='text';
+ const url='https://example.com/Watch?v=AbC_dE&list=PL%2F1#t=1';
+ for(const c of url) d.key(c);
+ assert.equal(d.text,url);
+ assert.ok(d.create(s)); assert.equal(s.state.contentItems[0].sourceRef,url);
+ const keys=new creation.XrCreation();
+ assert.ok(keys.keys.includes('a'));
+ assert.ok(keys.keys.includes('caps'));
+ keys.key('caps'); assert.ok(keys.keys.includes('A'));
+ for(const c of ':&=?%#_+@.,-/\'!') {
+   assert.ok(keys.keys.includes(c),`missing ${c}`);
+ }
+});
 test('link mode rejects malformed URLs without creating a note or changing the save',()=>{
  const s=new Store(newRoom()); const before=JSON.stringify(s.state);
  for(const text of ['', 'not a url', 'https://', 'https://bad host']) {
