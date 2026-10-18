@@ -16,6 +16,7 @@ export class TutorialView {
     this.overlay.append(this.highlight, this.card);
     document.body.append(this.overlay);
     document.addEventListener('palace-tutorial', (event) => {
+      if (!this.store.canEdit) return;
       const detail = (event as CustomEvent<string>).detail;
       if (detail === 'replay') this.replay('create');
       else if (detail === 'start') this.start('create');
@@ -58,6 +59,7 @@ export class TutorialView {
     this.onVr?.('welcome');
   }
   private start(lesson: LessonId): void {
+    if (!this.store.canEdit) return;
     this.practiceId = this.ensurePractice(lesson);
     this.state = beginLesson(lesson, this.store.exportJson(), this.store.roomId ?? null);
     this.render();
@@ -99,7 +101,9 @@ export class TutorialView {
     this.highlight.style.height = `${box.height + 12}px`;
   }
   private observeStore(): void {
+    if (!this.store.canEdit) { this.overlay.hidden = true; return; }
     if (!this.state.lesson) return;
+    if (this.overlay.hidden) this.render();
     if (this.store.selectedId) this.notice('selected');
     if (this.store.holding) this.notice('picked');
     if (this.practiceId && this.store.slotOf(this.practiceId)) this.notice('placed');

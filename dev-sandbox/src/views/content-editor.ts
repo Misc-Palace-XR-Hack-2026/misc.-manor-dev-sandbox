@@ -3,6 +3,7 @@ import { preparePhoto } from './photo-upload';
 
 /** Draft stays outside the store; cancel/Escape never creates history or saves. */
 export function openContentEditor(store: Store, contentId: string): void {
+  if (!store.canEdit) return;
   const content = store.content(contentId);
   if (!content) return;
   const snapshot = JSON.stringify(content), roomId = store.state.id;
@@ -41,7 +42,10 @@ export function openContentEditor(store: Store, contentId: string): void {
     };
   }
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel'; cancel.onclick = () => dialog.close();
-  const actions = document.createElement('div'); actions.className = 'dialog-actions'; actions.append(save, cancel);
+  const preview = document.createElement('button'); preview.type = 'button'; preview.textContent = 'Preview room';
+  preview.title = 'Discard this draft and enter desktop/mobile Preview';
+  preview.onclick = () => store.setMode('preview');
+  const actions = document.createElement('div'); actions.className = 'dialog-actions'; actions.append(save, cancel, preview);
   form.append(error, actions); dialog.append(heading, form);
   form.onsubmit = event => {
     event.preventDefault();
@@ -55,6 +59,7 @@ export function openContentEditor(store: Store, contentId: string): void {
       dialog.close();
     } catch (e) { error.textContent = e instanceof Error ? e.message : String(e); error.hidden = false; }
   };
-  dialog.addEventListener('close', () => { dialog.remove(); if (returnFocus?.isConnected) returnFocus.focus(); });
+  const unsubscribe = store.subscribe(() => { if (!store.canEdit) dialog.close(); });
+  dialog.addEventListener('close', () => { unsubscribe(); dialog.remove(); if (store.canEdit && returnFocus?.isConnected) returnFocus.focus(); });
   document.body.append(dialog); dialog.showModal(); title.focus();
 }

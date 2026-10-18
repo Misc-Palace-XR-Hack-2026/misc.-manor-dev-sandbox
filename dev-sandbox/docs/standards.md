@@ -58,7 +58,15 @@ Use these terms consistently in UI and code:
 - **Open link** – launch URL in new tab.
 - **View** – focus/zoom on object for inspection.
 
-**Edit-room mode** vs **Preview mode** share the same paradigm but Preview is limited to "Open link" + "View."
+**Edit-room mode** vs **Preview mode** (desktop/mobile):
+
+- A fresh page starts in **Edit-room**, preserving the existing editing workflow. **Preview** in the room chrome (or **Preview room** inside the editor) enters read-only browsing. **Edit room** explicitly leaves Preview and opens the editor. Close an inspected item's card to reveal the room chrome again.
+- Preview keeps object selection/inspection, embedded previews and **Open link**, room switching, the session speaker control and **Take photo**. It hides Edit / Pick up / Stash / Delete, rename, kind selection, add/import, Undo, room/style/music editors and the editing tutorial. The room still fills the viewport; chrome and inspect cards remain overlays on desktop and mobile.
+- Store mutation commands are guarded as well as the UI: stale click handlers and delayed work cannot write a room while Preview is active. Switching to Preview restores a picked-up object before locking edits, closes editor sheets and discards an unsaved content-editor draft. The content dialog's Preview room button explicitly offers this exit; saved changes are not undone. In-flight imports/photo/surface work is invalidated even if the user returns to Edit-room before it finishes.
+- Mode is **session-only**: retained when switching rooms, reset to Edit-room on reload. It is not a room field or localStorage preference; room JSON, schemaVersion, save keys and saved links are unchanged. Browsing another room may update the existing last-open-room preference, but does not overwrite either room's content save.
+- **VR Preview is deferred.** The visible Preview notice says desktop/mobile only, and VR entry is disabled until the user explicitly returns to Edit-room. Existing headset object/menu actions are unchanged; this is not a headset read-only guarantee or a security/permissions boundary.
+
+Run `node tests/browser-interaction-mode.mjs` against an isolated dev server (`MP_URL` overrides its default `http://127.0.0.1:5187`). It checks desktop 1440×1000 and mobile 390×844, safe inspection/Open, editor/action visibility, room navigation, pickup restoration, draft cancellation, delayed import invalidation and reload behavior. `MP_SCREENSHOTS` overrides the evidence directory. Real headset and iOS Safari behavior still require device testing.
 
 **Safety rule:** Picking up an object and dropping it on an invalid location, pressing Esc, or selecting another object **returns** it to original slot (`Store.pickUp` → `Store.cancelPickup`). Objects must never silently vanish.
 

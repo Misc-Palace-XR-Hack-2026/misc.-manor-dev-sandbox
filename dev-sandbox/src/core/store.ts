@@ -100,6 +100,18 @@ export function normalizeRoom(input: unknown): RoomState {
 
 export class Store {
   state: RoomState;
+  private interactionMode: 'edit' | 'preview' = 'edit';
+  /** Session UI state, never part of a room save or export. */
+  get mode(): 'edit' | 'preview' { return this.interactionMode; }
+  get canEdit(): boolean { return this.interactionMode === 'edit'; }
+
+  setMode(mode: 'edit' | 'preview'): void {
+    if (mode === this.interactionMode) return;
+    // Restore a lifted object before locking mutations; keep the inspected item.
+    this.cancelPickup(null);
+    this.interactionMode = mode;
+    this.emit();
+  }
   selectedId: string | null = null; // representation id; never saved
   saveError: string | null = null;
   visiting: string | null = null;
@@ -195,6 +207,7 @@ export class Store {
    * something else) the object goes back where it was instead of being lost.
    */
   pickUp(repId: string): void {
+    if (!this.canEdit) return;
     const slotId = this.slotOf(repId);
     if (!slotId) {
       this.select(repId);
@@ -485,6 +498,7 @@ export class Store {
   }
 
   undo(): void {
+    if (!this.canEdit) return;
     this.pickup = null;
     const prev = this.history.pop();
     if (!prev) return;
@@ -500,6 +514,7 @@ export class Store {
 
   /** Replace the whole room. Throws a readable Error if the data is bad; nothing changes in that case. */
   replaceState(data: unknown): void {
+    if (!this.canEdit) return;
     const error = validateRoom(data);
     if (error) throw new Error(error);
     this.pickup = null;
@@ -576,6 +591,7 @@ export class Store {
   }
 
   private commit(fn: (s: RoomState) => void): void {
+    if (!this.canEdit) return;
     this.pickup = null;
     this.pushHistory();
     fn(this.state);
