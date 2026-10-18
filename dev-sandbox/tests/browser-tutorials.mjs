@@ -4,7 +4,7 @@ import {mkdirSync} from 'node:fs';
 const out=new URL('../../evidence/',import.meta.url).pathname; mkdirSync(out,{recursive:true});
 const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--use-angle=gl','--enable-webgl','--ignore-gpu-blocklist']});
 try {
- for(const [name,viewport,isMobile] of [['desktop',{width:1440,height:1000},false],['mobile',{width:390,height:844},true]]) {
+ for(const [name,viewport,isMobile] of [['desktop',{width:1440,height:1000},false],['mobile',{width:390,height:844},true],['small-mobile',{width:360,height:640},true],['landscape',{width:844,height:390},true]]) {
  if(process.env.MP_DEVICE && process.env.MP_DEVICE!==name) continue;
  const context=await browser.newContext({viewport,isMobile,hasTouch:isMobile}); const page=await context.newPage(); page.setDefaultTimeout(10000);
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -30,6 +30,9 @@ try {
  assert.ok(target&&ring&&Math.abs(ring.x-(target.x-6))<2&&Math.abs(ring.y-(target.y-6))<2,'highlight follows actual importer');
  assert.ok(card.y+card.height<=target.y || card.y>=target.y+target.height || card.x+card.width<=target.x || card.x>=target.x+target.width,'card does not cover target');
  await page.locator('.tutorial-card').evaluate(el=>el.scrollTop=0);
+ // Exit must be immediately tappable, not merely scrollable into view by Playwright.
+ const exit=page.getByRole('button',{name:'Skip / Exit',exact:true});
+ assert.ok(await exit.evaluate(el=>{const b=el.getBoundingClientRect();const c=el.closest('.tutorial-card').getBoundingClientRect();if(b.top<c.top || b.bottom>c.bottom)return false;const hit=document.elementFromPoint(b.x+b.width/2,b.y+b.height/2);return b.height>=44 && b.top>=0 && b.bottom<=innerHeight && (hit===el || el.contains(hit));}),'Skip / Exit is fully visible and reachable with Import open');
  await page.screenshot({path:`${out}/${name}-bookmarks.png`});
  await upload('tutorial-bookmarks.html');await step('Find overflow in Inbox');await show();await step('Free a pad');
  await page.locator('.row:not(.inbox) [data-action=stash]').first().click();await step('Recover an overflow item');

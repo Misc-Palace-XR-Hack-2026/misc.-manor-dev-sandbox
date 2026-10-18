@@ -105,6 +105,7 @@ export class TutorialView {
     const step = currentStep(this.state); if (!step) return '';
     if(step.event==='placed' && !this.store.holding && this.practiceId) return `[data-rep-id="${this.practiceId}"] [data-action="pick-up"]`;
     if (['move-select','move-pick-again'].includes(step.id) && this.practiceId) return `[data-rep-id="${this.practiceId}"]`;
+    if (step.id === 'rooms-switch') return `[data-room-id]:not([data-room-id="${this.state.roomId}"])`;
     if (step.id === 'rooms-home') return `[data-room-id="${this.state.roomId}"]`;
     if (step.id === 'move-restore' && this.contentId) return `[data-content-id="${this.contentId}"] [data-action="bring-out"]`;
     if (step.id === 'import-restore') return [...this.overflow].map(id=>`[data-content-id="${id}"] [data-action="bring-out"]`).join(',');
@@ -133,8 +134,12 @@ export class TutorialView {
       if (this.state.step === 0) { const ready=button('Export or sample ready',()=>this.accept('export-ready')); ready.dataset.tutorial='export-ready'; this.card.append(ready); }
     }
     this.card.scrollTop=0;
-    this.card.append(button('Restart lesson',()=>this.start(step.lesson)));
-    this.card.append(button('Show control',()=>this.reveal()),button('Skip / Exit',()=>this.goToRoom()),button('Other lessons',()=>this.picker()));
+    this.card.append(button('Restart lesson',()=>this.start(step.lesson)),button('Other lessons',()=>this.picker()));
+    const body = document.createElement('div'); body.className = 'tutorial-body';
+    body.append(...Array.from(this.card.childNodes));
+    const actions = document.createElement('div'); actions.className = 'tutorial-actions';
+    actions.append(button('Show control',()=>this.reveal()),button('Skip / Exit',()=>this.goToRoom()));
+    this.card.append(body,actions);
     this.highlight.hidden=true;
   }
   private placeHighlight(selector: string): void {

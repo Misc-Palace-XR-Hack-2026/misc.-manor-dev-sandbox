@@ -458,3 +458,8 @@ body:has(.item-sheet:not([hidden])) .fab-menu { display: none; }
 .tutorial-card p { margin:0; }
 .tutorial-card a { font-size:13px; }
 .tutorial-card button { flex-shrink:0; }
+.tutorial-card:has(.tutorial-body) { overflow:hidden; }
+.tutorial-body { min-height:0; overflow:auto; display:flex; flex-direction:column; gap:8px; }
+.tutorial-body > * { flex-shrink:0; }
+.tutorial-actions { display:flex; gap:8px; flex-shrink:0; }
+.tutorial-actions button { flex:1; }
