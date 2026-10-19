@@ -15,6 +15,7 @@ import { mediaArt, type MediaArt } from '../core/media-art';
 import { canEnterVr, enterReason, type NeighborhoodRoom } from '../xr/interaction';
 import { XrSession } from '../xr/session';
 import { buildSeatedGuide } from './guides';
+import { MAX_SCENE_ZOOM } from '../core/scenes';
 
 // Thin 3D adapter: draws store.state and sends clicks back as store commands. Holds no truth of its own.
 // Replaceable later (IWSDK, Babylon) as long as the store contract stays the same.
@@ -140,7 +141,7 @@ export class RoomView {
     this.controls.enableDamping = true;
     this.controls.screenSpacePanning = true;
     this.controls.minZoom = this.scenesMode ? 0.2 : 0.6;
-    this.controls.maxZoom = this.scenesMode ? 5 : 3;
+    this.controls.maxZoom = this.scenesMode ? MAX_SCENE_ZOOM : 3;
     this.controls.maxPolarAngle = Math.PI * 0.49;
     this.controls.dampingFactor = 0.15; // Higher damping = stops faster after drag
     this.controls.update();
@@ -845,8 +846,12 @@ export class RoomView {
    * Set camera state for scene framing: orbit angle, height, and zoom.
    * Used by ScenesView to frame shots.
    */
-  public setCameraState(orbitAngle: number, orbitHeight: number, zoom: number, resetTarget = false): void {
-    if (resetTarget) {
+  public setCameraState(
+    orbitAngle: number, orbitHeight: number, zoom: number, resetTarget = false, lookAt?: [number, number, number],
+  ): void {
+    if (lookAt) {
+      this.controls.target.set(lookAt[0], lookAt[1], lookAt[2]);
+    } else if (resetTarget) {
       const [fx, fy, fz] = this.store.layout.focus;
       this.controls.target.set(fx, fy, fz);
     }
@@ -864,6 +869,20 @@ export class RoomView {
     this.setZoom(zoom);
   }
 
+  /** Pan: move the look-at point (and the camera with it) without changing orbit, tilt or zoom. */
+  public setCameraTarget(x: number, y: number, z: number): void {
+    const offset = this.camera.position.clone().sub(this.controls.target);
+    this.controls.target.set(x, y, z);
+    this.camera.position.copy(this.controls.target).add(offset);
+    this.controls.update();
+  }
+
+  /** The room's default look-at point (what "Reset pan" returns to). */
+  public getDefaultTarget(): [number, number, number] {
+    const [fx, fy, fz] = this.store.layout.focus;
+    return [fx, fy, fz];
+  }
+
   /** Zoom only: never touches orbit or position. */
   public setZoom(zoom: number): void {
     this.camera.zoom = Math.min(this.controls.maxZoom, Math.max(this.controls.minZoom, zoom));
@@ -876,7 +895,7 @@ export class RoomView {
    * Returns orbit angle (0-360°), height offset, and zoom.
    * Used by ScenesView to capture manual camera adjustments.
    */
-  public getCameraState(): { orbitAngle: number; orbitHeight: number; zoom: number } {
+  public getCameraState(): { orbitAngle: number; orbitHeight: number; zoom: number; target: [number, number, number] } {
     // Exact inverse of setCameraState: offset of the camera from the target -> azimuth and elevation.
     const d = this.camera.position.clone().sub(this.controls.target);
     let orbitAngle = (Math.atan2(d.x, d.z) * 180) / Math.PI; // the default isometric view is 45
@@ -886,6 +905,7 @@ export class RoomView {
       orbitAngle,
       orbitHeight: (elevation - ISO_ELEVATION) / HEIGHT_UNIT, // 0 = the normal isometric view
       zoom: this.camera.zoom,
+      target: this.getCameraTarget(),
     };
   }
 

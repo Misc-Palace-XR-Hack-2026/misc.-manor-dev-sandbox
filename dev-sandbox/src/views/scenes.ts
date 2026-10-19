@@ -1,7 +1,7 @@
 import type { Store } from '../core/store';
 import { listSceneIds, loadScene, createScene, deleteScene, saveScene, setActiveSceneId } from '../core/scene-store';
 import {
-  SHOT_EASINGS, SHOT_TYPES, newShot,
+  MAX_SCENE_ZOOM, SHOT_EASINGS, SHOT_TYPES, newShot,
   type CameraState, type Scene, type Shot, type ShotEasing, type ShotType,
 } from '../core/scenes';
 import { RoomView } from './room';
@@ -11,6 +11,7 @@ import { buildKindInventory } from './kind-picker';
 import { OBJECT_LABELS } from '../core/types';
 import { FIREPLACE_X_RANGE, cloneFixtures, newFireplace, type Fixture } from '../core/fixtures';
 import { CapturePanel } from './capture';
+import { SHOT4_LINKS, planShotPlacements } from '../core/shot-objects';
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -32,7 +33,11 @@ export interface ScenesViewOptions {
   onEditRoom?: () => void;
 }
 
-type CamSlider = 'orbit' | 'tilt' | 'zoom';
+type CamSlider = 'orbit' | 'tilt' | 'zoom' | 'panX' | 'panY' | 'panZ';
+
+// Pan sliders move the point the camera looks at, in room coordinates (see layout.ts: x along the right wall,
+// z along the left wall, y up). Wide enough to frame the outside of the room, e.g. a close-up of one corner.
+const PAN_RANGE = { x: [-4, 15], y: [-2, 8], z: [-4, 12] } as const;
 
 /**
  * Scenes mode: a simplified, separate version of the room for composing trailer shots.
@@ -82,8 +87,20 @@ export class ScenesView {
   private orbitValue = el('span', { class: 'scenes-orbit-value', textContent: '45°' });
   private tiltSlider = el('input', { type: 'range', min: '-1.1', max: '1.75', step: '0.05', value: '0', class: 'scenes-tilt-slider' });
   private tiltValue = el('span', { class: 'scenes-tilt-value', textContent: '0' });
-  private zoomSlider = el('input', { type: 'range', min: '0.2', max: '5', step: '0.05', value: '1', class: 'scenes-zoom-slider' });
+  private zoomSlider = el('input', { type: 'range', min: '0.2', max: String(MAX_SCENE_ZOOM), step: '0.05', value: '1', class: 'scenes-zoom-slider' });
   private zoomValue = el('span', { class: 'scenes-zoom-value', textContent: '1.0x' });
+  // Pan: where the camera looks. Also changed by right-drag / two-finger drag in the 3D window.
+  private panXSlider = el('input', { type: 'range', min: String(PAN_RANGE.x[0]), max: String(PAN_RANGE.x[1]), step: '0.1', value: '4.8', class: 'scenes-pan-slider' });
+  private panXValue = el('span', { textContent: '4.8' });
+  private panYSlider = el('input', { type: 'range', min: String(PAN_RANGE.y[0]), max: String(PAN_RANGE.y[1]), step: '0.1', value: '1.4', class: 'scenes-pan-slider' });
+  private panYValue = el('span', { textContent: '1.4' });
+  private panZSlider = el('input', { type: 'range', min: String(PAN_RANGE.z[0]), max: String(PAN_RANGE.z[1]), step: '0.1', value: '3.6', class: 'scenes-pan-slider' });
+  private panZValue = el('span', { textContent: '3.6' });
+  private panResetBtn = el('button', { type: 'button', textContent: 'Reset pan' });
+
+  // Shot 4 props: the link objects that fill the whole-room shot.
+  private shot4Btn = el('button', { type: 'button', textContent: `Add shot 4 objects (${SHOT4_LINKS.length})` });
+  private shot4Status = el('div', { class: 'scenes-object-hint', textContent: '' });
 
   // Room add-ons (fireplace). Stored in the room (store.state.fixtures), so they save with the scene and the room.
   private fireplaceToggle = el('input', { type: 'checkbox', class: 'scenes-fireplace-toggle' });
@@ -157,7 +174,28 @@ export class ScenesView {
     track('orbit', this.orbitSlider);
     track('tilt', this.tiltSlider);
     track('zoom', this.zoomSlider);
+    track('panX', this.panXSlider);
+    track('panY', this.panYSlider);
+    track('panZ', this.panZSlider);
     window.addEventListener('pointerup', () => { this.dragging = null; });
+
+    // Pan: orbit, tilt and zoom stay exactly as they are; only the look-at point moves.
+    const applyPan = () => {
+      if (!this.roomView) return;
+      this.roomView.setCameraTarget(
+        parseFloat(this.panXSlider.value), parseFloat(this.panYSlider.value), parseFloat(this.panZSlider.value),
+      );
+      this.syncCameraUi();
+    };
+    for (const slider of [this.panXSlider, this.panYSlider, this.panZSlider]) slider.addEventListener('input', applyPan);
+    this.panResetBtn.addEventListener('click', () => {
+      if (!this.roomView) return;
+      const [x, y, z] = this.roomView.getDefaultTarget();
+      this.roomView.setCameraTarget(x, y, z);
+      this.syncCameraUi();
+    });
+
+    this.shot4Btn.addEventListener('click', () => this.addShot4Objects());
 
     // Object rotation: the only thing that turns an object in scenes mode.
     this.rotationSlider.addEventListener('input', () => {
@@ -224,6 +262,10 @@ export class ScenesView {
       row('Orbit', this.orbitSlider, this.orbitValue),
       row('Tilt', this.tiltSlider, this.tiltValue),
       row('Zoom', this.zoomSlider, this.zoomValue),
+      row('Pan X', this.panXSlider, this.panXValue),
+      row('Pan Z', this.panZSlider, this.panZValue),
+      row('Pan up', this.panYSlider, this.panYValue),
+      this.panResetBtn,
     );
 
     const fireplaceControls = el('div', { class: 'scenes-camera-controls' },
@@ -237,6 +279,9 @@ export class ScenesView {
       fireplaceControls,
       el('h4', { textContent: 'Camera' }),
       cameraControls,
+      el('h4', { textContent: 'Props' }),
+      this.shot4Btn,
+      this.shot4Status,
       el('h4', { textContent: 'Shots' }),
       this.shotsPanel,
       el('h4', { textContent: 'Capture' }),
@@ -286,6 +331,12 @@ export class ScenesView {
     const scene = this.scenes.get(sceneId);
     if (!scene) return;
 
+    // Leaving a scene (or reloading it): keep the framing of its active shot. The store still shows that scene's room here.
+    if (this.currentScene) {
+      this.commitShotCamera();
+      this.persistSceneQuietly();
+    }
+
     this.currentScene = scene;
     this.sceneName.textContent = scene.name;
     this.sceneDesc.value = scene.description;
@@ -319,12 +370,15 @@ export class ScenesView {
 
     // Apply the saved camera once; from here on the camera is the source of truth and the sliders follow it.
     const cam = scene.cameraState;
-    this.roomView.setCameraState(cam.orbitAngle, cam.orbitHeight, cam.zoom, true);
+    this.roomView.setCameraState(cam.orbitAngle, cam.orbitHeight, cam.zoom, true, cam.target);
     this.syncCameraUi();
     this.startCameraMonitor();
     this.refreshScenesList();
     this.updateObjectPanel();
     this.activeShotId = scene.shots?.[0]?.id ?? null;
+    // The first shot is the active one, so show its framing: otherwise leaving it would save the scene camera into it.
+    const firstShot = this.activeShot();
+    if (firstShot) this.viewCamera(firstShot.start);
     this.refreshShotsPanel();
 
     setActiveSceneId(sceneId);
@@ -343,12 +397,57 @@ export class ScenesView {
   /** Point the real camera at a saved camera state; the sliders follow on their own. */
   private viewCamera(c: CameraState): void {
     if (!this.roomView) return;
-    this.roomView.setCameraState(c.orbitAngle, c.orbitHeight, c.zoom);
+    // A saved state without a target (older shots) keeps wherever the camera is looking now.
+    this.roomView.setCameraState(c.orbitAngle, c.orbitHeight, c.zoom, false, c.target);
     this.syncCameraUi();
   }
 
   private currentCamera(): CameraState {
     return this.roomView ? this.roomView.getCameraState() : { orbitAngle: 45, orbitHeight: 0, zoom: 1 };
+  }
+
+  /**
+   * Write the live camera into the shot being worked on, so moving the camera and then switching shots (or saving)
+   * keeps the framing. Only still shots follow the camera: a shot with an end has two framings that are set
+   * explicitly with Set start / Set end, and must not be overwritten by wherever the camera happens to be.
+   */
+  private commitShotCamera(): void {
+    const shot = this.activeShot();
+    if (!shot || shot.end || !this.roomView) return;
+    shot.start = { ...this.currentCamera() };
+  }
+
+  /** Save the current scene without the alert Save Scene shows. Same fields saveCurrentScene writes. */
+  private persistSceneQuietly(): void {
+    const scene = this.currentScene;
+    if (!scene) return;
+    scene.baseRoom = JSON.parse(JSON.stringify(this.store.state));
+    scene.updatedAt = new Date().toISOString();
+    try { saveScene(scene); } catch { /* Save Scene can be pressed by hand to see the error */ }
+  }
+
+  /** Scatter the shot 4 link objects into random free spots (skipping links already in the room), then save the scene. */
+  private addShot4Objects(): void {
+    const scene = this.currentScene;
+    if (!scene) { this.shot4Status.textContent = 'Open a scene first.'; return; }
+    const have = new Set(this.store.state.contentItems.map((c) => c.sourceRef));
+    const missing = SHOT4_LINKS.filter((l) => !have.has(l.url));
+    if (missing.length === 0) { this.shot4Status.textContent = 'All shot 4 objects are already in this room.'; return; }
+
+    const plan = planShotPlacements(
+      missing, this.store.layout.slots, this.store.freeSlotIds(), this.currentFireplace()?.pos[0],
+    );
+    let added = 0;
+    for (const { link, slotId } of plan) {
+      this.store.addItem({ title: link.title, sourceRef: link.url, kind: link.kind, slotId });
+      added++;
+    }
+    scene.baseRoom = JSON.parse(JSON.stringify(this.store.state));
+    scene.updatedAt = new Date().toISOString();
+    try { saveScene(scene); } catch { /* the objects are in the room; Save Scene can be pressed by hand */ }
+    const skipped = SHOT4_LINKS.length - missing.length;
+    this.shot4Status.textContent = `Added ${added} to "${scene.name}" and saved the scene`
+      + `${skipped ? ` (${skipped} already there)` : ''}. Select an object and use Pick up to move it.`;
   }
 
   private refreshShotsPanel(): void {
@@ -371,6 +470,7 @@ export class ScenesView {
         const id = prompt('Shot id (matches the storyboard, e.g. 2 or 7a):', '');
         if (!id?.trim()) return;
         if (shots.some((s) => s.id === id.trim())) { alert(`Shot ${id.trim()} already exists in this scene.`); return; }
+        this.commitShotCamera(); // the shot being left keeps its framing before the new one starts from the live camera
         shots.push(newShot(id.trim(), `Shot ${id.trim()}`, this.currentCamera()));
         this.activeShotId = id.trim();
         this.refreshShotsPanel();
@@ -391,7 +491,11 @@ export class ScenesView {
       );
       row.classList.toggle('active', shot.id === this.activeShotId);
       row.addEventListener('click', () => {
-        this.activeShotId = shot.id;
+        if (shot.id !== this.activeShotId) {
+          this.commitShotCamera(); // keep the framing of the shot being left
+          this.activeShotId = shot.id;
+          this.persistSceneQuietly();
+        }
         this.viewCamera(shot.start);
         this.refreshShotsPanel();
       });
@@ -488,6 +592,10 @@ export class ScenesView {
     set('orbit', this.orbitSlider, this.orbitValue, Math.round(cam.orbitAngle) % 360, `${Math.round(cam.orbitAngle) % 360}°`);
     set('tilt', this.tiltSlider, this.tiltValue, Math.round(cam.orbitHeight * 20) / 20, (Math.round(cam.orbitHeight * 20) / 20).toFixed(2));
     set('zoom', this.zoomSlider, this.zoomValue, Math.round(cam.zoom * 20) / 20, `${cam.zoom.toFixed(2)}x`);
+    const [tx, ty, tz] = cam.target.map((n) => Math.round(n * 10) / 10);
+    set('panX', this.panXSlider, this.panXValue, tx, tx.toFixed(1));
+    set('panY', this.panYSlider, this.panYValue, ty, ty.toFixed(1));
+    set('panZ', this.panZSlider, this.panZValue, tz, tz.toFixed(1));
   }
 
   private startCameraMonitor(): void {
@@ -560,6 +668,7 @@ export class ScenesView {
       alert('No scene selected');
       return;
     }
+    this.commitShotCamera();
     // Capture the layout as it is now, including anything moved / edited / deleted from this HUD.
     this.currentScene.baseRoom = JSON.parse(JSON.stringify(this.store.state));
     this.currentScene.updatedAt = new Date().toISOString();

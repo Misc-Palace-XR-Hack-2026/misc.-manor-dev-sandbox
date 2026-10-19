@@ -3,11 +3,21 @@ import { newFireplace } from './fixtures';
 
 export const SCENE_SCHEMA_VERSION = 1;
 
+/** Highest zoom in Scenes mode (5 was too shallow for close-ups of small objects). Scenes saved with less still load. */
+export const MAX_SCENE_ZOOM = 20;
+
 /** Camera state for a scene or shot: center-orbit around room */
 export interface CameraState {
   orbitAngle: number;    // Degrees around the room center (0-360). 45 = the normal isometric view.
   orbitHeight: number;   // Tilt: 0 = the normal isometric elevation, +1 = 30 degrees higher, -1 = 30 degrees lower.
-  zoom: number;          // Camera zoom (0.2-5). Independent of orbit and tilt.
+  zoom: number;          // Camera zoom (0.2 to MAX_SCENE_ZOOM). Independent of orbit and tilt.
+  /** Point the camera looks at (pan). Optional: older scenes omit it and use the room's default focus. */
+  target?: [number, number, number];
+}
+
+function validTarget(value: unknown): boolean {
+  return value === undefined
+    || (Array.isArray(value) && value.length === 3 && value.every((n) => typeof n === 'number' && Number.isFinite(n)));
 }
 
 /** Visual effects toggles */
@@ -62,7 +72,7 @@ function validCamera(value: unknown): value is CameraState {
   if (!value || typeof value !== 'object') return false;
   const c = value as Partial<CameraState>;
   return [c.orbitAngle, c.orbitHeight, c.zoom].every((n) => typeof n === 'number' && Number.isFinite(n))
-    && (c.zoom as number) > 0 && (c.zoom as number) <= 5;
+    && (c.zoom as number) > 0 && (c.zoom as number) <= MAX_SCENE_ZOOM && validTarget(c.target);
 }
 
 /** Returns an error message, or null when `value` is a valid shot list. */
@@ -107,12 +117,18 @@ export function shotCameraAt(shot: Shot, t: number): CameraState {
   const k = shot.easing === 'ease-in-out' ? p * p * (3 - 2 * p) : p;
   let dAngle = ((shot.end.orbitAngle - shot.start.orbitAngle + 540) % 360) - 180;
   if (dAngle === -180 && shot.end.orbitAngle > shot.start.orbitAngle) dAngle = 180;
-  return {
+  const a = shot.start.target;
+  const b = shot.end.target;
+  const camera: CameraState = {
     orbitAngle: (((shot.start.orbitAngle + dAngle * k) % 360) + 360) % 360,
     orbitHeight: shot.start.orbitHeight + (shot.end.orbitHeight - shot.start.orbitHeight) * k,
     // Zoom is perceived multiplicatively, so a push-in feels even when interpolated in log space.
     zoom: Math.exp(Math.log(shot.start.zoom) + (Math.log(shot.end.zoom) - Math.log(shot.start.zoom)) * k),
   };
+  // Pan only moves when both ends say where to look; otherwise the start's target holds.
+  if (a && b) camera.target = [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+  else if (a) camera.target = [...a];
+  return camera;
 }
 
 /** Default camera state: exactly the normal-mode isometric view */
@@ -148,7 +164,7 @@ export function validateScene(input: unknown): string | null {
     return 'Scene cameraState has invalid properties.';
   }
 
-  if (cam.zoom <= 0 || cam.zoom > 5) return 'Scene zoom must be between 0 and 5.';
+  if (cam.zoom <= 0 || cam.zoom > MAX_SCENE_ZOOM) return `Scene zoom must be between 0 and ${MAX_SCENE_ZOOM}.`;
 
   if (s.effects !== undefined && (typeof s.effects !== 'object' || s.effects === null)) {
     return 'Scene effects must be object.';

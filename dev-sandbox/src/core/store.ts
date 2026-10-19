@@ -228,13 +228,16 @@ export class Store {
   }
 
   // ---- commands (every one is undoable) ---------------------------------
-  addItem(input: { title: string; sourceRef: string; type?: ContentType | 'auto'; kind?: ObjectKind }): string {
+  /** `slotId` picks where the new object goes; if it is missing or taken, the first free slot is used. */
+  addItem(input: { title: string; sourceRef: string; type?: ContentType | 'auto'; kind?: ObjectKind; slotId?: string }): string {
     const ref = normalizeRef(input.sourceRef.trim());
     const type = !input.type || input.type === 'auto' ? guessType(ref) : input.type;
     let repId = '';
     this.commit((s) => {
       repId = this.createItem(s, input.title.trim() || ref || 'Untitled', ref, type, [], input.kind);
-      this.placeInFreeSlot(s, repId);
+      const wanted = input.slotId;
+      if (wanted && this.freeSlotsIn(s).includes(wanted)) s.placements.push({ representationId: repId, slotId: wanted });
+      else this.placeInFreeSlot(s, repId);
     });
     return repId;
   }
