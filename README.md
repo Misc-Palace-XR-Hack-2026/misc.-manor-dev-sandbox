@@ -22,3 +22,21 @@ npm run dev
 ## Share your room
 
 Click **Export room**, save the JSON as `dev-sandbox/rooms/<yourname>.json`, commit, and push. Teammates pick it from **Load repo room**.
+
+## Levi's room
+
+Choose **Levi's room** in the Rooms list for a warm maker studio based on Matt's
+loft implementation, with sunset lighting, terracotta terrazzo, rose stucco, and
+an amber horizon. The Sunset amber soundtrack stays selected when lighting changes;
+No music remains available in the editor. The 31 placed objects include a listening corner, project
+placeholders, a furnished maker loft, greenery, coffee corner, and a paper lantern.
+A second reading nook adds an armchair, side table, rug, fireplace, and sleeping
+cat; a telescope, retro console, drum, and boombox fill out the creative corners.
+Public bookmarks add CodingBat Java, Excalidraw, Photopea, WebGradients, and a
+Java OOP video to the book, sketch notebook, toolkit, frame, and TV. The four
+project placeholders remain ready for your own projects. Select an object and
+choose **Edit** to add your own content.
+
+The dedicated starter is `dev-sandbox/rooms/levi.json`. Existing local room saves
+still take priority. If you already have a Levi save, export it first, then use
+**Load repo room** and choose `levi` to load the new starter into your room.

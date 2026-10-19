@@ -1,0 +1,679 @@
+{
+  "schemaVersion": 1,
+  "id": "levi",
+  "owner": "Levi's room",
+  "layoutId": "cozy-loft",
+  "lighting": "sunset",
+  "soundtrack": {
+    "mode": "track",
+    "track": "sunset"
+  },
+  "surfaces": {
+    "floor": {
+      "preset": "terracotta-terrazzo"
+    },
+    "wall": {
+      "preset": "rose-stucco"
+    },
+    "background": {
+      "preset": "amber-horizon"
+    }
+  },
+  "contentItems": [
+    {
+      "id": "levi-listening-station",
+      "type": "note",
+      "title": "Listening station",
+      "sourceKind": "note",
+      "sourceRef": "Add an album or playlist to make this your listening station.",
+      "tags": [
+        "levi",
+        "music"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-mixtape-shelf",
+      "type": "note",
+      "title": "Mixtape shelf",
+      "sourceKind": "note",
+      "sourceRef": "Keep a favorite mix or an album to return to here.",
+      "tags": [
+        "levi",
+        "music"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-live-sessions",
+      "type": "note",
+      "title": "Live sessions",
+      "sourceKind": "note",
+      "sourceRef": "Save a concert, jam, or recording that inspires you.",
+      "tags": [
+        "levi",
+        "music"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-project-01",
+      "type": "note",
+      "title": "Project 01",
+      "sourceKind": "note",
+      "sourceRef": "Placeholder for your first project. Add its name, link, and notes when ready.",
+      "tags": [
+        "levi",
+        "projects"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-screening-corner",
+      "type": "link",
+      "title": "Java OOP",
+      "sourceKind": "url",
+      "sourceRef": "https://www.youtube.com/watch?v=TiccevwEVe8",
+      "tags": [
+        "levi",
+        "learning"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-time-to-make",
+      "type": "note",
+      "title": "Time to make",
+      "sourceKind": "note",
+      "sourceRef": "A reminder to leave a little time for making things.",
+      "tags": [
+        "levi",
+        "studio"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-project-02",
+      "type": "note",
+      "title": "Project 02",
+      "sourceKind": "note",
+      "sourceRef": "Placeholder for a build journal or work in progress.",
+      "tags": [
+        "levi",
+        "projects"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-coffee-break",
+      "type": "note",
+      "title": "Coffee break",
+      "sourceKind": "note",
+      "sourceRef": "A coffee corner for a pause between builds.",
+      "tags": [
+        "levi",
+        "play"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-reading-shelf",
+      "type": "link",
+      "title": "CodingBat Java",
+      "sourceKind": "url",
+      "sourceRef": "https://codingbat.com/java",
+      "tags": [
+        "levi",
+        "coding"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-sound-experiments",
+      "type": "link",
+      "title": "Excalidraw",
+      "sourceKind": "url",
+      "sourceRef": "https://excalidraw.com/",
+      "tags": [
+        "levi",
+        "design"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-project-03",
+      "type": "note",
+      "title": "Project 03",
+      "sourceKind": "note",
+      "sourceRef": "Placeholder for a prototype or maker project.",
+      "tags": [
+        "levi",
+        "maker"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-project-04",
+      "type": "note",
+      "title": "Project 04",
+      "sourceKind": "note",
+      "sourceRef": "Placeholder for a game, experiment, or interactive project.",
+      "tags": [
+        "levi",
+        "maker"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-studio-greenery",
+      "type": "note",
+      "title": "Studio greenery",
+      "sourceKind": "note",
+      "sourceRef": "A leafy corner to keep the studio feeling calm.",
+      "tags": [
+        "levi",
+        "inspiration"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-project-toolkit",
+      "type": "link",
+      "title": "Photopea",
+      "sourceKind": "url",
+      "sourceRef": "https://www.photopea.com/",
+      "tags": [
+        "levi",
+        "design"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-on-rotation",
+      "type": "link",
+      "title": "WebGradients",
+      "sourceKind": "url",
+      "sourceRef": "https://webgradients.com/",
+      "tags": [
+        "levi",
+        "design"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-headphone-sessions",
+      "type": "note",
+      "title": "Headphone sessions",
+      "sourceKind": "note",
+      "sourceRef": "Keep something for focused listening here.",
+      "tags": [
+        "levi",
+        "music"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-listening-chair",
+      "type": "note",
+      "title": "Listening chair",
+      "sourceKind": "note",
+      "sourceRef": "Take a seat in the sunset studio.",
+      "tags": [
+        "levi",
+        "cozy"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-studio-rug",
+      "type": "note",
+      "title": "Studio rug",
+      "sourceKind": "note",
+      "sourceRef": "A soft landing in front of the media wall.",
+      "tags": [
+        "levi",
+        "cozy"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-paper-lantern",
+      "type": "note",
+      "title": "Paper lantern",
+      "sourceKind": "note",
+      "sourceRef": "A soft glow beside the listening chair.",
+      "tags": [
+        "levi",
+        "cozy"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-loft-fern",
+      "type": "note",
+      "title": "Loft fern",
+      "sourceKind": "note",
+      "sourceRef": "A little greenery beside the maker loft.",
+      "tags": [
+        "levi",
+        "decor"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-loft-cushion",
+      "type": "note",
+      "title": "Loft floor cushion",
+      "sourceKind": "note",
+      "sourceRef": "A soft spot to pause with an idea.",
+      "tags": [
+        "levi",
+        "decor"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-stargazing",
+      "type": "note",
+      "title": "Stargazing telescope",
+      "sourceKind": "note",
+      "sourceRef": "A telescope for the next big idea.",
+      "tags": [
+        "levi",
+        "decor"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-studio-hearth",
+      "type": "note",
+      "title": "Studio hearth",
+      "sourceKind": "note",
+      "sourceRef": "A cozy fireplace beside the stairs.",
+      "tags": [
+        "levi",
+        "decor"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-reading-chair",
+      "type": "note",
+      "title": "Reading chair",
+      "sourceKind": "note",
+      "sourceRef": "A second seat for sketching and reading.",
+      "tags": [
+        "levi",
+        "decor"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-tea-table",
+      "type": "note",
+      "title": "Tea table",
+      "sourceKind": "note",
+      "sourceRef": "A side table for slow afternoons in the studio.",
+      "tags": [
+        "levi",
+        "decor"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-reading-rug",
+      "type": "note",
+      "title": "Reading corner rug",
+      "sourceKind": "note",
+      "sourceRef": "A soft rug in front of the reading chair.",
+      "tags": [
+        "levi",
+        "decor"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-studio-cat",
+      "type": "note",
+      "title": "Studio cat",
+      "sourceKind": "note",
+      "sourceRef": "A sleeping studio companion.",
+      "tags": [
+        "levi",
+        "decor"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-corner-fern",
+      "type": "note",
+      "title": "Corner fern",
+      "sourceKind": "note",
+      "sourceRef": "More greenery around the lounge.",
+      "tags": [
+        "levi",
+        "decor"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-rhythm-corner",
+      "type": "note",
+      "title": "Rhythm corner",
+      "sourceKind": "note",
+      "sourceRef": "A drum for a creative break.",
+      "tags": [
+        "levi",
+        "decor"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-studio-boombox",
+      "type": "note",
+      "title": "Studio boombox",
+      "sourceKind": "note",
+      "sourceRef": "A retro companion for the music corner.",
+      "tags": [
+        "levi",
+        "decor"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "id": "levi-play-station",
+      "type": "note",
+      "title": "Play station",
+      "sourceKind": "note",
+      "sourceRef": "A retro console for a break between builds.",
+      "tags": [
+        "levi",
+        "decor"
+      ],
+      "createdAt": "2026-10-19T00:00:00.000Z"
+    }
+  ],
+  "representations": [
+    {
+      "id": "levi-object-listening-station",
+      "contentItemId": "levi-listening-station",
+      "objectKind": "turntable"
+    },
+    {
+      "id": "levi-object-mixtape-shelf",
+      "contentItemId": "levi-mixtape-shelf",
+      "objectKind": "cassette"
+    },
+    {
+      "id": "levi-object-live-sessions",
+      "contentItemId": "levi-live-sessions",
+      "objectKind": "guitar"
+    },
+    {
+      "id": "levi-object-project-01",
+      "contentItemId": "levi-project-01",
+      "objectKind": "photoFrame"
+    },
+    {
+      "id": "levi-object-screening-corner",
+      "contentItemId": "levi-screening-corner",
+      "objectKind": "tv"
+    },
+    {
+      "id": "levi-object-time-to-make",
+      "contentItemId": "levi-time-to-make",
+      "objectKind": "clock"
+    },
+    {
+      "id": "levi-object-project-02",
+      "contentItemId": "levi-project-02",
+      "objectKind": "notebook"
+    },
+    {
+      "id": "levi-object-coffee-break",
+      "contentItemId": "levi-coffee-break",
+      "objectKind": "coffeeMaker"
+    },
+    {
+      "id": "levi-object-reading-shelf",
+      "contentItemId": "levi-reading-shelf",
+      "objectKind": "book"
+    },
+    {
+      "id": "levi-object-sound-experiments",
+      "contentItemId": "levi-sound-experiments",
+      "objectKind": "notebook"
+    },
+    {
+      "id": "levi-object-project-03",
+      "contentItemId": "levi-project-03",
+      "objectKind": "robot"
+    },
+    {
+      "id": "levi-object-project-04",
+      "contentItemId": "levi-project-04",
+      "objectKind": "cartridge"
+    },
+    {
+      "id": "levi-object-studio-greenery",
+      "contentItemId": "levi-studio-greenery",
+      "objectKind": "plant"
+    },
+    {
+      "id": "levi-object-project-toolkit",
+      "contentItemId": "levi-project-toolkit",
+      "objectKind": "box"
+    },
+    {
+      "id": "levi-object-on-rotation",
+      "contentItemId": "levi-on-rotation",
+      "objectKind": "photoFrame"
+    },
+    {
+      "id": "levi-object-headphone-sessions",
+      "contentItemId": "levi-headphone-sessions",
+      "objectKind": "headphones"
+    },
+    {
+      "id": "levi-object-listening-chair",
+      "contentItemId": "levi-listening-chair",
+      "objectKind": "armchair"
+    },
+    {
+      "id": "levi-object-studio-rug",
+      "contentItemId": "levi-studio-rug",
+      "objectKind": "rug"
+    },
+    {
+      "id": "levi-object-paper-lantern",
+      "contentItemId": "levi-paper-lantern",
+      "objectKind": "lantern"
+    },
+    {
+      "id": "levi-object-loft-fern",
+      "contentItemId": "levi-loft-fern",
+      "objectKind": "plant"
+    },
+    {
+      "id": "levi-object-loft-cushion",
+      "contentItemId": "levi-loft-cushion",
+      "objectKind": "cushion"
+    },
+    {
+      "id": "levi-object-stargazing",
+      "contentItemId": "levi-stargazing",
+      "objectKind": "telescope"
+    },
+    {
+      "id": "levi-object-studio-hearth",
+      "contentItemId": "levi-studio-hearth",
+      "objectKind": "fireplace"
+    },
+    {
+      "id": "levi-object-reading-chair",
+      "contentItemId": "levi-reading-chair",
+      "objectKind": "armchair"
+    },
+    {
+      "id": "levi-object-tea-table",
+      "contentItemId": "levi-tea-table",
+      "objectKind": "sideTable"
+    },
+    {
+      "id": "levi-object-reading-rug",
+      "contentItemId": "levi-reading-rug",
+      "objectKind": "rug"
+    },
+    {
+      "id": "levi-object-studio-cat",
+      "contentItemId": "levi-studio-cat",
+      "objectKind": "cat"
+    },
+    {
+      "id": "levi-object-corner-fern",
+      "contentItemId": "levi-corner-fern",
+      "objectKind": "plant"
+    },
+    {
+      "id": "levi-object-rhythm-corner",
+      "contentItemId": "levi-rhythm-corner",
+      "objectKind": "drum"
+    },
+    {
+      "id": "levi-object-studio-boombox",
+      "contentItemId": "levi-studio-boombox",
+      "objectKind": "boombox"
+    },
+    {
+      "id": "levi-object-play-station",
+      "contentItemId": "levi-play-station",
+      "objectKind": "console"
+    }
+  ],
+  "placements": [
+    {
+      "representationId": "levi-object-listening-station",
+      "slotId": "floor-front-loft-1"
+    },
+    {
+      "representationId": "levi-object-mixtape-shelf",
+      "slotId": "block-1"
+    },
+    {
+      "representationId": "levi-object-live-sessions",
+      "slotId": "floor-6"
+    },
+    {
+      "representationId": "levi-object-project-01",
+      "slotId": "shelf-1"
+    },
+    {
+      "representationId": "levi-object-screening-corner",
+      "slotId": "floor-1"
+    },
+    {
+      "representationId": "levi-object-time-to-make",
+      "slotId": "shelf-3"
+    },
+    {
+      "representationId": "levi-object-project-02",
+      "slotId": "bench-1"
+    },
+    {
+      "representationId": "levi-object-coffee-break",
+      "slotId": "floor-old-7"
+    },
+    {
+      "representationId": "levi-object-reading-shelf",
+      "slotId": "bench-2"
+    },
+    {
+      "representationId": "levi-object-sound-experiments",
+      "slotId": "floor-9"
+    },
+    {
+      "representationId": "levi-object-project-03",
+      "slotId": "loft-4"
+    },
+    {
+      "representationId": "levi-object-project-04",
+      "slotId": "shelf-2"
+    },
+    {
+      "representationId": "levi-object-studio-greenery",
+      "slotId": "floor-8"
+    },
+    {
+      "representationId": "levi-object-project-toolkit",
+      "slotId": "floor-front-loft-2"
+    },
+    {
+      "representationId": "levi-object-on-rotation",
+      "slotId": "bench-3"
+    },
+    {
+      "representationId": "levi-object-headphone-sessions",
+      "slotId": "block-2"
+    },
+    {
+      "representationId": "levi-object-listening-chair",
+      "slotId": "floor-3"
+    },
+    {
+      "representationId": "levi-object-studio-rug",
+      "slotId": "floor-7"
+    },
+    {
+      "representationId": "levi-object-paper-lantern",
+      "slotId": "floor-2"
+    },
+    {
+      "representationId": "levi-object-loft-fern",
+      "slotId": "loft-1"
+    },
+    {
+      "representationId": "levi-object-loft-cushion",
+      "slotId": "loft-2"
+    },
+    {
+      "representationId": "levi-object-stargazing",
+      "slotId": "loft-3"
+    },
+    {
+      "representationId": "levi-object-studio-hearth",
+      "slotId": "floor-4"
+    },
+    {
+      "representationId": "levi-object-reading-chair",
+      "slotId": "floor-old-9"
+    },
+    {
+      "representationId": "levi-object-tea-table",
+      "slotId": "floor-old-10"
+    },
+    {
+      "representationId": "levi-object-reading-rug",
+      "slotId": "floor-5"
+    },
+    {
+      "representationId": "levi-object-studio-cat",
+      "slotId": "floor-old-12"
+    },
+    {
+      "representationId": "levi-object-corner-fern",
+      "slotId": "floor-10"
+    },
+    {
+      "representationId": "levi-object-rhythm-corner",
+      "slotId": "floor-12"
+    },
+    {
+      "representationId": "levi-object-studio-boombox",
+      "slotId": "floor-15"
+    },
+    {
+      "representationId": "levi-object-play-station",
+      "slotId": "floor-old-8"
+    }
+  ]
+}

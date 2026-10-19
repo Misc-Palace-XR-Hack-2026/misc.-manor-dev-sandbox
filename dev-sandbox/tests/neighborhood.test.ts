@@ -19,6 +19,7 @@ const EXPECTED = [
   'creative-atelier',
   'vinyl-lounge',
   'matt',
+  'levi',
 ];
 
 test('neighborhood example rooms are valid JSON configs with themed furnishings', () => {
