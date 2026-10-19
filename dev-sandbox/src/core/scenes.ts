@@ -15,6 +15,33 @@ export interface SceneEffects {
   vignette?: boolean;
 }
 
+/**
+ * How a shot ends up in the trailer:
+ *  - sandbox:   screen-captured from this app as is
+ *  - composite: a 3D plate captured here, with live footage (green screen) added over it in post
+ *  - vr:        real headset footage; here it only records the seated eye position and facing
+ */
+export type ShotType = 'sandbox' | 'composite' | 'vr';
+export const SHOT_TYPES: readonly ShotType[] = ['sandbox', 'composite', 'vr'];
+
+export type ShotEasing = 'linear' | 'ease-in-out';
+export const SHOT_EASINGS: readonly ShotEasing[] = ['linear', 'ease-in-out'];
+
+/**
+ * One shot of the trailer inside a scene. The camera either holds still (end = null) or moves from `start` to `end`
+ * over `durationSec`, so a push-in, pull-out or orbit is repeatable instead of being dragged by hand.
+ */
+export interface Shot {
+  id: string;            // storyboard id, unique within the scene: "1", "7a"
+  title: string;
+  type: ShotType;
+  durationSec: number;
+  start: CameraState;
+  end: CameraState | null;
+  easing: ShotEasing;
+  notes: string;
+}
+
 /** A saved scene composition: room layout + camera framing */
 export interface Scene {
   schemaVersion: number;
@@ -25,8 +52,67 @@ export interface Scene {
   cameraState: CameraState;
   effects: SceneEffects;
   objectRotations?: Record<string, number>; // repId -> rotation in radians
+  /** Optional so scenes saved before shots existed still load. */
+  shots?: Shot[];
   createdAt: string;
   updatedAt: string;
+}
+
+function validCamera(value: unknown): value is CameraState {
+  if (!value || typeof value !== 'object') return false;
+  const c = value as Partial<CameraState>;
+  return [c.orbitAngle, c.orbitHeight, c.zoom].every((n) => typeof n === 'number' && Number.isFinite(n))
+    && (c.zoom as number) > 0 && (c.zoom as number) <= 5;
+}
+
+/** Returns an error message, or null when `value` is a valid shot list. */
+export function validateShots(value: unknown): string | null {
+  if (!Array.isArray(value)) return 'Scene shots must be an array.';
+  const ids = new Set<string>();
+  for (const raw of value as Partial<Shot>[]) {
+    if (!raw || typeof raw !== 'object') return 'Shot is not an object.';
+    if (typeof raw.id !== 'string' || !raw.id.trim() || ids.has(raw.id)) return 'Shot missing id, or id is duplicated.';
+    ids.add(raw.id);
+    if (typeof raw.title !== 'string' || typeof raw.notes !== 'string') return `Shot ${raw.id} has invalid text fields.`;
+    if (!SHOT_TYPES.includes(raw.type as ShotType)) return `Shot ${raw.id} has an invalid type.`;
+    if (!SHOT_EASINGS.includes(raw.easing as ShotEasing)) return `Shot ${raw.id} has an invalid easing.`;
+    if (typeof raw.durationSec !== 'number' || !Number.isFinite(raw.durationSec) || raw.durationSec <= 0) {
+      return `Shot ${raw.id} has an invalid duration.`;
+    }
+    if (!validCamera(raw.start)) return `Shot ${raw.id} has an invalid start camera.`;
+    if (raw.end !== null && !validCamera(raw.end)) return `Shot ${raw.id} has an invalid end camera.`;
+  }
+  return null;
+}
+
+/** Build a shot that holds the given camera still. */
+export function newShot(id: string, title: string, camera: CameraState, partial: Partial<Shot> = {}): Shot {
+  return {
+    id,
+    title,
+    type: 'sandbox',
+    durationSec: 5,
+    start: { ...camera },
+    end: null,
+    easing: 'ease-in-out',
+    notes: '',
+    ...partial,
+  };
+}
+
+/** Camera at progress `t` (0-1) of a shot. Orbit takes the short way round so 350 -> 10 doesn't spin through 180. */
+export function shotCameraAt(shot: Shot, t: number): CameraState {
+  if (!shot.end) return { ...shot.start };
+  const p = Math.min(1, Math.max(0, t));
+  const k = shot.easing === 'ease-in-out' ? p * p * (3 - 2 * p) : p;
+  let dAngle = ((shot.end.orbitAngle - shot.start.orbitAngle + 540) % 360) - 180;
+  if (dAngle === -180 && shot.end.orbitAngle > shot.start.orbitAngle) dAngle = 180;
+  return {
+    orbitAngle: (((shot.start.orbitAngle + dAngle * k) % 360) + 360) % 360,
+    orbitHeight: shot.start.orbitHeight + (shot.end.orbitHeight - shot.start.orbitHeight) * k,
+    // Zoom is perceived multiplicatively, so a push-in feels even when interpolated in log space.
+    zoom: Math.exp(Math.log(shot.start.zoom) + (Math.log(shot.end.zoom) - Math.log(shot.start.zoom)) * k),
+  };
 }
 
 /** Default camera state: exactly the normal-mode isometric view */
@@ -66,6 +152,11 @@ export function validateScene(input: unknown): string | null {
 
   if (s.effects !== undefined && (typeof s.effects !== 'object' || s.effects === null)) {
     return 'Scene effects must be object.';
+  }
+
+  if (s.shots !== undefined) {
+    const shotsError = validateShots(s.shots);
+    if (shotsError) return shotsError;
   }
 
   if (typeof s.createdAt !== 'string' || typeof s.updatedAt !== 'string') {

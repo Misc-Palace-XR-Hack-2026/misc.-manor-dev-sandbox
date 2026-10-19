@@ -14,6 +14,7 @@ import { PreviewCardView } from './preview-card';
 import { mediaArt, type MediaArt } from '../core/media-art';
 import { canEnterVr, enterReason, type NeighborhoodRoom } from '../xr/interaction';
 import { XrSession } from '../xr/session';
+import { buildSeatedGuide } from './guides';
 
 // Thin 3D adapter: draws store.state and sends clicks back as store commands. Holds no truth of its own.
 // Replaceable later (IWSDK, Babylon) as long as the store contract stays the same.
@@ -37,6 +38,37 @@ interface Entry {
 const ISO_ELEVATION = Math.atan2(14, Math.hypot(14, 14));
 const HEIGHT_UNIT = Math.PI / 6;
 
+/**
+ * What a captured frame contains. "no-chair" renders the room without the armchair, a clean plate for compositing a
+ * live person into the seat. Guides, slot markers and selection glow are never part of a capture.
+ */
+export type CaptureLayer = 'full' | 'no-chair';
+
+/**
+ * Vignette strength 0..1 as black opacity at the middle and at the corners of the frame (the gradient is clear out to
+ * 55% of the way to the corner). Up to 0.8 only the edges darken, reaching solid black at the corners. From 0.8 to 1 the
+ * middle darkens too, so 1 is a fully black frame: the starting point for a fade up from black.
+ */
+export function vignetteAlphas(strength: number): { center: number; edge: number } {
+  const s = Math.min(1, Math.max(0, strength));
+  return { center: Math.max(0, (s - 0.8) / 0.2), edge: Math.min(1, s / 0.8) };
+}
+
+export interface FrameCaptureOptions {
+  /** Output width in pixels; height is width * 9 / 16. */
+  width: number;
+  /** 0 = none. Darkens the edges of the frame, baked into the image. */
+  vignette: number;
+  layer: CaptureLayer;
+}
+
+/** Pose of the first armchair in the room (the seat the guide figure sits in), in world units. */
+export interface ChairPose {
+  pos: [number, number, number];
+  /** Rotation about Y in radians. The chair faces (sin r, cos r) on the floor plane. */
+  rotationY: number;
+}
+
 export class RoomView {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -46,6 +78,8 @@ export class RoomView {
   private markerGroup = new THREE.Group();
   private fixturesGroup = new THREE.Group(); // room add-ons (fireplace): built from store.state.fixtures, not slots
   private fixtureRigs = new Map<string, { kind: string; rig: FireplaceRig }>();
+  private guidesGroup = new THREE.Group(); // scenes-mode composition aids (seated person); hidden in every capture
+  private guidesOn = false;
   private objects = new Map<string, Entry>();
   private rotations = new Map<string, number>(); // scenes mode: orientation per representation, survives object rebuilds
   private markers = new Map<string, THREE.Mesh>();
@@ -111,7 +145,8 @@ export class RoomView {
     this.controls.dampingFactor = 0.15; // Higher damping = stops faster after drag
     this.controls.update();
 
-    this.scene.add(this.roomGroup, this.fixturesGroup, this.objectsGroup, this.markerGroup);
+    this.scene.add(this.roomGroup, this.fixturesGroup, this.objectsGroup, this.markerGroup, this.guidesGroup);
+    this.guidesGroup.visible = false;
     this.addLights();
 
     const el = this.renderer.domElement;
@@ -168,6 +203,122 @@ export class RoomView {
       this.markerGroup.visible = visible;
     }
     return new Promise((resolve, reject) => copy.toBlob(blob => blob ? resolve(blob) : reject(new Error('PNG encoding failed.')), 'image/png'));
+  }
+
+  // ---- scenes: guides and frame capture -----------------------------------
+
+  private chairEntry(): Entry | undefined {
+    for (const e of this.objects.values()) if (e.kind === 'armchair') return e;
+    return undefined;
+  }
+
+  /** Show or hide the translucent seated person. Preview only: captures always hide it. */
+  public setGuidesVisible(on: boolean): void {
+    this.guidesOn = on;
+    if (on && this.guidesGroup.children.length === 0) this.guidesGroup.add(buildSeatedGuide());
+    this.updateGuide();
+  }
+
+  /** The guide sits in the armchair, so it copies the chair's pose every frame. No chair in the room, no guide. */
+  private updateGuide(): void {
+    const chair = this.chairEntry();
+    const show = this.guidesOn && Boolean(chair);
+    this.guidesGroup.visible = show;
+    if (!show || !chair) return;
+    this.guidesGroup.position.copy(chair.group.position);
+    this.guidesGroup.rotation.y = chair.group.rotation.y;
+    this.guidesGroup.scale.copy(chair.group.scale);
+  }
+
+  public getChairPose(): ChairPose | null {
+    const chair = this.chairEntry();
+    if (!chair) return null;
+    return { pos: [chair.target.x, chair.target.y, chair.target.z], rotationY: chair.customRotationY ?? YAW };
+  }
+
+  /** The point the camera orbits and looks at, in world units (it moves when the view is panned). */
+  public getCameraTarget(): [number, number, number] {
+    const t = this.controls.target;
+    return [t.x, t.y, t.z];
+  }
+
+  /** The 16:9 frame that a capture records, in container pixels: the largest 16:9 box centered in the view. */
+  public frameRect(): { x: number; y: number; width: number; height: number } {
+    const cw = this.container.clientWidth || 1;
+    const ch = this.container.clientHeight || 1;
+    const width = Math.min(cw, (ch * 16) / 9);
+    const height = (width * 9) / 16;
+    return { x: (cw - width) / 2, y: (ch - height) / 2, width, height };
+  }
+
+  /** Sandbox world units visible top to bottom inside the 16:9 frame at zoom 1 (divide by the zoom for the real value). */
+  public frameWorldHeight(): number {
+    return (this.viewHeight * this.frameRect().height) / (this.container.clientHeight || 1);
+  }
+
+  /**
+   * Render exactly what is inside the on-screen 16:9 frame, at a fixed resolution, as a PNG. The camera is not moved:
+   * the frustum is cropped to the frame, so the picture matches the preview. Guides, slot markers and selection glow
+   * are left out, and the vignette (if any) is baked in the same way the preview overlay draws it.
+   */
+  public captureFrame(options: FrameCaptureOptions): Promise<Blob> {
+    const width = Math.round(options.width);
+    const height = Math.round((width * 9) / 16);
+    const visibleHeight = this.frameWorldHeight();
+
+    const chair = this.chairEntry();
+    const glowing = [...this.objects.values()].filter((e) => e.glowing);
+    const hidden = {
+      markers: this.markerGroup.visible,
+      guides: this.guidesGroup.visible,
+      chair: chair?.group.visible ?? true,
+    };
+    const pixelRatio = this.renderer.getPixelRatio();
+    const copy = document.createElement('canvas');
+    try {
+      this.markerGroup.visible = false;
+      this.guidesGroup.visible = false;
+      if (chair && options.layer === 'no-chair') chair.group.visible = false;
+      for (const e of glowing) this.setGlow(e, false);
+
+      this.renderer.setPixelRatio(1);
+      this.renderer.setSize(width, height, false);
+      const cam = this.camera;
+      cam.left = (-visibleHeight * 16) / 18;
+      cam.right = (visibleHeight * 16) / 18;
+      cam.top = visibleHeight / 2;
+      cam.bottom = -visibleHeight / 2;
+      cam.updateProjectionMatrix();
+      this.renderer.render(this.scene, cam);
+
+      copy.width = width;
+      copy.height = height;
+      const context = copy.getContext('2d');
+      if (!context) throw new Error('PNG capture is unavailable.');
+      context.drawImage(this.renderer.domElement, 0, 0);
+      if (options.vignette > 0) {
+        context.save();
+        context.translate(width / 2, height / 2);
+        context.scale((width / 2) * Math.SQRT2, (height / 2) * Math.SQRT2);
+        const gradient = context.createRadialGradient(0, 0, 0, 0, 0, 1);
+        const { center, edge } = vignetteAlphas(options.vignette);
+        gradient.addColorStop(0, `rgba(0,0,0,${center})`);
+        gradient.addColorStop(0.55, `rgba(0,0,0,${center})`);
+        gradient.addColorStop(1, `rgba(0,0,0,${edge})`);
+        context.fillStyle = gradient;
+        context.fillRect(-2, -2, 4, 4);
+        context.restore();
+      }
+    } finally {
+      this.markerGroup.visible = hidden.markers;
+      this.guidesGroup.visible = hidden.guides;
+      if (chair) chair.group.visible = hidden.chair;
+      for (const e of glowing) this.setGlow(e, true);
+      this.renderer.setPixelRatio(pixelRatio);
+      this.resize(); // back to the on-screen size and frustum
+    }
+    return new Promise((resolve, reject) =>
+      copy.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('PNG encoding failed.'))), 'image/png'));
   }
 
   // ---- scene setup ------------------------------------------------------
@@ -384,6 +535,7 @@ export class RoomView {
     // Only one of the two views is on screen at a time; the other one doesn't need to animate or render.
     if (this.scenesMode !== scenesActive) return;
     for (const { rig } of this.fixtureRigs.values()) rig.update(t);
+    if (this.scenesMode) this.updateGuide();
     const selected = this.store.selectedId;
     for (const [id, e] of this.objects) {
       if (this.scenesMode) {

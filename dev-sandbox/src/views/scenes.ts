@@ -1,12 +1,16 @@
 import type { Store } from '../core/store';
 import { listSceneIds, loadScene, createScene, deleteScene, saveScene, setActiveSceneId } from '../core/scene-store';
-import type { Scene } from '../core/scenes';
+import {
+  SHOT_EASINGS, SHOT_TYPES, newShot,
+  type CameraState, type Scene, type Shot, type ShotEasing, type ShotType,
+} from '../core/scenes';
 import { RoomView } from './room';
 import type { RepoRoom } from './menu';
 import { openContentEditor } from './content-editor';
 import { buildKindInventory } from './kind-picker';
 import { OBJECT_LABELS } from '../core/types';
 import { FIREPLACE_X_RANGE, cloneFixtures, newFireplace, type Fixture } from '../core/fixtures';
+import { CapturePanel } from './capture';
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -89,6 +93,22 @@ export class ScenesView {
   });
   private fireplaceValue = el('span', { textContent: '' });
   private lastFireplace: Fixture = newFireplace(); // remembered so toggling off/on keeps its position
+
+  // Shots: the trailer's shots inside the current scene. The list is rebuilt on selection / list changes only,
+  // never while typing, so text fields keep focus.
+  private shotsPanel = el('div', { class: 'scenes-shots' });
+  private activeShotId: string | null = null;
+
+  // Capture: 16:9 frame, vignette, guide figure, clean view, and the capture -> review -> save flow.
+  private capture = new CapturePanel({
+    room: () => this.roomView,
+    scene: () => this.currentScene,
+    shot: () => this.activeShot(),
+    camera: () => this.currentCamera(),
+    fireplace: () => this.currentFireplace(),
+    clearSelection: () => this.store.select(null),
+    onSaved: (info) => this.onShotSaved(info),
+  });
 
   // Object rotation (shown inside the object panel)
   private rotationSlider = el('input', { type: 'range', min: '0', max: '360', step: '1', value: '0', class: 'scenes-rotation-slider' });
@@ -217,6 +237,10 @@ export class ScenesView {
       fireplaceControls,
       el('h4', { textContent: 'Camera' }),
       cameraControls,
+      el('h4', { textContent: 'Shots' }),
+      this.shotsPanel,
+      el('h4', { textContent: 'Capture' }),
+      this.capture.element,
       el('h4', { textContent: 'Scene' }),
       this.sceneDesc,
       this.saveBtn,
@@ -284,6 +308,8 @@ export class ScenesView {
     if (!this.roomView) {
       this.roomContainer.innerHTML = '';
       this.roomView = new RoomView(this.roomContainer, this.store, [], { scenes: true });
+      this.roomContainer.append(this.capture.overlay);
+      this.capture.roomReady();
     }
 
     this.roomView.clearObjectRotations();
@@ -298,8 +324,149 @@ export class ScenesView {
     this.startCameraMonitor();
     this.refreshScenesList();
     this.updateObjectPanel();
+    this.activeShotId = scene.shots?.[0]?.id ?? null;
+    this.refreshShotsPanel();
 
     setActiveSceneId(sceneId);
+  }
+
+  // ---- shots --------------------------------------------------------------
+
+  private activeShot(): Shot | undefined {
+    return this.currentScene?.shots?.find((s) => s.id === this.activeShotId);
+  }
+
+  private static camText(c: CameraState): string {
+    return `${Math.round(c.orbitAngle) % 360}° · tilt ${c.orbitHeight.toFixed(2)} · ${c.zoom.toFixed(2)}x`;
+  }
+
+  /** Point the real camera at a saved camera state; the sliders follow on their own. */
+  private viewCamera(c: CameraState): void {
+    if (!this.roomView) return;
+    this.roomView.setCameraState(c.orbitAngle, c.orbitHeight, c.zoom);
+    this.syncCameraUi();
+  }
+
+  private currentCamera(): CameraState {
+    return this.roomView ? this.roomView.getCameraState() : { orbitAngle: 45, orbitHeight: 0, zoom: 1 };
+  }
+
+  private refreshShotsPanel(): void {
+    this.shotsPanel.replaceChildren();
+    const scene = this.currentScene;
+    if (!scene) {
+      this.shotsPanel.append(el('div', { class: 'scenes-object-hint', textContent: 'Select a scene to add shots.' }));
+      return;
+    }
+    const shots = (scene.shots ??= []);
+
+    const btn = (label: string, onClick: () => void, cls = '') => {
+      const b = el('button', { type: 'button', textContent: label, class: cls });
+      b.addEventListener('click', onClick);
+      return b;
+    };
+
+    this.shotsPanel.append(el('div', { class: 'scenes-object-actions' },
+      btn('+ Shot', () => {
+        const id = prompt('Shot id (matches the storyboard, e.g. 2 or 7a):', '');
+        if (!id?.trim()) return;
+        if (shots.some((s) => s.id === id.trim())) { alert(`Shot ${id.trim()} already exists in this scene.`); return; }
+        shots.push(newShot(id.trim(), `Shot ${id.trim()}`, this.currentCamera()));
+        this.activeShotId = id.trim();
+        this.refreshShotsPanel();
+      }),
+    ));
+
+    if (shots.length === 0) {
+      this.shotsPanel.append(el('div', { class: 'scenes-object-hint', textContent: 'No shots in this scene yet. A scene works fine without any.' }));
+      return;
+    }
+
+    const list = el('div', { class: 'scenes-shot-list' });
+    for (const shot of shots) {
+      const row = el('div', { class: 'scenes-shot-item' },
+        el('span', { class: 'scenes-shot-id', textContent: shot.id }),
+        el('span', { class: 'scenes-shot-title', textContent: shot.title }),
+        el('span', { class: `scenes-shot-type ${shot.type}`, textContent: shot.type }),
+      );
+      row.classList.toggle('active', shot.id === this.activeShotId);
+      row.addEventListener('click', () => {
+        this.activeShotId = shot.id;
+        this.viewCamera(shot.start);
+        this.refreshShotsPanel();
+      });
+      list.append(row);
+    }
+    this.shotsPanel.append(list);
+
+    const shot = this.activeShot();
+    if (shot) this.shotsPanel.append(this.buildShotEditor(shot, btn));
+  }
+
+  private buildShotEditor(shot: Shot, btn: (label: string, onClick: () => void, cls?: string) => HTMLButtonElement): HTMLElement {
+    const field = (label: string, input: HTMLElement) =>
+      el('div', { class: 'scenes-slider-row' }, el('span', { class: 'scenes-slider-label', textContent: label }), input);
+
+    const title = el('input', { type: 'text', value: shot.title, class: 'scenes-shot-input' });
+    title.addEventListener('change', () => {
+      shot.title = title.value.trim() || shot.title;
+      this.refreshShotsPanel();
+    });
+
+    const type = el('select', { class: 'scenes-shot-input' });
+    for (const t of SHOT_TYPES) type.append(el('option', { value: t, textContent: t, selected: t === shot.type }));
+    type.addEventListener('change', () => { shot.type = type.value as ShotType; this.refreshShotsPanel(); });
+
+    const duration = el('input', { type: 'number', min: '0.5', max: '120', step: '0.5', value: String(shot.durationSec), class: 'scenes-shot-input' });
+    duration.addEventListener('change', () => {
+      const n = parseFloat(duration.value);
+      if (Number.isFinite(n) && n > 0) shot.durationSec = n;
+      duration.value = String(shot.durationSec);
+    });
+
+    const easing = el('select', { class: 'scenes-shot-input' });
+    for (const e of SHOT_EASINGS) easing.append(el('option', { value: e, textContent: e, selected: e === shot.easing }));
+    easing.addEventListener('change', () => { shot.easing = easing.value as ShotEasing; });
+
+    const notes = el('textarea', { class: 'scenes-description', placeholder: 'Shot notes...', value: shot.notes });
+    notes.addEventListener('change', () => { shot.notes = notes.value; });
+
+    const startText = el('div', { class: 'scenes-shot-cam', textContent: `Start: ${ScenesView.camText(shot.start)}` });
+    const endText = el('div', { class: 'scenes-shot-cam', textContent: shot.end ? `End: ${ScenesView.camText(shot.end)}` : 'End: none (camera holds still)' });
+
+    const camActions = el('div', { class: 'scenes-object-actions' },
+      btn('Set start', () => { shot.start = { ...this.currentCamera() }; this.refreshShotsPanel(); }),
+      btn('Set end', () => { shot.end = { ...this.currentCamera() }; this.refreshShotsPanel(); }),
+      btn('View start', () => this.viewCamera(shot.start)),
+    );
+    if (shot.end) {
+      const end = shot.end;
+      camActions.append(
+        btn('View end', () => this.viewCamera(end)),
+        btn('Clear end', () => { shot.end = null; this.refreshShotsPanel(); }),
+      );
+    }
+
+    return el('div', { class: 'scenes-shot-editor' },
+      field('Title', title),
+      field('Type', type),
+      field('Seconds', duration),
+      field('Easing', easing),
+      startText,
+      endText,
+      camActions,
+      notes,
+      el('div', { class: 'scenes-object-actions' },
+        btn('Delete shot', () => {
+          const scene = this.currentScene;
+          if (!scene?.shots || !confirm(`Delete shot ${shot.id}?`)) return;
+          scene.shots = scene.shots.filter((s) => s.id !== shot.id);
+          this.activeShotId = scene.shots[0]?.id ?? null;
+          this.refreshShotsPanel();
+        }, 'scenes-delete-btn'),
+      ),
+      el('div', { class: 'scenes-object-hint', textContent: 'Shots are stored with the scene: press Save Scene to keep changes.' }),
+    );
   }
 
   /**
@@ -327,7 +494,10 @@ export class ScenesView {
     if (this.cameraMonitor !== null) return;
     const monitor = () => {
       // Only the visible scenes view needs to track the camera.
-      if (document.body.classList.contains('scenes-active')) this.syncCameraUi();
+      if (document.body.classList.contains('scenes-active')) {
+        this.syncCameraUi();
+        this.capture.updateOverlay();
+      }
       this.cameraMonitor = requestAnimationFrame(monitor);
     };
     this.cameraMonitor = requestAnimationFrame(monitor);
@@ -409,12 +579,38 @@ export class ScenesView {
     deleteScene(sceneId);
     this.scenes.delete(sceneId);
     this.currentScene = null;
+    this.activeShotId = null;
     this.refreshScenesList();
+    this.refreshShotsPanel();
     this.sceneName.textContent = 'No scene selected';
     this.updateObjectPanel();
   }
 
+  /**
+   * A shot was captured and saved into the repo: make sure the scene has a matching shot (this is how the first save
+   * becomes shot 01), point its start at the captured camera, and keep the scene.
+   */
+  private onShotSaved(info: { shotId: string; title: string; camera: CameraState }): void {
+    const scene = this.currentScene;
+    if (!scene) return;
+    const shots = (scene.shots ??= []);
+    let shot = shots.find((s) => s.id === info.shotId);
+    if (!shot) {
+      shot = newShot(info.shotId, info.title, info.camera, { type: 'composite' });
+      shots.push(shot);
+    } else {
+      shot.start = { ...info.camera };
+    }
+    this.activeShotId = shot.id;
+    this.refreshShotsPanel();
+    // Persist quietly (Save Scene alerts). Same fields saveCurrentScene writes.
+    scene.baseRoom = JSON.parse(JSON.stringify(this.store.state));
+    scene.updatedAt = new Date().toISOString();
+    try { saveScene(scene); } catch { /* the shot files are already in the repo; the scene can be saved by hand */ }
+  }
+
   private closeScenes(): void {
+    this.capture.exitClean();
     this.store.select(null); // also puts back anything that was picked up
     const toggleScenes = (window as unknown as { toggleScenes?: (active: boolean) => void }).toggleScenes;
     toggleScenes?.(false);
