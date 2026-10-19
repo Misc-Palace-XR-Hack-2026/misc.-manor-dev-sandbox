@@ -7,7 +7,10 @@ import type { RoomLayout } from '../core/layout';
 import { buildObject } from './objects';
 import { applyLampLightBudget } from './cozy-objects';
 import { disposeGroup } from './resources';
-import { buildFireplace, type FireplaceRig } from './fireplace';
+import { buildFireplace } from './fireplace';
+import { buildAvatar, buildLoungeChair, type FixtureRig } from './lounge-fixtures';
+import { buildNeighborhood } from './neighborhood';
+import type { Fixture } from '../core/fixtures';
 import { LIGHTING_PRESETS } from '../core/appearance';
 import { buildPreview, type Preview } from '../core/preview';
 import { PreviewCardView } from './preview-card';
@@ -16,6 +19,7 @@ import { canEnterVr, enterReason, type NeighborhoodRoom } from '../xr/interactio
 import { XrSession } from '../xr/session';
 import { buildSeatedGuide } from './guides';
 import { MAX_SCENE_ZOOM } from '../core/scenes';
+import { sampleFlight, type Flight } from '../core/motion';
 
 // Thin 3D adapter: draws store.state and sends clicks back as store commands. Holds no truth of its own.
 // Replaceable later (IWSDK, Babylon) as long as the store contract stays the same.
@@ -31,6 +35,7 @@ interface Entry {
   selectedState?: { originalPos: THREE.Vector3; targetRotation: number };
   customRotationY?: number; // Custom rotation in radians (set via scenes mode)
   glowing?: boolean; // Scenes mode: selection shows as an emissive glow instead of movement
+  motionDriven?: boolean; // Scenes mode: a flight is posing this object (restored to the plain pin when it ends)
   originalMaterials?: Map<THREE.Mesh, THREE.Material | THREE.Material[]>;
 }
 
@@ -61,6 +66,8 @@ export interface FrameCaptureOptions {
   /** 0 = none. Darkens the edges of the frame, baked into the image. */
   vignette: number;
   layer: CaptureLayer;
+  /** Optional burned-in caption, drawn centered near the top of the frame (for example "CONCEPT SEQUENCE"). */
+  label?: string;
 }
 
 /** Pose of the first armchair in the room (the seat the guide figure sits in), in world units. */
@@ -78,10 +85,13 @@ export class RoomView {
   private objectsGroup = new THREE.Group();
   private markerGroup = new THREE.Group();
   private fixturesGroup = new THREE.Group(); // room add-ons (fireplace): built from store.state.fixtures, not slots
-  private fixtureRigs = new Map<string, { kind: string; rig: FireplaceRig }>();
+  private fixtureRigs = new Map<string, { kind: string; rig: FixtureRig }>();
   private guidesGroup = new THREE.Group(); // scenes-mode composition aids (seated person); hidden in every capture
   private guidesOn = false;
   private objects = new Map<string, Entry>();
+  private motionFlights = new Map<string, Flight>(); // scenes mode: choreography for the shot being previewed or recorded
+  private motionClock: number | null = null; // seconds into the shot; null = no choreography, objects sit on their slots
+  private fireClock: number | null = null; // fixed fireplace clock (seconds) so recorded frames are repeatable
   private rotations = new Map<string, number>(); // scenes mode: orientation per representation, survives object rebuilds
   private markers = new Map<string, THREE.Mesh>();
   private raycaster = new THREE.Raycaster();
@@ -277,6 +287,10 @@ export class RoomView {
     const pixelRatio = this.renderer.getPixelRatio();
     const copy = document.createElement('canvas');
     try {
+      // The animation loop may not have run since the clock or camera changed, so pose everything now.
+      if (this.scenesMode) for (const [id, e] of this.objects) this.pinSceneObject(id, e);
+      if (this.fireClock !== null) for (const { rig } of this.fixtureRigs.values()) rig.update(this.fireClock);
+      this.controls.update();
       this.markerGroup.visible = false;
       this.guidesGroup.visible = false;
       if (chair && options.layer === 'no-chair') chair.group.visible = false;
@@ -308,6 +322,18 @@ export class RoomView {
         gradient.addColorStop(1, `rgba(0,0,0,${edge})`);
         context.fillStyle = gradient;
         context.fillRect(-2, -2, 4, 4);
+        context.restore();
+      }
+      if (options.label) {
+        const size = Math.round(height * 0.035);
+        context.save();
+        context.font = `600 ${size}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillStyle = 'rgba(255,255,255,0.92)';
+        context.shadowColor = 'rgba(0,0,0,0.55)';
+        context.shadowBlur = size * 0.35;
+        context.fillText(options.label.toUpperCase(), width / 2, height * 0.075);
         context.restore();
       }
     } finally {
@@ -501,7 +527,16 @@ export class RoomView {
     }
   }
 
-  /** Build, move and remove fixtures (the fireplace) to match store.state.fixtures. Cheap enough to run on every change. */
+  private buildFixtureRig(kind: Fixture['kind']): FixtureRig {
+    switch (kind) {
+      case 'fireplace': return buildFireplace();
+      case 'loungeChair': return buildLoungeChair();
+      case 'avatar': return buildAvatar();
+      case 'neighborhood': return buildNeighborhood();
+    }
+  }
+
+  /** Build, move and remove fixtures (fireplace, lounge set, neighborhood) to match store.state.fixtures. Cheap enough to run on every change. */
   private syncFixtures(): void {
     const wanted = this.store.state.fixtures ?? [];
     const live = new Set<string>();
@@ -515,8 +550,7 @@ export class RoomView {
         entry = undefined;
       }
       if (!entry) {
-        if (f.kind !== 'fireplace') continue;
-        entry = { kind: f.kind, rig: buildFireplace() };
+        entry = { kind: f.kind, rig: this.buildFixtureRig(f.kind) };
         this.fixturesGroup.add(entry.rig.group);
         this.fixtureRigs.set(f.id, entry);
       }
@@ -535,16 +569,14 @@ export class RoomView {
     const scenesActive = document.body.classList.contains('scenes-active');
     // Only one of the two views is on screen at a time; the other one doesn't need to animate or render.
     if (this.scenesMode !== scenesActive) return;
-    for (const { rig } of this.fixtureRigs.values()) rig.update(t);
+    for (const { rig } of this.fixtureRigs.values()) rig.update(this.fireClock ?? t);
     if (this.scenesMode) this.updateGuide();
     const selected = this.store.selectedId;
     for (const [id, e] of this.objects) {
       if (this.scenesMode) {
         // Scenes mode: an object is exactly where its slot is, at the rotation from the slider. No lerp, bob, pull
-        // toward center, scale or wobble. Selection is shown by a glow only.
-        e.group.position.copy(e.target);
-        e.group.rotation.y = e.customRotationY ?? YAW;
-        e.group.scale.setScalar(1.6);
+        // toward center, scale or wobble. Selection is shown by a glow only. A shot's choreography overrides the pin.
+        this.pinSceneObject(id, e);
         const glow = id === selected;
         if (glow !== Boolean(e.glowing)) this.setGlow(e, glow);
         continue;
@@ -642,6 +674,62 @@ export class RoomView {
     this.frameSelection();
     this.fitBackground();
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Scenes mode: place one object on its slot, or at its choreographed pose when a flight is playing. */
+  private pinSceneObject(id: string, e: Entry): void {
+    const flight = this.motionClock === null ? undefined : this.motionFlights.get(id);
+    const yaw = e.customRotationY ?? YAW;
+    if (flight && this.motionClock !== null) {
+      const pose = sampleFlight(flight, [e.target.x, e.target.y, e.target.z], yaw, this.motionClock);
+      e.group.visible = pose.visible;
+      e.group.position.set(pose.pos[0], pose.pos[1], pose.pos[2]);
+      e.group.rotation.set(pose.tilt[0], pose.rotY, pose.tilt[1]);
+      e.group.scale.setScalar(1.6 * pose.scale);
+      e.motionDriven = true;
+      return;
+    }
+    if (e.motionDriven) {
+      e.motionDriven = false;
+      e.group.visible = true;
+      e.group.rotation.x = 0;
+      e.group.rotation.z = 0;
+    }
+    e.group.position.copy(e.target);
+    e.group.rotation.y = yaw;
+    e.group.scale.setScalar(1.6);
+  }
+
+  /**
+   * Scenes mode choreography. While a clock is set, objects with a flight are posed from it instead of sitting on their
+   * slot. Pass `null` flights to stop. The clock is seconds into the shot.
+   */
+  public setMotion(flights: readonly Flight[] | null, seconds: number): void {
+    this.motionFlights = new Map((flights ?? []).map((f) => [f.repId, f]));
+    this.motionClock = flights ? seconds : null;
+  }
+
+  public setMotionTime(seconds: number): void {
+    if (this.motionClock !== null) this.motionClock = seconds;
+  }
+
+  /** Fix the fireplace animation clock (seconds) so every recorded frame is repeatable; null returns it to real time. */
+  public setFireClock(seconds: number | null): void {
+    this.fireClock = seconds;
+  }
+
+  /** World-space right and up vectors of the camera, for aiming a fling-in from off-screen. */
+  public cameraAxes(): { right: [number, number, number]; up: [number, number, number] } {
+    this.camera.updateMatrixWorld();
+    const right = new THREE.Vector3().setFromMatrixColumn(this.camera.matrixWorld, 0);
+    const up = new THREE.Vector3().setFromMatrixColumn(this.camera.matrixWorld, 1);
+    return { right: [right.x, right.y, right.z], up: [up.x, up.y, up.z] };
+  }
+
+  /** Where an object rests (its slot), for planning flights. */
+  public restPosition(repId: string): [number, number, number] | null {
+    const e = this.objects.get(repId);
+    return e ? [e.target.x, e.target.y, e.target.z] : null;
   }
 
   /** Scenes mode selection feedback: swap in cloned materials with an emissive tint (clones so shared materials stay untouched). */

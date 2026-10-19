@@ -46,7 +46,7 @@ const pad2 = (n: number): string => String(n).padStart(2, '0');
 const slug = (text: string): string =>
   text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'shot';
 
-function toBase64(blob: Blob): Promise<string> {
+export function toBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
@@ -124,6 +124,11 @@ export class CapturePanel {
         if (!e.repeat) this.toggleFade();
       }
     });
+  }
+
+  /** Vignette strength (0..1) currently set, so a frame recording matches a still capture. */
+  getVignette(): number {
+    return this.vignette;
   }
 
   private static vignetteLabel(v: number): string {

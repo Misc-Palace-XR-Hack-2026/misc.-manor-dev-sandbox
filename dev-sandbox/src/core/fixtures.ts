@@ -1,7 +1,7 @@
 // Fixtures are room add-ons: built-in pieces of the room (a fireplace) that are not objects in slots.
 // They have no content item, no icon and no slot; they are just placed in the room and saved with it.
 
-export const FIXTURE_KINDS = ['fireplace'] as const;
+export const FIXTURE_KINDS = ['fireplace', 'loungeChair', 'avatar', 'neighborhood'] as const;
 export type FixtureKind = (typeof FIXTURE_KINDS)[number];
 
 export interface Fixture {
@@ -20,6 +20,25 @@ export const FIREPLACE_X_RANGE = { min: 1.4, max: 9.0 } as const;
 
 export function newFireplace(): Fixture {
   return { id: 'fireplace', kind: 'fireplace', pos: [...FIREPLACE_DEFAULT_POS], rotationY: 0 };
+}
+
+/** Lounge set: a reclined chair with a headphone-wearing avatar in it. Both face the default camera. */
+export const LOUNGE_DEFAULT_POS: [number, number, number] = [5.0, 0, 3.4];
+export const LOUNGE_DEFAULT_ROTATION = Math.PI / 4;
+
+export function newLoungeChair(): Fixture {
+  return { id: 'lounge-chair', kind: 'loungeChair', pos: [...LOUNGE_DEFAULT_POS], rotationY: LOUNGE_DEFAULT_ROTATION };
+}
+
+export function newAvatar(): Fixture {
+  return { id: 'avatar', kind: 'avatar', pos: [...LOUNGE_DEFAULT_POS], rotationY: LOUNGE_DEFAULT_ROTATION };
+}
+
+/** The neighborhood diorama is centered on the room (its position is the room's floor center). */
+export const NEIGHBORHOOD_CENTER: [number, number, number] = [5.15, 0, 3.65];
+
+export function newNeighborhood(): Fixture {
+  return { id: 'neighborhood', kind: 'neighborhood', pos: [...NEIGHBORHOOD_CENTER], rotationY: 0 };
 }
 
 export function validFixtures(value: unknown): value is Fixture[] {

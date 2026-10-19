@@ -8,6 +8,8 @@ import { defineConfig } from 'vite';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const shotsDir = path.join(root, 'docs', 'trailer-materials', 'shots');
+const framesDir = path.join(root, 'docs', 'trailer-materials', 'frames');
+const sceneDataDir = path.join(root, 'docs', 'trailer-materials', 'scenes', 'data');
 const FOLDER = /^[a-z0-9][a-z0-9-]{0,60}$/;
 const FILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$/;
 const MAX_BYTES = 80 * 1024 * 1024;
@@ -45,30 +47,38 @@ function shotsPlugin() {
         send(res, 200, { folders });
       });
 
-      server.middlewares.use('/__shots/save', async (req, res) => {
-        if (req.method !== 'POST') return send(res, 405, { error: 'POST only.' });
-        try {
-          const { folder, files } = JSON.parse(await readBody(req));
-          if (typeof folder !== 'string' || !FOLDER.test(folder)) return send(res, 400, { error: 'Bad folder name.' });
-          if (!Array.isArray(files) || files.length === 0 || files.length > 20) return send(res, 400, { error: 'Bad file list.' });
-          const dir = path.join(shotsDir, folder);
-          fs.mkdirSync(dir, { recursive: true });
-          const written = [];
-          for (const file of files) {
-            if (typeof file?.name !== 'string' || !FILE.test(file.name) || typeof file.data !== 'string') {
-              return send(res, 400, { error: 'Bad file entry.' });
+      // Same body shape for every endpoint: { folder, files: [{ name, data, encoding }] }, written under `baseDir/folder`.
+      const saveEndpoint = (route, baseDir, maxFiles) => {
+        server.middlewares.use(route, async (req, res) => {
+          if (req.method !== 'POST') return send(res, 405, { error: 'POST only.' });
+          try {
+            const { folder, files } = JSON.parse(await readBody(req));
+            if (typeof folder !== 'string' || !FOLDER.test(folder)) return send(res, 400, { error: 'Bad folder name.' });
+            if (!Array.isArray(files) || files.length === 0 || files.length > maxFiles) return send(res, 400, { error: 'Bad file list.' });
+            const dir = path.join(baseDir, folder);
+            fs.mkdirSync(dir, { recursive: true });
+            const written = [];
+            for (const file of files) {
+              if (typeof file?.name !== 'string' || !FILE.test(file.name) || typeof file.data !== 'string') {
+                return send(res, 400, { error: 'Bad file entry.' });
+              }
+              const target = path.join(dir, file.name);
+              if (path.dirname(target) !== dir) return send(res, 400, { error: 'Bad file name.' });
+              if (file.encoding === 'base64') fs.writeFileSync(target, Buffer.from(file.data, 'base64'));
+              else fs.writeFileSync(target, file.data, 'utf8');
+              written.push(path.relative(root, target));
             }
-            const target = path.join(dir, file.name);
-            if (path.dirname(target) !== dir) return send(res, 400, { error: 'Bad file name.' });
-            if (file.encoding === 'base64') fs.writeFileSync(target, Buffer.from(file.data, 'base64'));
-            else fs.writeFileSync(target, file.data, 'utf8');
-            written.push(path.relative(root, target));
+            send(res, 200, { written });
+          } catch (error) {
+            send(res, 500, { error: error instanceof Error ? error.message : String(error) });
           }
-          send(res, 200, { written });
-        } catch (error) {
-          send(res, 500, { error: error instanceof Error ? error.message : String(error) });
-        }
-      });
+        });
+      };
+      saveEndpoint('/__shots/save', shotsDir, 20);
+      // Frame-by-frame PNG sequences (docs/trailer-materials/frames/<shot>/frame-0001.png), a few frames per request.
+      saveEndpoint('/__frames/save', framesDir, 10);
+      // Scene exports as JSON (docs/trailer-materials/scenes/data/<folder>/<name>.json) so scenes can be reviewed in git.
+      saveEndpoint('/__scenes/export', sceneDataDir, 4);
     },
   };
 }

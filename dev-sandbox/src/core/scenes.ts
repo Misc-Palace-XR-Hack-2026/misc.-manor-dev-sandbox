@@ -1,5 +1,6 @@
 import type { RoomState } from './types';
 import { newFireplace } from './fixtures';
+import type { Flight } from './motion';
 
 export const SCENE_SCHEMA_VERSION = 1;
 
@@ -50,6 +51,10 @@ export interface Shot {
   end: CameraState | null;
   easing: ShotEasing;
   notes: string;
+  /** Per-object flights played over the shot (objects flying onto shelves, the magic burst). Optional: older shots omit it. */
+  motion?: Flight[];
+  /** Burned-in caption, for example "CONCEPT SEQUENCE". Optional. */
+  label?: string;
 }
 
 /** A saved scene composition: room layout + camera framing */
@@ -91,6 +96,8 @@ export function validateShots(value: unknown): string | null {
     }
     if (!validCamera(raw.start)) return `Shot ${raw.id} has an invalid start camera.`;
     if (raw.end !== null && !validCamera(raw.end)) return `Shot ${raw.id} has an invalid end camera.`;
+    if (raw.motion !== undefined && !Array.isArray(raw.motion)) return `Shot ${raw.id} has invalid motion.`;
+    if (raw.label !== undefined && typeof raw.label !== 'string') return `Shot ${raw.id} has an invalid label.`;
   }
   return null;
 }

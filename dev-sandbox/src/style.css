@@ -842,6 +842,53 @@ body.scenes-active .item-sheet {
   height: 20px;
 }
 
+/* Choreography presets and playback inside the shot editor */
+.scenes-shot-presets,
+.scenes-shot-player {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.scenes-shot-scrub {
+  flex: 1;
+  min-width: 0;
+}
+
+.scenes-shot-time {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The burned-in caption preview, drawn inside the 16:9 frame at the same place and relative size a capture bakes it. */
+.scenes-frame {
+  container-type: size;
+}
+
+.scenes-shot-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 7.5%;
+  transform: translateY(-50%);
+  text-align: center;
+  font-size: 3.5cqh;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 0.2cqh 0.8cqh rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+
+.scenes-shot-label[hidden] {
+  display: none;
+}
+
 /* ---- Scenes capture: frame overlay, vignette preview, clean view, review dialog ---- */
 
 .scenes-capture {

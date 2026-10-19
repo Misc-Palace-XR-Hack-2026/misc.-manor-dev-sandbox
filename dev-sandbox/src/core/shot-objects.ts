@@ -24,6 +24,25 @@ export const SHOT4_LINKS: readonly ShotLink[] = [
   { title: 'Moonloops "Samples"', url: 'https://gungo06.itch.io/moonloops-samples', kind: 'headphones' },
 ];
 
+/**
+ * The magic scene: new objects that start as a heap (standing in for the full box, which is never drawn) and fly
+ * out to organize themselves. Placeholder addresses, only used so each toy is its own item in the room.
+ */
+export const MAGIC_TOYS: readonly ShotLink[] = [
+  { title: 'Goldfish', url: 'https://example.com/magic/fish-bowl', kind: 'fishBowl' },
+  { title: 'Yo-yo tricks', url: 'https://example.com/magic/yoyo', kind: 'yoyo' },
+  { title: 'Skate clips', url: 'https://example.com/magic/skateboard', kind: 'skateboard' },
+  { title: 'Match highlights', url: 'https://example.com/magic/soccer-ball', kind: 'soccerBall' },
+  { title: 'UFO sightings', url: 'https://example.com/magic/flying-saucer', kind: 'flyingSaucer' },
+  { title: 'Lava lamp loops', url: 'https://example.com/magic/lava-lamp', kind: 'lavaLamp' },
+  { title: 'Cube solving guide', url: 'https://example.com/magic/puzzle-cube', kind: 'rubiksCube' },
+  { title: 'Debugging duck', url: 'https://example.com/magic/rubber-duck', kind: 'rubberDuck' },
+  { title: 'World atlas', url: 'https://example.com/magic/globe', kind: 'globe' },
+  { title: 'Desert plants', url: 'https://example.com/magic/cactus', kind: 'cactus' },
+  { title: 'Board game night', url: 'https://example.com/magic/dice', kind: 'dice' },
+  { title: 'Space race', url: 'https://example.com/magic/rocket', kind: 'rocket' },
+];
+
 /** Big objects only go on the floor; small ones can sit on shelves, the bench, the loft or the stairs. */
 const FLOOR_ONLY: ReadonlySet<ObjectKind> = new Set<ObjectKind>(['tv', 'console', 'boombox', 'box', 'synthesizer']);
 

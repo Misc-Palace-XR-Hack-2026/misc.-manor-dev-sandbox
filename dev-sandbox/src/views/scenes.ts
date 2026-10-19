@@ -9,9 +9,15 @@ import type { RepoRoom } from './menu';
 import { openContentEditor } from './content-editor';
 import { buildKindInventory } from './kind-picker';
 import { OBJECT_LABELS } from '../core/types';
-import { FIREPLACE_X_RANGE, cloneFixtures, newFireplace, type Fixture } from '../core/fixtures';
+import {
+  FIREPLACE_X_RANGE, LOUNGE_DEFAULT_POS, NEIGHBORHOOD_CENTER, cloneFixtures, newAvatar, newFireplace, newLoungeChair,
+  newNeighborhood, type Fixture,
+} from '../core/fixtures';
+import { THEMES } from '../core/themes';
 import { CapturePanel } from './capture';
-import { SHOT4_LINKS, planShotPlacements } from '../core/shot-objects';
+import { SHOT4_LINKS, MAGIC_TOYS, planShotPlacements } from '../core/shot-objects';
+import { ShotPlayer } from './shot-player';
+import { planFling, planHeapLaunch, motionLength, type Flight } from '../core/motion';
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -127,6 +133,25 @@ export class ScenesView {
     onSaved: (info) => this.onShotSaved(info),
   });
 
+  // Playback and the frame-by-frame recorder for the active shot (camera move plus object flights).
+  private player = new ShotPlayer({
+    room: () => this.roomView,
+    shot: () => this.activeShot(),
+    viewCamera: (c) => this.viewCamera(c),
+    commitCamera: () => this.commitShotCamera(),
+    vignette: () => this.capture.getVignette(),
+    clearSelection: () => this.store.select(null),
+    changed: () => this.refreshShotsPanel(),
+  });
+
+  // Magic scene props and exporting the scene into the repo.
+  private magicBtn = el('button', { type: 'button', textContent: `Set up magic scene (${MAGIC_TOYS.length} new objects)` });
+  private loungeBtn = el('button', { type: 'button', textContent: 'Set up lounge (chair, avatar, vinyl theme)' });
+  private neighborhoodBtn = el('button', { type: 'button', textContent: 'Set up neighborhood zoom-out' });
+  private exportBtn = el('button', { type: 'button', textContent: 'Export scene to repo' });
+  private propsStatus = el('div', { class: 'scenes-object-hint', textContent: '' });
+  private exportStatus = el('div', { class: 'scenes-object-hint', textContent: '' });
+
   // Object rotation (shown inside the object panel)
   private rotationSlider = el('input', { type: 'range', min: '0', max: '360', step: '1', value: '0', class: 'scenes-rotation-slider' });
   private rotationValue = el('span', { textContent: '0°' });
@@ -196,6 +221,10 @@ export class ScenesView {
     });
 
     this.shot4Btn.addEventListener('click', () => this.addShot4Objects());
+    this.magicBtn.addEventListener('click', () => this.setUpMagicScene());
+    this.loungeBtn.addEventListener('click', () => this.setUpLounge());
+    this.neighborhoodBtn.addEventListener('click', () => this.setUpNeighborhood());
+    this.exportBtn.addEventListener('click', () => void this.exportScene());
 
     // Object rotation: the only thing that turns an object in scenes mode.
     this.rotationSlider.addEventListener('input', () => {
@@ -210,15 +239,17 @@ export class ScenesView {
     });
 
     // Fireplace add-on: on/off, and slide it along the wall. Dragging redraws live; releasing saves it into the room.
+    // Only the fireplace changes here: the lounge set and neighborhood fixtures stay as they are.
     this.fireplaceToggle.addEventListener('change', () => {
-      this.store.setFixtures(this.fireplaceToggle.checked ? [cloneFireplace(this.lastFireplace)] : []);
+      const others = (this.store.state.fixtures ?? []).filter((f) => f.kind !== 'fireplace');
+      this.store.setFixtures(this.fireplaceToggle.checked ? [...others, cloneFireplace(this.lastFireplace)] : others);
     });
     this.fireplaceSlider.addEventListener('input', () => {
       const fixture = this.currentFireplace();
       if (!fixture) return;
       const next = cloneFireplace(fixture);
       next.pos[0] = parseFloat(this.fireplaceSlider.value);
-      this.store.setFixtures([next], false);
+      this.store.setFixtures((this.store.state.fixtures ?? []).map((f) => (f.id === next.id ? next : f)), false);
     });
     this.fireplaceSlider.addEventListener('change', () => {
       const fixtures = cloneFixtures(this.store.state.fixtures);
@@ -282,6 +313,10 @@ export class ScenesView {
       el('h4', { textContent: 'Props' }),
       this.shot4Btn,
       this.shot4Status,
+      this.magicBtn,
+      this.loungeBtn,
+      this.neighborhoodBtn,
+      this.propsStatus,
       el('h4', { textContent: 'Shots' }),
       this.shotsPanel,
       el('h4', { textContent: 'Capture' }),
@@ -289,6 +324,8 @@ export class ScenesView {
       el('h4', { textContent: 'Scene' }),
       this.sceneDesc,
       this.saveBtn,
+      this.exportBtn,
+      this.exportStatus,
       this.deleteBtn,
     );
 
@@ -332,6 +369,7 @@ export class ScenesView {
     if (!scene) return;
 
     // Leaving a scene (or reloading it): keep the framing of its active shot. The store still shows that scene's room here.
+    this.player.stop();
     if (this.currentScene) {
       this.commitShotCamera();
       this.persistSceneQuietly();
@@ -359,6 +397,7 @@ export class ScenesView {
     if (!this.roomView) {
       this.roomContainer.innerHTML = '';
       this.roomView = new RoomView(this.roomContainer, this.store, [], { scenes: true });
+      this.capture.overlay.append(this.player.label);
       this.roomContainer.append(this.capture.overlay);
       this.capture.roomReady();
     }
@@ -450,8 +489,170 @@ export class ScenesView {
       + `${skipped ? ` (${skipped} already there)` : ''}. Select an object and use Pick up to move it.`;
   }
 
+  // ---- choreography presets ------------------------------------------------
+
+  /** Representations currently in a slot, with the slot they rest in. */
+  private placedReps(): Array<{ repId: string; slotId: string; sourceRef: string }> {
+    const out: Array<{ repId: string; slotId: string; sourceRef: string }> = [];
+    for (const p of this.store.state.placements) {
+      const rep = this.store.state.representations.find((r) => r.id === p.representationId);
+      const content = rep ? this.store.content(rep.contentItemId) : undefined;
+      if (rep && content) out.push({ repId: rep.id, slotId: p.slotId, sourceRef: content.sourceRef });
+    }
+    return out;
+  }
+
+  /** Make the shot long enough for its choreography to finish, plus a short hold at the end. */
+  private fitDuration(shot: Shot, flights: readonly Flight[]): void {
+    shot.durationSec = Math.max(shot.durationSec, Math.ceil((motionLength(flights) + 0.7) * 2) / 2);
+  }
+
+  /** Shot 5: every object on the shelves flies in from off-screen, one after another, and lands on its slot. */
+  private applyFling(shot: Shot): string {
+    const room = this.roomView;
+    if (!room) return 'Open a scene first.';
+    const targets = this.placedReps().filter((p) => p.slotId.startsWith('shelf'));
+    if (targets.length === 0) return 'No objects are on the shelves. Put objects on the shelf slots, then try again.';
+    this.player.stop();
+    this.viewCamera(shot.start); // the entry directions are worked out from what this shot's camera sees
+    const reach = 10 / shot.start.zoom + 1.5;
+    shot.motion = planFling(targets, room.cameraAxes(), reach, Math.random);
+    this.fitDuration(shot, shot.motion);
+    return `Planned ${targets.length} flights onto the shelves. Press Play to preview.`;
+  }
+
+  /** Magic scene: the new toys wait as a straining heap (the full box, never drawn) and burst out to their slots. */
+  private applyHeapLaunch(shot: Shot): string {
+    const known = new Set(MAGIC_TOYS.map((t) => t.url));
+    const targets = this.placedReps().filter((p) => known.has(p.sourceRef));
+    if (targets.length === 0) return 'The magic objects are not in this room yet. Use "Set up magic scene" under Props first.';
+    this.player.stop();
+    const look = shot.start.target ?? this.roomView?.getDefaultTarget() ?? [4.8, 0, 3.6];
+    shot.motion = planHeapLaunch(targets, [look[0], 0, look[2]], Math.random);
+    if (!shot.label) shot.label = 'CONCEPT SEQUENCE';
+    this.fitDuration(shot, shot.motion);
+    return `Planned ${targets.length} objects launching from a heap at the camera target. Press Play to preview.`;
+  }
+
+  /**
+   * One click for the magic shot: put the new toys into free slots (the room is not changed if they are already
+   * there), then create or refresh a "magic" shot with the heap launch and the CONCEPT SEQUENCE caption.
+   */
+  private setUpMagicScene(): void {
+    const scene = this.currentScene;
+    const room = this.roomView;
+    if (!scene || !room) { this.propsStatus.textContent = 'Open a scene first.'; return; }
+    this.player.stop();
+
+    const have = new Set(this.store.state.contentItems.map((c) => c.sourceRef));
+    const missing = MAGIC_TOYS.filter((t) => !have.has(t.url));
+    if (missing.length > 0) {
+      const plan = planShotPlacements(missing, this.store.layout.slots, this.store.freeSlotIds(), this.currentFireplace()?.pos[0]);
+      for (const { link, slotId } of plan) this.store.addItem({ title: link.title, sourceRef: link.url, kind: link.kind, slotId });
+    }
+
+    const shots = (scene.shots ??= []);
+    this.commitShotCamera();
+    let shot = shots.find((s) => s.id === 'magic');
+    if (!shot) {
+      const [x, y, z] = room.getDefaultTarget();
+      shot = newShot('magic', 'Magic: everything flies out', { orbitAngle: 45, orbitHeight: 0, zoom: 1.15, target: [x, y, z] }, {
+        notes: 'No box is shown. The objects waiting in a heap stand in for the full box, then burst out and organize themselves.',
+      });
+      shots.push(shot);
+    }
+    this.activeShotId = shot.id;
+    this.viewCamera(shot.start);
+    const message = this.applyHeapLaunch(shot);
+    this.persistSceneQuietly();
+    this.refreshShotsPanel();
+    this.propsStatus.textContent = `${missing.length ? `Added ${missing.length} objects. ` : 'Objects were already in the room. '}${message}`;
+  }
+
+  /** Add fixtures to the room, replacing any with the same id and leaving the others (the fireplace) alone. */
+  private addFixtures(add: Fixture[]): void {
+    const keep = (this.store.state.fixtures ?? []).filter((f) => !add.some((a) => a.id === f.id));
+    this.store.setFixtures([...keep, ...add]);
+  }
+
+  /** Find the shot with this storyboard id or create it, make it the active shot and look through its start camera. */
+  private ensureShot(id: string, title: string, camera: CameraState, partial: Partial<Shot>): Shot {
+    const scene = this.currentScene as Scene;
+    const shots = (scene.shots ??= []);
+    this.commitShotCamera(); // keep the camera of the shot being left
+    let shot = shots.find((s) => s.id === id);
+    if (!shot) {
+      shot = newShot(id, title, camera, partial);
+      shots.push(shot);
+    }
+    this.activeShotId = shot.id;
+    this.viewCamera(shot.start);
+    return shot;
+  }
+
+  /** Shot 7c: the vinyl lounge theme, a lounge chair with an avatar in it wearing headphones, and a close shot of them. */
+  private setUpLounge(): void {
+    if (!this.currentScene || !this.roomView) { this.propsStatus.textContent = 'Open a scene first.'; return; }
+    this.player.stop();
+    const theme = THEMES['vinyl-lounge'];
+    this.store.applyLook({ surfaces: theme.surfaces, lighting: theme.lighting });
+    this.addFixtures([newLoungeChair(), newAvatar()]);
+    const [x, , z] = LOUNGE_DEFAULT_POS;
+    this.ensureShot('7c', 'Lounge: avatar listening', { orbitAngle: 45, orbitHeight: 0, zoom: 3, target: [x, 0.65, z] }, {
+      notes: 'Avatar lounging in the chair with headphones, nodding to the music. Place objects around them from the slots.',
+      durationSec: 6,
+    });
+    this.persistSceneQuietly();
+    this.refreshShotsPanel();
+    this.propsStatus.textContent = 'Applied the Vinyl lounge theme, added the chair and avatar at the middle of the floor, '
+      + 'and set up shot 7c. Floor objects near the middle may overlap the chair; use a fresh scene for the cleanest lounge.';
+  }
+
+  /** Shot 8: a diorama of houses around the room, and a slow pull-out from the room to the whole neighborhood. */
+  private setUpNeighborhood(): void {
+    if (!this.currentScene || !this.roomView) { this.propsStatus.textContent = 'Open a scene first.'; return; }
+    this.player.stop();
+    this.addFixtures([newNeighborhood()]);
+    const [rx, ry, rz] = this.roomView.getDefaultTarget();
+    const [nx, , nz] = NEIGHBORHOOD_CENTER;
+    const shot = this.ensureShot('8', 'Zoom out: the neighborhood', { orbitAngle: 45, orbitHeight: 0, zoom: 1.1, target: [rx, ry, rz] }, {
+      notes: 'Slow pull-out from this room to every dev\'s room in the neighborhood.',
+      durationSec: 7,
+      end: { orbitAngle: 45, orbitHeight: 0.6, zoom: 0.24, target: [nx, 0, nz] },
+    });
+    this.persistSceneQuietly();
+    this.refreshShotsPanel();
+    this.propsStatus.textContent = `Added the neighborhood and set up shot ${shot.id}: ${shot.durationSec}s pull-out. `
+      + 'Press Play on that shot to preview it. The lowest zoom the camera allows is 0.2.';
+  }
+
+  /** Write the scene as JSON into docs/trailer-materials/scenes/data/<scene>/ (dev server only) so it can be reviewed in git. */
+  private async exportScene(): Promise<void> {
+    const scene = this.currentScene;
+    if (!scene) { this.exportStatus.textContent = 'Open a scene first.'; return; }
+    this.commitShotCamera();
+    scene.baseRoom = JSON.parse(JSON.stringify(this.store.state));
+    scene.updatedAt = new Date().toISOString();
+    try { saveScene(scene); } catch { /* the export below still has the full scene */ }
+    const folder = scene.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/g, '') || 'scene';
+    try {
+      const response = await fetch('/__scenes/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder, files: [{ name: 'scene.json', data: JSON.stringify(scene, null, 2), encoding: 'utf8' }] }),
+      });
+      const body = (await response.json().catch(() => ({}))) as { written?: string[]; error?: string };
+      this.exportStatus.textContent = response.ok
+        ? `Wrote ${(body.written ?? []).join(', ')}`
+        : `Export failed: ${body.error ?? response.status}`;
+    } catch (error) {
+      this.exportStatus.textContent = `Export failed: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  }
+
   private refreshShotsPanel(): void {
     this.shotsPanel.replaceChildren();
+    this.player.syncLabel(); // the frame preview always shows the active shot's caption
     const scene = this.currentScene;
     if (!scene) {
       this.shotsPanel.append(el('div', { class: 'scenes-object-hint', textContent: 'Select a scene to add shots.' }));
@@ -491,7 +692,9 @@ export class ScenesView {
       );
       row.classList.toggle('active', shot.id === this.activeShotId);
       row.addEventListener('click', () => {
+        if (this.player.busy) return; // a recording or playback is using the camera
         if (shot.id !== this.activeShotId) {
+          this.player.stop();
           this.commitShotCamera(); // keep the framing of the shot being left
           this.activeShotId = shot.id;
           this.persistSceneQuietly();
@@ -551,6 +754,26 @@ export class ScenesView {
       );
     }
 
+    const presetStatus = el('div', { class: 'scenes-object-hint', textContent: '' });
+    const runPreset = (plan: (shot: Shot) => string) => {
+      presetStatus.textContent = plan(shot);
+      this.persistSceneQuietly();
+      // Rebuild so the motion line, duration and caption reflect the new choreography. The message survives the rebuild below.
+      const message = presetStatus.textContent;
+      this.refreshShotsPanel();
+      const fresh = this.shotsPanel.querySelector('.scenes-preset-status');
+      if (fresh) fresh.textContent = message;
+    };
+    presetStatus.classList.add('scenes-preset-status');
+    const presets = el('div', { class: 'scenes-shot-presets' },
+      el('div', { class: 'scenes-object-actions' }, el('strong', { textContent: 'Choreography' })),
+      el('div', { class: 'scenes-object-actions' },
+        btn('Fling onto shelves', () => runPreset((s) => this.applyFling(s))),
+        btn('Heap launch', () => runPreset((s) => this.applyHeapLaunch(s))),
+      ),
+      presetStatus,
+    );
+
     return el('div', { class: 'scenes-shot-editor' },
       field('Title', title),
       field('Type', type),
@@ -559,11 +782,14 @@ export class ScenesView {
       startText,
       endText,
       camActions,
+      presets,
+      this.player.buildControls(shot),
       notes,
       el('div', { class: 'scenes-object-actions' },
         btn('Delete shot', () => {
           const scene = this.currentScene;
           if (!scene?.shots || !confirm(`Delete shot ${shot.id}?`)) return;
+          this.player.stop();
           scene.shots = scene.shots.filter((s) => s.id !== shot.id);
           this.activeShotId = scene.shots[0]?.id ?? null;
           this.refreshShotsPanel();
@@ -719,6 +945,7 @@ export class ScenesView {
   }
 
   private closeScenes(): void {
+    this.player.stop();
     this.capture.exitClean();
     this.store.select(null); // also puts back anything that was picked up
     const toggleScenes = (window as unknown as { toggleScenes?: (active: boolean) => void }).toggleScenes;
