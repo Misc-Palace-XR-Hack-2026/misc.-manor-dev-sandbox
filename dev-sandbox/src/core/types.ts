@@ -74,6 +74,8 @@ export interface RoomState {
   soundtrack?: import("./soundtrack").Soundtrack;
   surfaces?: import("./surfaces").SurfaceSettings;
   lighting?: import("./appearance").Lighting;
+  /** Room add-ons such as a fireplace. Optional: rooms without it are unchanged. */
+  fixtures?: import("./fixtures").Fixture[];
   schemaVersion: number;
   id: string;
   owner: string;

@@ -7,6 +7,7 @@ import type { RoomLayout } from '../core/layout';
 import { buildObject } from './objects';
 import { applyLampLightBudget } from './cozy-objects';
 import { disposeGroup } from './resources';
+import { buildFireplace, type FireplaceRig } from './fireplace';
 import { LIGHTING_PRESETS } from '../core/appearance';
 import { buildPreview, type Preview } from '../core/preview';
 import { PreviewCardView } from './preview-card';
@@ -26,7 +27,15 @@ interface Entry {
   contentKey: string;
   target: THREE.Vector3;
   selectedState?: { originalPos: THREE.Vector3; targetRotation: number };
+  customRotationY?: number; // Custom rotation in radians (set via scenes mode)
+  glowing?: boolean; // Scenes mode: selection shows as an emissive glow instead of movement
+  originalMaterials?: Map<THREE.Mesh, THREE.Material | THREE.Material[]>;
 }
+
+// The default isometric camera looks down at ~35.26 degrees. Scene "height" is measured from that, in 30 degree units,
+// so height 0 is exactly the normal room view.
+const ISO_ELEVATION = Math.atan2(14, Math.hypot(14, 14));
+const HEIGHT_UNIT = Math.PI / 6;
 
 export class RoomView {
   private renderer: THREE.WebGLRenderer;
@@ -35,7 +44,10 @@ export class RoomView {
   private controls: OrbitControls;
   private objectsGroup = new THREE.Group();
   private markerGroup = new THREE.Group();
+  private fixturesGroup = new THREE.Group(); // room add-ons (fireplace): built from store.state.fixtures, not slots
+  private fixtureRigs = new Map<string, { kind: string; rig: FireplaceRig }>();
   private objects = new Map<string, Entry>();
+  private rotations = new Map<string, number>(); // scenes mode: orientation per representation, survives object rebuilds
   private markers = new Map<string, THREE.Mesh>();
   private raycaster = new THREE.Raycaster();
   private tooltip: HTMLDivElement;
@@ -53,15 +65,21 @@ export class RoomView {
   private ground!: THREE.Mesh;
   private hoverTimer: number | undefined;
   private hoverRep: string | null = null;
-  private card: PreviewCardView;
+  private card: PreviewCardView | null;
   private cardAnchor = new THREE.Vector3();
   private cardKey = '';
   private cardPreview: Preview | null = null;
   private cardArt: MediaArt | null = null;
   private xr: XrSession | null = null;
   private vrButton = document.createElement('button');
+  /**
+   * Scenes mode is a different kind of view, fixed at construction: objects never move on select (they only glow),
+   * and there is no preview card, tooltip, VR button or XR session. Camera limits are wider for framing shots.
+   */
+  public readonly scenesMode: boolean;
 
-  constructor(private container: HTMLElement, private store: Store, rooms: NeighborhoodRoom[] = []) {
+  constructor(private container: HTMLElement, private store: Store, rooms: NeighborhoodRoom[] = [], options: { scenes?: boolean } = {}) {
+    this.scenesMode = options.scenes ?? false;
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
@@ -78,7 +96,7 @@ export class RoomView {
     container.appendChild(this.tooltip);
     // On the body, not inside the room: the item sheet and menus are body-level siblings of the room and would
     // otherwise paint over the card. The room fills the viewport, so room pixels and viewport pixels are the same.
-    this.card = new PreviewCardView(document.body);
+    this.card = this.scenesMode ? null : new PreviewCardView(document.body);
 
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 120);
     const target = new THREE.Vector3(3, 1.6, 3);
@@ -87,13 +105,13 @@ export class RoomView {
     this.controls.target.copy(target);
     this.controls.enableDamping = true;
     this.controls.screenSpacePanning = true;
-    this.controls.minZoom = 0.6;
-    this.controls.maxZoom = 3;
+    this.controls.minZoom = this.scenesMode ? 0.2 : 0.6;
+    this.controls.maxZoom = this.scenesMode ? 5 : 3;
     this.controls.maxPolarAngle = Math.PI * 0.49;
     this.controls.dampingFactor = 0.15; // Higher damping = stops faster after drag
     this.controls.update();
 
-    this.scene.add(this.roomGroup, this.objectsGroup, this.markerGroup);
+    this.scene.add(this.roomGroup, this.fixturesGroup, this.objectsGroup, this.markerGroup);
     this.addLights();
 
     const el = this.renderer.domElement;
@@ -114,14 +132,17 @@ export class RoomView {
 
     this.store.subscribe(() => this.sync());
     this.sync();
-    this.xr = new XrSession(this.renderer, this.scene, this.store, this.objectsGroup, this.markerGroup, this.roomGroup, rooms);
-    this.vrButton.type = 'button';
-    this.vrButton.className = 'vr-enter';
-    this.vrButton.textContent = 'Enter VR';
-    container.appendChild(this.vrButton);
-    this.vrButton.addEventListener('click', () => void this.enterVr());
-    void this.refreshVrButton();
+    if (!this.scenesMode) {
+      this.xr = new XrSession(this.renderer, this.scene, this.store, this.objectsGroup, this.markerGroup, this.roomGroup, rooms);
+      this.vrButton.type = 'button';
+      this.vrButton.className = 'vr-enter';
+      this.vrButton.textContent = 'Enter VR';
+      container.appendChild(this.vrButton);
+      this.vrButton.addEventListener('click', () => void this.enterVr());
+      void this.refreshVrButton();
+    }
     this.renderer.setAnimationLoop((t) => this.tick(t / 1000));
+    if (this.scenesMode) return; // no preview card to keep in sync
     // The card follows the item sheet on its own frame loop, not the 3D one. The sheet's size changes as its content
     // fills in, and a hiccup in rendering must never leave the card stuck at a stale spot over the sheet.
     const followSheet = () => {
@@ -281,6 +302,7 @@ export class RoomView {
       this.hemi.color.setHex(p?.hemiSky ?? 0xffffff);this.hemi.groundColor.setHex(p?.hemiGround ?? 0xd9a47a);this.hemi.intensity=p?.hemiIntensity ?? 1.7;
       this.lamp.color.setHex(p?.lampColor ?? 0xffd8a8);this.lamp.intensity=p?.lampIntensity ?? 0;
     }
+    this.syncFixtures();
     const { state, layout } = this.store;
     const live = new Set<string>();
 
@@ -304,7 +326,7 @@ export class RoomView {
         group.position.set(slot.pos[0], slot.pos[1], slot.pos[2]);
         group.userData.repId = rep.id;
         this.objectsGroup.add(group);
-        entry = { group, kind: rep.objectKind, contentKey, target: new THREE.Vector3() };
+        entry = { group, kind: rep.objectKind, contentKey, target: new THREE.Vector3(), customRotationY: this.rotations.get(rep.id) };
         this.objects.set(rep.id, entry);
       }
       entry.target.set(slot.pos[0], slot.pos[1], slot.pos[2]);
@@ -327,9 +349,53 @@ export class RoomView {
     }
   }
 
+  /** Build, move and remove fixtures (the fireplace) to match store.state.fixtures. Cheap enough to run on every change. */
+  private syncFixtures(): void {
+    const wanted = this.store.state.fixtures ?? [];
+    const live = new Set<string>();
+    for (const f of wanted) {
+      live.add(f.id);
+      let entry = this.fixtureRigs.get(f.id);
+      if (entry && entry.kind !== f.kind) {
+        entry.rig.dispose();
+        this.fixturesGroup.remove(entry.rig.group);
+        this.fixtureRigs.delete(f.id);
+        entry = undefined;
+      }
+      if (!entry) {
+        if (f.kind !== 'fireplace') continue;
+        entry = { kind: f.kind, rig: buildFireplace() };
+        this.fixturesGroup.add(entry.rig.group);
+        this.fixtureRigs.set(f.id, entry);
+      }
+      entry.rig.group.position.set(f.pos[0], f.pos[1], f.pos[2]);
+      entry.rig.group.rotation.y = f.rotationY;
+    }
+    for (const [id, entry] of this.fixtureRigs) {
+      if (live.has(id)) continue;
+      entry.rig.dispose();
+      this.fixturesGroup.remove(entry.rig.group);
+      this.fixtureRigs.delete(id);
+    }
+  }
+
   private tick(t: number): void {
+    const scenesActive = document.body.classList.contains('scenes-active');
+    // Only one of the two views is on screen at a time; the other one doesn't need to animate or render.
+    if (this.scenesMode !== scenesActive) return;
+    for (const { rig } of this.fixtureRigs.values()) rig.update(t);
     const selected = this.store.selectedId;
     for (const [id, e] of this.objects) {
+      if (this.scenesMode) {
+        // Scenes mode: an object is exactly where its slot is, at the rotation from the slider. No lerp, bob, pull
+        // toward center, scale or wobble. Selection is shown by a glow only.
+        e.group.position.copy(e.target);
+        e.group.rotation.y = e.customRotationY ?? YAW;
+        e.group.scale.setScalar(1.6);
+        const glow = id === selected;
+        if (glow !== Boolean(e.glowing)) this.setGlow(e, glow);
+        continue;
+      }
       const presenting = Boolean(this.xr?.presenting);
       const bob = presenting || id !== selected ? 0 : 0.2 + Math.sin(t * 4) * 0.05;
 
@@ -389,7 +455,7 @@ export class RoomView {
       p.z += (targetPos.z - p.z) * 0.22;
       p.y += (targetPos.y + bob - p.y) * 0.22;
 
-      // Animate rotation: face camera with minimal clockwise rotation when selected
+      // Normal mode animation
       if (!presenting && id === selected && e.selectedState) {
         const targetRot = e.selectedState.targetRotation + Math.sin(t * 2) * 0.25;
         e.group.rotation.y += (targetRot - e.group.rotation.y) * 0.18;
@@ -418,11 +484,39 @@ export class RoomView {
       this.renderer.render(this.scene, xrCamera);
       return;
     }
-    const inspecting = Boolean(this.store.selectedId && this.objects.has(this.store.selectedId));
+    const inspecting = !this.scenesMode && Boolean(this.store.selectedId && this.objects.has(this.store.selectedId));
     if (!inspecting) this.controls.update();
     this.frameSelection();
     this.fitBackground();
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Scenes mode selection feedback: swap in cloned materials with an emissive tint (clones so shared materials stay untouched). */
+  private setGlow(e: Entry, on: boolean): void {
+    e.glowing = on;
+    if (on) {
+      const originals = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
+      e.group.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        originals.set(mesh, mesh.material);
+        const tint = (m: THREE.Material): THREE.Material => {
+          const c = m.clone();
+          const std = c as THREE.MeshStandardMaterial;
+          if (std.emissive) { std.emissive = new THREE.Color(0xffc45a); std.emissiveIntensity = 0.5; }
+          return c;
+        };
+        mesh.material = Array.isArray(mesh.material) ? mesh.material.map(tint) : tint(mesh.material);
+      });
+      e.originalMaterials = originals;
+    } else if (e.originalMaterials) {
+      for (const [mesh, original] of e.originalMaterials) {
+        const glowing = mesh.material;
+        mesh.material = original;
+        for (const m of Array.isArray(glowing) ? glowing : [glowing]) m.dispose();
+      }
+      e.originalMaterials = undefined;
+    }
   }
 
   /**
@@ -430,6 +524,10 @@ export class RoomView {
    * so it stays steady while the object bobs and turns. Needs the camera matrices from this frame's render.
    */
   private updatePreviewCard(): void {
+    const card = this.card;
+    if (!card) return;
+    // The main view keeps running behind scenes mode, so it must not float its card over the scenes HUD.
+    if (document.body.classList.contains('scenes-active')) { card.show(null); return; }
     const id = this.store.selectedId;
     const entry = id ? this.objects.get(id) : undefined;
     const rep = id ? this.store.state.representations.find((r) => r.id === id) : undefined;
@@ -438,7 +536,7 @@ export class RoomView {
     // sheet it floats over the object. An object that is selected but not placed yet has nowhere to float, so it
     // only shows when the sheet is there.
     const sheet = document.querySelector<HTMLElement>('.item-sheet:not([hidden])');
-    if (!content || (!entry && !sheet)) { this.card.show(null); return; }
+    if (!content || (!entry && !sheet)) { card.show(null); return; }
     // Rebuild the preview only when the content changed. The card swaps DOM on a new preview object, and an iframe
     // must not reload every frame.
     const key = [content.id, content.type, content.title, content.sourceKind, content.sourceRef,
@@ -448,19 +546,19 @@ export class RoomView {
       this.cardPreview = buildPreview(content);
       this.cardArt = mediaArt(content);
     }
-    this.card.show(this.cardPreview, this.cardArt);
+    card.show(this.cardPreview, this.cardArt);
     if (sheet) {
       // Position the card with its bottom-right corner 10px above and aligned with the sheet's top-right.
       // dockBottomRight handles viewport clamping so the card never goes off-page.
       const s = sheet.getBoundingClientRect();
-      this.card.dockBottomRight(s.right, s.top - 10);
+      card.dockBottomRight(s.right, s.top - 10);
       return;
     }
     // Floating mode: anchor the card above the selected object, projected through the camera.
     this.cardAnchor.copy(entry!.target).y += 2;
     this.camera.updateMatrixWorld();
     const ndc = this.cardAnchor.project(this.camera);
-    this.card.moveTo(((ndc.x + 1) / 2) * this.container.clientWidth, ((1 - ndc.y) / 2) * this.container.clientHeight);
+    card.moveTo(((ndc.x + 1) / 2) * this.container.clientWidth, ((1 - ndc.y) / 2) * this.container.clientHeight);
   }
 
   private frameSelection(): void {
@@ -560,7 +658,7 @@ export class RoomView {
     const repId = this.repIdAt(e);
     const slotOver = this.store.selectedId ? this.slotIdAt(e) : null;
     this.renderer.domElement.style.cursor = repId || slotOver ? 'pointer' : 'grab';
-    if (!repId || this.store.selectedId) {
+    if (this.scenesMode || !repId || this.store.selectedId) {
       this.hideTooltip();
       return;
     }
@@ -589,5 +687,81 @@ export class RoomView {
     window.clearTimeout(this.hoverTimer);
     this.hoverRep = null;
     this.tooltip.hidden = true;
+  }
+
+  /**
+   * Set camera state for scene framing: orbit angle, height, and zoom.
+   * Used by ScenesView to frame shots.
+   */
+  public setCameraState(orbitAngle: number, orbitHeight: number, zoom: number, resetTarget = false): void {
+    if (resetTarget) {
+      const [fx, fy, fz] = this.store.layout.focus;
+      this.controls.target.set(fx, fy, fz);
+    }
+    const target = this.controls.target;
+    // Keep the camera's current distance from the target. With an orthographic camera distance doesn't change what
+    // you see, so only azimuth (orbit) and elevation (height) are set here. Zoom is applied separately below.
+    const radius = this.camera.position.distanceTo(target) || Math.hypot(14, 14, 14);
+    const azimuth = (orbitAngle * Math.PI) / 180;
+    const elevation = Math.min(Math.PI / 2 - 0.02, Math.max(0.03, ISO_ELEVATION + orbitHeight * HEIGHT_UNIT));
+    this.camera.position.set(
+      target.x + radius * Math.cos(elevation) * Math.sin(azimuth),
+      target.y + radius * Math.sin(elevation),
+      target.z + radius * Math.cos(elevation) * Math.cos(azimuth),
+    );
+    this.setZoom(zoom);
+  }
+
+  /** Zoom only: never touches orbit or position. */
+  public setZoom(zoom: number): void {
+    this.camera.zoom = Math.min(this.controls.maxZoom, Math.max(this.controls.minZoom, zoom));
+    this.camera.updateProjectionMatrix();
+    this.controls.update();
+  }
+
+  /**
+   * Read current camera state from the OrbitControls.
+   * Returns orbit angle (0-360°), height offset, and zoom.
+   * Used by ScenesView to capture manual camera adjustments.
+   */
+  public getCameraState(): { orbitAngle: number; orbitHeight: number; zoom: number } {
+    // Exact inverse of setCameraState: offset of the camera from the target -> azimuth and elevation.
+    const d = this.camera.position.clone().sub(this.controls.target);
+    let orbitAngle = (Math.atan2(d.x, d.z) * 180) / Math.PI; // the default isometric view is 45
+    if (orbitAngle < 0) orbitAngle += 360;
+    const elevation = Math.atan2(d.y, Math.hypot(d.x, d.z));
+    return {
+      orbitAngle,
+      orbitHeight: (elevation - ISO_ELEVATION) / HEIGHT_UNIT, // 0 = the normal isometric view
+      zoom: this.camera.zoom,
+    };
+  }
+
+  /**
+   * Set rotation for an object by representation ID (in radians).
+   * Used by ScenesView to control object orientation.
+   */
+  public setObjectRotation(repId: string, rotationY: number): void {
+    this.rotations.set(repId, rotationY);
+    const entry = this.objects.get(repId);
+    if (entry) {
+      entry.group.rotation.y = rotationY;
+      entry.customRotationY = rotationY; // Store to prevent tick() from resetting
+    }
+  }
+
+  /** Forget every custom rotation (used when switching scenes so one scene's rotations don't leak into the next). */
+  public clearObjectRotations(): void {
+    this.rotations.clear();
+    for (const e of this.objects.values()) e.customRotationY = undefined;
+  }
+
+  /**
+   * Get rotation for an object by representation ID (in radians).
+   * Returns 0 if object not found.
+   */
+  public getObjectRotation(repId: string): number {
+    const entry = this.objects.get(repId);
+    return entry ? (entry.customRotationY ?? YAW) : 0;
   }
 }

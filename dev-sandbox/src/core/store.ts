@@ -3,6 +3,7 @@ import { validPhotoData } from './photos';
 import { soundtrackFromUnknown, validSoundtrack, type Soundtrack } from './soundtrack';
 import { lightingFromUnknown, validLighting, type Lighting } from './appearance';
 import { guessType, normalizeRef, safeUrl } from './content';
+import { cloneFixtures, validFixtures, type Fixture } from './fixtures';
 import type { BookmarkEntry } from './bookmarks';
 import { DEFAULT_LAYOUT_ID, getLayout, type RoomLayout } from './layout';
 import {
@@ -42,6 +43,7 @@ export function validateRoom(input: unknown): string | null {
   if (s.surfaces !== undefined && !validSurfaces(s.surfaces)) return 'Invalid room surfaces (local PNG/JPEG only, max 1024px and 1.5 MB encoded per image).';
   if (s.lighting !== undefined && !validLighting(s.lighting)) return 'Invalid room lighting.';
   if (s.soundtrack !== undefined && !validSoundtrack(s.soundtrack)) return 'Invalid room soundtrack.';
+  if (s.fixtures !== undefined && !validFixtures(s.fixtures)) return 'Invalid room fixtures.';
   const legacy = (s as { appearance?: { theme?: unknown; lighting?: unknown } }).appearance;
   if (legacy !== undefined && (!legacy || !['loft', 'study'].includes(String(legacy.theme)) ||
       (legacy.lighting !== 'loft' && !validLighting(legacy.lighting)))) return 'Invalid legacy room lighting.';
@@ -292,6 +294,20 @@ export class Store {
       if (lighting) s.lighting = lighting;
       else delete s.lighting;
     });
+  }
+
+  /**
+   * Set the room's add-ons (e.g. the fireplace). `record: false` is for live slider drags: it updates the room and
+   * redraws without filling undo history or saving on every tick; the next normal change saves it.
+   */
+  setFixtures(fixtures: Fixture[] | undefined, record = true): void {
+    if (fixtures !== undefined && !validFixtures(fixtures)) throw new Error('Invalid room fixtures.');
+    const apply = (s: RoomState) => {
+      if (fixtures) s.fixtures = cloneFixtures(fixtures);
+      else delete s.fixtures;
+    };
+    if (record) this.commit(apply);
+    else { apply(this.state); this.emit(); }
   }
 
   /** Apply a theme's look (floor, wall, background, lighting) in one undoable step. Content and layout are untouched. */

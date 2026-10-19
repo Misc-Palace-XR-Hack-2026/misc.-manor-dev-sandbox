@@ -1,0 +1,24 @@
+you are the orchestrator you will invoke models as best needed for each task, and be more descriptive about what ur doing bc sometimes i cant see anything, for not lets plan, take a look at @dev-sandbox/docs/trailer-materials/ especially the story board generated and tosry board sketch , look at all the materials in there to udnerstand, now what we are 
+trying to do in this session is create the scebes that we will use and set pieces for the video in our dev sandbox, i dont need you to capture anything i will help you design the scens and i will capture contenet. whatwe need is a different "mode" separate from our dev sandbox usual stuff, maybe a button on the left called Scenes takes yout o the mode where 
+we can see past created scenes which are just rooms made in deifferent ways for the set pieces we will need to make custom animations or custom thigns happen so each scene will need its own stuff but should use the existing functionality of the dev sandbox but scenes are gonna be more beefy and involved so lets discuss how we can come up with asystem on top 
+of what we have to make the potential set pieces and scenes we need, im thinking the simplest one will be the opening shot, i will advise oncew e get to bulding lets discuss what is needed to build the scene mode component seamlessly and effectively and if uyou understand 
+  ⎿  Listed directory dev-sandbox/docs/trailer-materials/
+
+---
+
+in the e should have a placeholder stick fgure outline just sititng in the chair, can be slightly transaprent and ust give the size and shape of a person sitting there for shot composition, this is a unique thing that needs to be in this scene so a "person" asset introduced in the scene, idk how you wanna do that but we need it in there or maybe we just add
+  it later somehow, just something to think about - also when i finalize a shot  intro, how can i get the current camera details, how far the chair is for the in rela life shoo, how much to turn it, aspect ratio im not too woriied about but i need some output to be recorded on each save of where to place the camera for shot 1 and an idea of where to sit and
+  stuff, can we make a iagram too for the shot day? we should start making a shot by shot diagram alongside the scenes based on the camera position, this is only applicable really ot he real life shots bc we dont care aboutthe set pieces bc those are recorded, so how can we think about that? lets discuss before implement, 
+
+links to add as objects in shot 4:
+- https://www.newgrounds.com/ - newgrounds
+- https://www.youtube.com/watch?v=4CSYA9R70R8 - GMTK how to make a trailer
+- https://www.unpackinggame.com/ - unpacking game
+- https://tcbonepiecechapters.com/mangas/5/one-piece - one piece tcbscans
+- https://duckduckgo.com/?q=infinite+jest&atb=v507-1&ia=web - infinite jest (book) 
+- https://beforesandafters.com/category/vfx-breakdowns/page/2/ - vfx breakdowns
+- https://youtu.be/sTJ7AzBIJoI?si=BUnzpkroFsi-xo87 - baz lurman everyones free to wear sunscreen
+- https://youtu.be/RZZRu5q63r4?si=eCNYNKuuHASrOYaL - nujabes feather sample
+- https://youtu.be/8G3f_RM7Eew?si=oD8D5BP57jcoweCM - how to dribble and create space like xavi and iniesta
+- https://vaultsoundbyte.vercel.app/library - soundbyte vault
+- https://gungo06.itch.io/moonloops-samples - Moonloops "Samples"

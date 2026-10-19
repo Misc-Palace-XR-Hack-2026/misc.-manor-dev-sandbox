@@ -8,6 +8,7 @@ import { SoundtrackPlayer } from './views/soundtrack';
 import { createRoomCapture } from './views/room-capture';
 import { createSoundtrackControl } from './views/soundtrack-control';
 import { createDebugPanel } from './views/debug';
+import { ScenesView } from './views/scenes';
 
 // Every rooms/*.json committed to the repo is a starter source: dev rooms seed from them, and the
 // toolbar can still load any of them into the current room.
@@ -47,13 +48,34 @@ try {
 
 if (initial) {
   const store = new Store(initial, roomId);
-  new MenuView(document.getElementById('menu')!, store, repoRooms);
+
+  // Create scenes root container
+  const scenesRoot = document.createElement('div');
+  scenesRoot.id = 'scenes-root';
+  document.body.appendChild(scenesRoot);
+
+  const menu = new MenuView(document.getElementById('menu')!, store, repoRooms);
   const room = new RoomView(document.getElementById('room')!, store, repoRooms);
-  document.body.append(createRoomCapture(() => room.capturePhoto()));
   const soundtrack = new SoundtrackPlayer(store);
+  const scenes = new ScenesView(scenesRoot, store, repoRooms, { onEditRoom: () => menu.openEditor() });
+
+  // Scenes mode is a separate view, not an overlay on normal mode. One body class switches the whole normal-mode
+  // chrome off (CSS in style.css: audio button, Take photo, nav bar, +, VR, preview card, item sheet), including
+  // elements that are created later, so nothing needs to be hunted down and hidden one by one.
+  (window as unknown as { toggleScenes: (active: boolean) => void }).toggleScenes = (active: boolean) => {
+    document.body.classList.toggle('scenes-active', active);
+    scenesRoot.classList.toggle('active', active);
+    document.getElementById('room')!.style.display = active ? 'none' : 'block';
+    // Scenes have no audio concept yet: stop room music on entry, bring it back on exit.
+    if (active) soundtrack.leave();
+    else soundtrack.return();
+  };
+
+  document.body.append(createRoomCapture(() => room.capturePhoto()));
   document.body.append(createSoundtrackControl(soundtrack));
   if (new URLSearchParams(location.search).has('debug')) document.body.append(createDebugPanel(store, soundtrack));
 
   // Handy for poking at things from the browser console while developing.
-  (window as unknown as { store: Store }).store = store;
+  (window as unknown as { store: Store; scenesView: ScenesView }).store = store;
+  (window as unknown as { scenesView: ScenesView }).scenesView = scenes;
 }

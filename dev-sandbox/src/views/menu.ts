@@ -53,6 +53,7 @@ export class MenuView {
   private chrome = el('nav', { class: 'chrome', ariaLabel: 'Room actions' });
   private editBtn = el('button', { type: 'button', textContent: 'Edit room' });
   private roomsBtn = el('button', { type: 'button', textContent: 'Rooms', title: 'Switch room' });
+  private scenesBtn = el('button', { type: 'button', textContent: 'Scenes', title: 'Scene composition mode' });
   private editorClose = el('button', { type: 'button', class: 'sheet-close', textContent: 'Close editor' });
   private itemClose = el('button', { type: 'button', class: 'sheet-close icon-close', textContent: '×', ariaLabel: 'Close' });
   private backdrop = el('button', { type: 'button', class: 'sheet-backdrop', hidden: true, ariaLabel: 'Close sheet' });
@@ -86,7 +87,8 @@ export class MenuView {
       this.refreshRooms();
       this.openDialog(this.roomsSheet);
     });
-    this.chrome.append(this.editBtn, this.roomsBtn);
+    this.scenesBtn.addEventListener('click', () => this.openScenes());
+    this.chrome.append(this.editBtn, this.roomsBtn, this.scenesBtn);
     this.itemSheet.setAttribute('role', 'dialog');
     this.itemSheet.setAttribute('aria-label', 'Item');
     this.itemSheet.append(
@@ -139,7 +141,8 @@ export class MenuView {
     this.backdrop.hidden = false;
   }
 
-  private openEditor(): void {
+  /** Opens the room editor panel (lighting, surfaces, items). Also used by the Scenes HUD's "Edit room". */
+  openEditor(): void {
     this.closeSheets();
     this.root.classList.add('sheet-open');
     this.backdrop.hidden = false;
@@ -178,6 +181,15 @@ export class MenuView {
       this.closeSheets();
     } catch (e) {
       this.flash(`Could not open ${label}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  // ---- scenes -----------------------------------------------------------
+  private openScenes(): void {
+    this.closeSheets();
+    const toggleScenes = (window as unknown as { toggleScenes?: (active: boolean) => void }).toggleScenes;
+    if (toggleScenes) {
+      toggleScenes(true);
     }
   }
 
