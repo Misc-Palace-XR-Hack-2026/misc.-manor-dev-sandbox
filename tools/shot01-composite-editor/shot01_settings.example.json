@@ -1,0 +1,214 @@
+{
+  "plate": "QC/composite/shot01_plate_1080.png",
+  "output_dir": "composite/full",
+  "person": {
+    "x": 1380,
+    "y": 430,
+    "width": 360,
+    "crop": [
+      1080,
+      1400,
+      0,
+      420
+    ],
+    "key_color": "0x68FF7E",
+    "key_similarity": 0.14,
+    "key_blend": 0.07,
+    "despill": 0.5,
+    "colorbalance": "rs=0.16:gs=0.02:bs=-0.12:rm=0.10:gm=0.0:bm=-0.08",
+    "angle": 0,
+    "flip_h": false,
+    "flip_v": false,
+    "exposure": 0,
+    "contrast": 1,
+    "saturation": 1,
+    "hue": 0,
+    "warmth": 0,
+    "tint": 0,
+    "gain_r": 1,
+    "gain_g": 1,
+    "gain_b": 1
+  },
+  "front_arm_polygon": [
+    [
+      1806,
+      657
+    ],
+    [
+      1838,
+      652
+    ],
+    [
+      1837,
+      672
+    ],
+    [
+      1836,
+      802
+    ],
+    [
+      1589,
+      832
+    ],
+    [
+      1578,
+      682
+    ]
+  ],
+  "back_matte": {
+    "color": "#481b16",
+    "opacity": 0.98,
+    "spread": 0.0,
+    "offset_x": 0,
+    "offset_y": 0
+  },
+  "animated_plate": "composite/shot01_animated_background_25s.mp4",
+  "clips": {
+    "KO6A8423": {
+      "preview_at": 25.7,
+      "person": {
+        "x": 1072,
+        "y": 227,
+        "width": 700,
+        "angle": 0,
+        "flip_h": true,
+        "flip_v": false,
+        "exposure": -0.05,
+        "contrast": 1,
+        "saturation": 1,
+        "hue": 0,
+        "warmth": 0.62,
+        "tint": 0,
+        "gain_r": 1.099,
+        "gain_g": 0.927,
+        "gain_b": 0.829
+      }
+    },
+    "KO6A8424": {
+      "preview_at": 49.9,
+      "person": {
+        "x": 1072,
+        "y": 227,
+        "width": 700,
+        "angle": 0,
+        "flip_h": true,
+        "flip_v": false,
+        "exposure": -0.05,
+        "contrast": 1,
+        "saturation": 1,
+        "hue": 0,
+        "warmth": 0.62,
+        "tint": 0,
+        "gain_r": 1.099,
+        "gain_g": 0.927,
+        "gain_b": 0.829
+      }
+    },
+    "KO6A8425": {
+      "preview_at": 23.1,
+      "person": {
+        "x": 1072,
+        "y": 227,
+        "width": 700,
+        "angle": 0,
+        "flip_h": true,
+        "flip_v": false,
+        "exposure": -0.05,
+        "contrast": 1,
+        "saturation": 1,
+        "hue": 0,
+        "warmth": 0.62,
+        "tint": 0,
+        "gain_r": 1.099,
+        "gain_g": 0.927,
+        "gain_b": 0.829
+      }
+    },
+    "KO6A8426": {
+      "preview_at": 90.4,
+      "person": {
+        "x": 1072,
+        "y": 227,
+        "width": 700,
+        "angle": 0,
+        "flip_h": true,
+        "flip_v": false,
+        "exposure": -0.05,
+        "contrast": 1,
+        "saturation": 1,
+        "hue": 0,
+        "warmth": 0.62,
+        "tint": 0,
+        "gain_r": 1.099,
+        "gain_g": 0.927,
+        "gain_b": 0.829
+      }
+    },
+    "KO6A8427": {
+      "preview_at": 27.5,
+      "person": {
+        "x": 1072,
+        "y": 227,
+        "width": 700,
+        "angle": 0,
+        "flip_h": true,
+        "flip_v": false,
+        "exposure": -0.05,
+        "contrast": 1,
+        "saturation": 1,
+        "hue": 0,
+        "warmth": 0.62,
+        "tint": 0,
+        "gain_r": 1.099,
+        "gain_g": 0.927,
+        "gain_b": 0.829
+      }
+    },
+    "KO6A8428": {
+      "preview_at": 18.3,
+      "person": {
+        "x": 1072,
+        "y": 227,
+        "width": 700,
+        "angle": 0,
+        "flip_h": true,
+        "flip_v": false,
+        "exposure": -0.05,
+        "contrast": 1,
+        "saturation": 1,
+        "hue": 0,
+        "warmth": 0.62,
+        "tint": 0,
+        "gain_r": 1.099,
+        "gain_g": 0.927,
+        "gain_b": 0.829
+      }
+    },
+    "KO6A8429": {
+      "preview_at": 75.9,
+      "person": {
+        "x": 1072,
+        "y": 227,
+        "width": 700,
+        "angle": 0,
+        "flip_h": true,
+        "flip_v": false,
+        "exposure": -0.05,
+        "contrast": 1,
+        "saturation": 1,
+        "hue": 0,
+        "warmth": 0.62,
+        "tint": 0,
+        "gain_r": 1.099,
+        "gain_g": 0.927,
+        "gain_b": 0.829
+      }
+    }
+  },
+  "camera": {
+    "name": "wide",
+    "zoom": 1.0,
+    "center_x": 960,
+    "center_y": 540
+  }
+}

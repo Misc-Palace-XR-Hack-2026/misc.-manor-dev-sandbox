@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shot 01 · Composite Editor</title>
+<style>
+:root{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;color:#f3e9dd;background:#13100f;--panel:#201a18;--line:#4a3932;--muted:#b7a699;--accent:#f2a457}
+*{box-sizing:border-box}body{margin:0}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);gap:14px}
+h1{font-size:18px;margin:0;font-weight:650}.tag{font:11px ui-monospace,monospace;color:var(--accent);letter-spacing:.13em;text-transform:uppercase}
+main{display:grid;grid-template-columns:minmax(0,1fr) 360px;min-height:calc(100vh - 60px)}
+.stage{padding:18px;min-width:0}
+.viewer{position:relative;width:100%;max-width:1280px;margin:auto;background:#000;border:1px solid #5a4030;box-shadow:0 18px 48px #0009}
+.viewer canvas{display:block;width:100%;aspect-ratio:16/9;touch-action:none;cursor:grab}
+.hidden{display:none}
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;max-width:1280px;margin:12px auto;align-items:center}
+.toolbar button.active{background:#764c2c;border-color:var(--accent)}
+.transport{display:flex;align-items:center;gap:12px;max-width:1280px;margin:8px auto}
+.transport input{flex:1}
+.help{color:var(--muted);font-size:13px;line-height:1.5;margin:10px auto;max-width:1280px}
+aside{background:var(--panel);border-left:1px solid var(--line);padding:18px;overflow-y:auto;max-height:calc(100vh - 60px)}
+details{border-top:1px solid var(--line);padding:10px 0}
+summary{font-size:14px;font-weight:650;cursor:pointer;padding:4px 0}
+.ctl{display:grid;grid-template-columns:86px 1fr 64px;gap:8px;align-items:center;margin:7px 0;font-size:12px;color:var(--muted)}
+.ctl input[type=number]{width:64px;padding:5px;min-height:30px}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.row button{flex:1}
+label.inline{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;margin:8px 0}
+input,select,button{font:inherit}
+input[type=number],input[type=text],select{background:#151211;border:1px solid #685044;color:#fff;border-radius:6px;padding:7px}
+input[type=color]{width:52px;height:32px;border:1px solid #685044;background:#151211;border-radius:6px;padding:2px}
+input[type=range]{accent-color:var(--accent);width:100%}
+select{width:100%}
+button{border:1px solid #795a43;background:#34261f;color:#fff;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px}
+button:hover{border-color:var(--accent)}button.active{background:#764c2c;border-color:var(--accent)}button.primary{background:#a9511f;border-color:#d87e37;font-weight:650}button:disabled{opacity:.5;cursor:not-allowed}
+small{color:#ab988b;line-height:1.45;display:block;font-size:12px}
+#status{color:#c9b9ad;font-size:12px;line-height:1.5;min-height:2em;margin-top:10px;white-space:pre-wrap}
+.out{display:flex;gap:8px;margin-top:14px}.out button{flex:1}
+.pk{flex:0 0 auto!important;font:11px ui-monospace,monospace;padding:6px 7px}.pk.on{background:#764c2c;border-color:var(--accent)}
+.job{border:1px solid var(--line);border-radius:6px;padding:7px 8px;margin:6px 0;font-size:12px}
+.job .top{display:flex;justify-content:space-between;gap:6px;align-items:center}.job .top b{font:12px ui-monospace,monospace}
+.job .bar{height:5px;background:#151211;border-radius:3px;margin:6px 0;overflow:hidden}.job .bar i{display:block;height:100%;background:var(--accent)}
+.job button{padding:3px 8px;font-size:11px}.job a{color:#ffbd78}.st-done{color:#9fe09a}.st-error{color:#ff9c8a}.st-canceled{color:#998}
+@media(max-width:900px){main{grid-template-columns:1fr}aside{border-left:0;border-top:1px solid var(--line);max-height:none}.stage{padding:8px}}
+</style>
+</head>
+<body>
+<header><div><div class="tag">Misc Manor · Trailer</div><h1>Shot 01 / Composite editor</h1></div><div class="tag">8422 excluded</div></header>
+<main>
+<section class="stage">
+  <div class="viewer"><canvas id="canvas" width="1920" height="1080" aria-label="Composite preview"></canvas></div>
+  <div class="toolbar" role="toolbar">
+    <button data-mode="move" class="active">Move German</button>
+    <button data-mode="camera">Camera framing</button>
+    <button data-mode="arm">Front arm mask</button>
+    <label class="inline" style="margin:0 0 0 auto"><input type="checkbox" id="throughCam" checked> View through camera</label>
+  </div>
+  <div class="transport"><button id="play">Pause</button><input id="seek" type="range" min="0" max="8" step="0.01" value="0" aria-label="Timeline"><span id="time">0.0s</span></div>
+  <p class="help" id="help"></p>
+</section>
+<aside>
+  <label class="inline" style="display:block">Take<select id="clip"></select></label>
+  <details open><summary>Transform</summary>
+    <div id="transformCtl"></div>
+    <div class="row"><button id="rotL" title="Rotate 90° left">⟲ 90°</button><button id="rotR" title="Rotate 90° right">⟳ 90°</button><button id="flipH">⇋ Flip H</button><button id="flipV">⇵ Flip V</button></div>
+    <div class="row"><button id="resetT">Reset rotate/flip</button></div>
+    <small>Drag to move · wheel to scale · Shift+wheel to rotate.</small>
+  </details>
+  <details open><summary>Color match</summary>
+    <div id="gradeCtl"></div>
+    <div class="row"><button id="match" title="Nudge German's color balance and brightness toward the room around him">Match room</button><button id="resetG">Reset color</button></div>
+    <small>Match room samples the plate around German and moves his balance toward it. Press again to push further. Double-click a slider to reset it.</small>
+  </details>
+  <details open><summary>Back matte (follows German)</summary>
+    <div class="ctl"><span>Color</span><input type="color" id="matteColor"><span></span></div>
+    <div id="matteCtl"></div>
+    <small>The matte is German's own silhouette, grown by Spread and filled with a solid color. It moves, scales, rotates and flips with him.</small>
+  </details>
+  <details open><summary>Camera (whole comp)</summary>
+    <div id="cameraCtl"></div>
+    <div class="ctl"><span>Pass name</span><input type="text" id="camName" maxlength="24" style="grid-column:span 2"></div>
+    <div class="row"><button id="camWide">Wide (full room)</button><button id="camGerman">Close on German</button></div>
+    <small>Reframes the finished composite: zoom in and pan like a closer camera. Renders are saved per pass name, so a “wide” and a “close” pass of the same take sit side by side. Above ~1.6× gets soft: the room plate is 1080p.</small>
+  </details>
+  <details open><summary>Apply to all takes</summary>
+    <label class="inline"><input type="checkbox" id="applyPos" checked> Position &amp; scale</label>
+    <label class="inline"><input type="checkbox" id="applyRot" checked> Rotate &amp; flip</label>
+    <label class="inline"><input type="checkbox" id="applyColor" checked> Color</label>
+    <div class="row"><button id="applyAll">Apply this take's settings to all 7 takes</button></div>
+    <small>Copies the ticked settings from this take to every other take and saves. Back matte, camera and arm mask are already shared by all takes.</small>
+  </details>
+  <div class="out"><button id="save">Save</button><button id="render" class="primary">Queue this take</button></div>
+  <div id="status" role="status"></div>
+  <details open><summary>Render queue</summary>
+    <div id="pick" class="row" style="gap:4px"></div>
+    <div class="row"><button id="pickAll">Select all</button><button id="pickNone">None</button><button id="queueSel" class="primary">Queue selected</button></div>
+    <small>Each queued render is frozen with the settings at the moment you queue it; renders run one at a time in the background, so you can keep editing or close this page.</small>
+    <div id="queue" style="margin-top:10px"></div>
+    <div class="row"><button id="clearDone">Clear finished</button></div>
+  </details>
+</aside>
+</main>
+<video id="plate" src="/media/plate" muted playsinline loop preload="auto" class="hidden"></video>
+<video id="actor" muted playsinline loop preload="auto" class="hidden"></video>
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const C=$('#canvas'),ctx=C.getContext('2d'),plate=$('#plate'),actor=$('#actor');
+const GRADE={exposure:0,contrast:1,saturation:1,hue:0,warmth:0,tint:0,gain_r:1,gain_g:1,gain_b:1};
+const TRANSFORM_KEYS=['x','y','width','angle','flip_h','flip_v'];
+let cfg,clip,person,matte,camera,armPoly,mode='move',dirty=false,drag=null,playing=true;
+const status=s=>$('#status').textContent=s;
+const mark=()=>{dirty=true;status('Unsaved changes.')};
+
+/* ---------- sliders ---------- */
+const rows=[];
+function slider(host,obj,key,label,min,max,step,def){
+  const row=document.createElement('div');row.className='ctl';
+  row.innerHTML=`<span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}"><input type="number" min="${min}" max="${max}" step="${step}">`;
+  const [r,n]=row.querySelectorAll('input');
+  const set=v=>{v=Math.min(max,Math.max(min,Number(v)));if(Number.isNaN(v))return;obj()[key]=v;r.value=n.value=+v.toFixed(3);mark()};
+  r.oninput=()=>set(r.value);n.onchange=()=>set(n.value);
+  if(def!==undefined)r.ondblclick=()=>set(def);
+  row.sync=()=>{r.value=n.value=+Number(obj()[key]).toFixed(3)};
+  host.appendChild(row);rows.push(row);
+}
+function buildControls(){
+  const P=()=>person,M=()=>matte,K=()=>camera;
+  const T=$('#transformCtl'),G=$('#gradeCtl'),Mh=$('#matteCtl'),Ch=$('#cameraCtl');
+  slider(T,P,'x','X',-600,1900,1);slider(T,P,'y','Y',-600,1060,1);
+  slider(T,P,'width','Scale (px)',60,1600,1);slider(T,P,'angle','Rotate °',-180,180,.5,0);
+  for(const [k,l,a,b,s] of [['exposure','Exposure',-.5,.5,.005],['contrast','Contrast',.25,2,.01],['saturation','Saturation',0,2,.01],
+    ['hue','Hue °',-180,180,1],['warmth','Warmth',-1,1,.01],['tint','Tint (G↔M)',-1,1,.01],
+    ['gain_r','Red',.5,1.5,.005],['gain_g','Green',.5,1.5,.005],['gain_b','Blue',.5,1.5,.005]])slider(G,P,k,l,a,b,s,GRADE[k]);
+  slider(Mh,M,'opacity','Opacity',0,1,.01);slider(Mh,M,'spread','Spread px',0,60,.5);
+  slider(Mh,M,'offset_x','Offset X',-300,300,1,0);slider(Mh,M,'offset_y','Offset Y',-300,300,1,0);
+  slider(Ch,K,'zoom','Zoom ×',1,4,.01,1);slider(Ch,K,'center_x','Center X',0,1920,1,960);slider(Ch,K,'center_y','Center Y',0,1080,1,540);
+  $('#matteColor').oninput=e=>{matte.color=e.target.value;mark()};
+  $('#camName').oninput=e=>{camera.name=e.target.value.replace(/[^A-Za-z0-9_-]/g,'').slice(0,24)||'wide';mark()};
+}
+function syncControls(){rows.forEach(r=>r.sync());$('#matteColor').value=matte.color;if(document.activeElement!==$('#camName'))$('#camName').value=camera.name;
+  $('#flipH').classList.toggle('active',!!person.flip_h);$('#flipV').classList.toggle('active',!!person.flip_v)}
+
+/* ---------- WebGL: key, grade, silhouette matte (same math as shot01_edit.py) ---------- */
+const glc=document.createElement('canvas');
+const gl=glc.getContext('webgl',{premultipliedAlpha:false,preserveDrawingBuffer:true,alpha:true});
+const VS='attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
+const KEY_FS=`precision highp float;
+uniform sampler2D tex;uniform vec2 vsize;uniform float pad;uniform vec2 key;uniform float sim,blend,mixv;
+uniform vec3 cbS,cbM,cbH;uniform mat3 M;uniform float con,expo;
+vec2 uvOf(vec3 c){return vec2(-0.114572*c.r-0.385428*c.g+0.5*c.b,0.5*c.r-0.454153*c.g-0.045847*c.b)+128./255.;}
+float comp(float v,float l,float s,float m,float h){s*=clamp((0.333-l)*4.+.5,0.,1.)*.7;m*=clamp((l-.333)*4.+.5,0.,1.)*clamp((1.-l-.333)*4.+.5,0.,1.)*.7;h*=clamp((l+.333-1.)*4.+.5,0.,1.)*.7;return clamp(v+s+m+h,0.,1.);}
+void main(){vec2 px=gl_FragCoord.xy-vec2(pad);
+ if(px.x<0.||px.y<0.||px.x>vsize.x||px.y>vsize.y){gl_FragColor=vec4(0.);return;}
+ vec2 t=px/vsize,d=1./vsize;float diff=0.;
+ for(int i=-1;i<=1;i++)for(int j=-1;j<=1;j++){vec2 q=uvOf(texture2D(tex,t+vec2(float(i),float(j))*d).rgb)-key;diff+=sqrt(dot(q,q)/2.);}
+ diff/=9.;float a=blend>0.0001?clamp((diff-sim)/blend,0.,1.):(diff>sim?1.:0.);
+ vec3 c=texture2D(tex,t).rgb;float s=max(c.g-(c.r*mixv+c.b*(1.-mixv)),0.);c.g-=s;
+ float l=max(max(c.r,c.g),c.b)+min(min(c.r,c.g),c.b);
+ c=vec3(comp(c.r,l,cbS.x,cbM.x,cbH.x),comp(c.g,l,cbS.y,cbM.y,cbH.y),comp(c.b,l,cbS.z,cbM.z,cbH.z));
+ c=clamp(M*c,0.,1.);c=clamp((c-.5)*con+.5+expo,0.,1.);gl_FragColor=vec4(c,a);}`;
+const BLUR_FS=`precision highp float;uniform sampler2D tex;uniform vec2 size,dir;uniform float sigma;
+void main(){vec2 t=gl_FragCoord.xy/size;if(sigma<0.3){gl_FragColor=vec4(0.,0.,0.,texture2D(tex,t).a);return;}
+ float r=ceil(3.*sigma),st=max(1.,r/48.),acc=0.,tot=0.;
+ for(int i=-48;i<=48;i++){float x=float(i)*st;if(abs(x)>r)continue;float w=exp(-x*x/(2.*sigma*sigma));acc+=w*texture2D(tex,t+dir*x/size).a;tot+=w;}
+ gl_FragColor=vec4(0.,0.,0.,acc/tot);}`;
+const OUT_FS=`precision highp float;uniform sampler2D tex;uniform vec2 size;uniform float matteMode,op;uniform vec3 color;
+void main(){vec4 c=texture2D(tex,gl_FragCoord.xy/size);
+ if(matteMode>.5){float a=(1.-pow(1.-c.a,3.))*op;gl_FragColor=vec4(color,a);}else gl_FragColor=c;}`;
+function prog(fs){const p=gl.createProgram();for(const [t,s] of [[gl.VERTEX_SHADER,VS],[gl.FRAGMENT_SHADER,fs]]){const sh=gl.createShader(t);gl.shaderSource(sh,s);gl.compileShader(sh);
+  if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(sh));gl.attachShader(p,sh)}
+  gl.bindAttribLocation(p,0,'p');gl.linkProgram(p);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p));
+  const u={};const n=gl.getProgramParameter(p,gl.ACTIVE_UNIFORMS);for(let i=0;i<n;i++){const a=gl.getActiveUniform(p,i);u[a.name]=gl.getUniformLocation(p,a.name)}return {p,u}}
+let P_KEY,P_BLUR,P_OUT,vtex,fbos=[],fbSize=[0,0];
+function texture(w,h){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
+  for(const [k,v] of [[gl.TEXTURE_MIN_FILTER,gl.LINEAR],[gl.TEXTURE_MAG_FILTER,gl.LINEAR],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]])gl.texParameteri(gl.TEXTURE_2D,k,v);
+  if(w)gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,w,h,0,gl.RGBA,gl.UNSIGNED_BYTE,null);return t}
+function initGL(){if(!gl)throw Error('no WebGL');P_KEY=prog(KEY_FS);P_BLUR=prog(BLUR_FS);P_OUT=prog(OUT_FS);
+  const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);vtex=texture();gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true)}
+function ensureFBO(w,h){if(fbSize[0]===w&&fbSize[1]===h)return;fbSize=[w,h];glc.width=w;glc.height=h;
+  fbos.forEach(f=>{gl.deleteFramebuffer(f.fb);gl.deleteTexture(f.t)});fbos=[0,1,2].map(()=>{const t=texture(w,h),fb=gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER,fb);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,t,0);return {t,fb}})}
+function pass(P,target,src,unis,w,h){gl.useProgram(P.p);gl.bindFramebuffer(gl.FRAMEBUFFER,target?target.fb:null);gl.viewport(0,0,w,h);
+  gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,src);gl.uniform1i(P.u.tex,0);
+  for(const [k,v] of Object.entries(unis)){const l=P.u[k];if(l==null)continue;
+    if(typeof v==='number')gl.uniform1f(l,v);else if(v.length===9)gl.uniformMatrix3fv(l,false,v);else if(v.length===3)gl.uniform3fv(l,v);else gl.uniform2fv(l,v)}
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,4)}
+function parseCB(s){const o={};String(s).split(':').forEach(kv=>{const [k,v]=kv.split('=');o[k]=Number(v)});const g=k=>o[k]||0;
+  return {S:[g('rs'),g('gs'),g('bs')],M:[g('rm'),g('gm'),g('bm')],H:[g('rh'),g('gh'),g('bh')]}}
+function gradeMatrix(p){const th=p.hue*Math.PI/180,c=Math.cos(th),s=Math.sin(th);
+  const H=[[.213+c*.787-s*.213,.715-c*.715-s*.715,.072-c*.072+s*.928],[.213-c*.213+s*.143,.715+c*.285+s*.140,.072-c*.072-s*.283],[.213-c*.213-s*.787,.715-c*.715+s*.715,.072+c*.928+s*.072]];
+  const L=[.2126,.7152,.0722],sv=p.saturation,S=[0,1,2].map(i=>[0,1,2].map(j=>(1-sv)*L[j]+(i===j?sv:0)));
+  const gn=[p.gain_r*(1+.25*p.warmth),p.gain_g*(1-.2*p.tint),p.gain_b*(1-.25*p.warmth)];
+  const SH=[0,1,2].map(i=>[0,1,2].map(j=>S[i][0]*H[0][j]+S[i][1]*H[1][j]+S[i][2]*H[2][j]));
+  return SH.map((r,i)=>r.map(v=>v*gn[i]))}
+const geom=()=>{const [cw,ch]=cfg.person.crop;const w=Math.round(person.width/2)*2;return {w,h:Math.round(w*ch/cw/2)*2}};
+let layerInfo=null;
+function renderLayers(){
+  if(actor.readyState<2||!actor.videoWidth)return null;
+  const vw=actor.videoWidth,vh=actor.videoHeight,{w}=geom(),k=w/vw;
+  const padC=matte.opacity>0?Math.ceil(3*matte.spread)+4:2,pad=Math.ceil(padC/k);
+  const W=vw+2*pad,H=vh+2*pad;ensureFBO(W,H);
+  gl.bindTexture(gl.TEXTURE_2D,vtex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,actor);
+  const cb=parseCB(cfg.person.colorbalance),m=gradeMatrix(person);
+  pass(P_KEY,fbos[0],vtex,{vsize:[vw,vh],pad,key:[89.0/255,63.0/255],sim:cfg.person.key_similarity,blend:cfg.person.key_blend,mixv:cfg.person.despill,
+    cbS:cb.S,cbM:cb.M,cbH:cb.H,M:[m[0][0],m[1][0],m[2][0],m[0][1],m[1][1],m[2][1],m[0][2],m[1][2],m[2][2]],con:person.contrast,expo:person.exposure},W,H);
+  layerInfo={W,H,k,pad};return layerInfo}
+function drawLayer(which){const {W,H,k}=layerInfo;
+  if(which==='matte'){const sig=matte.spread/k;
+    pass(P_BLUR,fbos[1],fbos[0].t,{size:[W,H],dir:[1,0],sigma:sig},W,H);pass(P_BLUR,fbos[2],fbos[1].t,{size:[W,H],dir:[0,1],sigma:sig},W,H);
+    pass(P_OUT,null,fbos[2].t,{size:[W,H],matteMode:1,op:matte.opacity,color:[1,3,5].map(i=>parseInt(matte.color.slice(i,i+2),16)/255)},W,H)}
+  else pass(P_OUT,null,fbos[0].t,{size:[W,H],matteMode:0,op:1,color:[0,0,0]},W,H);
+  const {w,h}=geom(),cx=person.x+w/2,cy=person.y+h/2,dx=which==='matte'?matte.offset_x:0,dy=which==='matte'?matte.offset_y:0;
+  ctx.save();ctx.translate(cx+dx,cy+dy);ctx.rotate(person.angle*Math.PI/180);ctx.scale(person.flip_h?-1:1,person.flip_v?-1:1);
+  ctx.drawImage(glc,-W*k/2,-H*k/2,W*k,H*k);ctx.restore()}
+
+/* ---------- plate: cached frame, so a loop seek never paints black ---------- */
+const plateCache=document.createElement('canvas');plateCache.width=1920;plateCache.height=1080;
+const pc=plateCache.getContext('2d',{willReadFrequently:true});let plateReady=false;
+const stillPlate=new Image();stillPlate.src='/media/still-plate';
+function updatePlate(){if(plate.readyState>=2&&!plate.seeking){pc.drawImage(plate,0,0,1920,1080);plateReady=true}}
+const hasRVFC='requestVideoFrameCallback' in HTMLVideoElement.prototype;
+if(hasRVFC){const cb=()=>{updatePlate();plate.requestVideoFrameCallback(cb)};plate.requestVideoFrameCallback(cb)}
+
+/* ---------- camera ---------- */
+function camRect(){const z=camera.zoom,w=Math.round(1920/z/2)*2,h=Math.round(1080/z/2)*2;
+  return {w,h,x:Math.round(Math.min(Math.max(camera.center_x-w/2,0),1920-w)),y:Math.round(Math.min(Math.max(camera.center_y-h/2,0),1080-h))}}
+const viewThroughCam=()=>$('#throughCam').checked&&mode!=='camera';
+function viewTransform(){if(!viewThroughCam())return [1,0,0];const r=camRect(),s=1920/r.w;return [s,-r.x*s,-r.y*s]}
+function toComp(e){const b=C.getBoundingClientRect(),sx=(e.clientX-b.left)*1920/b.width,sy=(e.clientY-b.top)*1080/b.height,[s,tx,ty]=viewTransform();return {x:(sx-tx)/s,y:(sy-ty)/s}}
+
+/* ---------- frame ---------- */
+function poly(pts){ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath()}
+function frame(){
+  try{
+  if(!hasRVFC)updatePlate();
+  const [s,tx,ty]=viewTransform();ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#0d0908';ctx.fillRect(0,0,1920,1080);
+  ctx.setTransform(s,0,0,s,tx,ty);
+  if(plateReady)ctx.drawImage(plateCache,0,0);
+  if(renderLayers()){if(matte.opacity>0)drawLayer('matte');drawLayer('actor')}
+  ctx.save();poly(armPoly);ctx.clip();if(stillPlate.complete&&stillPlate.naturalWidth)ctx.drawImage(stillPlate,0,0,1920,1080);else if(plateReady)ctx.drawImage(plateCache,0,0);ctx.restore();
+  overlays(s);
+  $('#seek').value=actor.currentTime||0;$('#time').textContent=(actor.currentTime||0).toFixed(1)+'s';
+  }catch(e){status('Preview error: '+e.message)}
+  requestAnimationFrame(frame)}
+function overlays(s){const lw=2/s;ctx.setLineDash([]);
+  if(mode==='move'){const {w,h}=geom();ctx.save();ctx.translate(person.x+w/2,person.y+h/2);ctx.rotate(person.angle*Math.PI/180);
+    ctx.setLineDash([10/s,8/s]);ctx.strokeStyle='rgba(255,204,105,.6)';ctx.lineWidth=lw;ctx.strokeRect(-w/2,-h/2,w,h);ctx.restore()}
+  if(mode==='arm'){poly(armPoly);ctx.strokeStyle='#7ad3ee';ctx.lineWidth=lw;ctx.stroke();
+    armPoly.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,7/s,0,7);ctx.fillStyle='#fff';ctx.fill()})}
+  if(mode==='camera'){const r=camRect();ctx.fillStyle='rgba(0,0,0,.62)';ctx.beginPath();ctx.rect(0,0,1920,1080);ctx.rect(r.x,r.y,r.w,r.h);ctx.fill('evenodd');
+    ctx.strokeStyle='#f2a457';ctx.lineWidth=4;ctx.strokeRect(r.x,r.y,r.w,r.h);
+    ctx.strokeStyle='rgba(242,164,87,.4)';ctx.lineWidth=1.5;for(const f of[1/3,2/3]){ctx.beginPath();ctx.moveTo(r.x+r.w*f,r.y);ctx.lineTo(r.x+r.w*f,r.y+r.h);ctx.moveTo(r.x,r.y+r.h*f);ctx.lineTo(r.x+r.w,r.y+r.h*f);ctx.stroke()}
+    ctx.fillStyle='#f2a457';ctx.font='28px ui-monospace,monospace';ctx.fillText(`${camera.name} · ${camera.zoom.toFixed(2)}×`,r.x+12,r.y+36)}}
+
+/* ---------- interaction ---------- */
+const HELP={move:'Drag German to place him. Wheel = scale, Shift+wheel = rotate. Use the sliders for exact values.',
+  camera:'Showing the full room. The orange frame is what the camera sees: drag to pan, wheel to zoom. Other modes preview through this camera unless you untick “View through camera”.',
+  arm:'Drag the white points so the shape traces the camera-near chair arm; that part of the room is laid over German.'};
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===b));$('#help').textContent=HELP[mode]});
+C.addEventListener('pointerdown',e=>{const p=toComp(e);
+  if(mode==='move')drag={p,x:person.x,y:person.y};
+  else if(mode==='camera')drag={p,cx:camera.center_x,cy:camera.center_y};
+  else{const i=armPoly.findIndex(([x,y])=>Math.hypot(x-p.x,y-p.y)<30);if(i<0)return;drag={i}}
+  C.setPointerCapture(e.pointerId)});
+C.addEventListener('pointermove',e=>{if(!drag)return;const p=toComp(e);
+  if(mode==='move'){person.x=Math.round(drag.x+p.x-drag.p.x);person.y=Math.round(drag.y+p.y-drag.p.y)}
+  else if(mode==='camera'){camera.center_x=Math.round(Math.min(1920,Math.max(0,drag.cx+p.x-drag.p.x)));camera.center_y=Math.round(Math.min(1080,Math.max(0,drag.cy+p.y-drag.p.y)))}
+  else armPoly[drag.i]=[Math.round(Math.min(1919,Math.max(0,p.x))),Math.round(Math.min(1079,Math.max(0,p.y)))];
+  syncControls();mark()});
+C.addEventListener('pointerup',()=>drag=null);
+C.addEventListener('wheel',e=>{e.preventDefault();const d=Math.sign(e.deltaY);
+  if(mode==='camera')camera.zoom=Math.min(4,Math.max(1,+(camera.zoom*(d>0?1/1.05:1.05)).toFixed(3)));
+  else if(e.shiftKey)person.angle=Math.max(-180,Math.min(180,person.angle-d));
+  else{const {w,h}=geom(),cx=person.x+w/2,cy=person.y+h/2;person.width=Math.round(Math.min(1600,Math.max(60,person.width*(d>0?1/1.04:1.04))));const g=geom();person.x=Math.round(cx-g.w/2);person.y=Math.round(cy-g.h/2)}
+  syncControls();mark()},{passive:false});
+const wrap=a=>{a=((a+180)%360+360)%360-180;return a===-180?180:a};
+$('#rotL').onclick=()=>{person.angle=wrap(person.angle-90);syncControls();mark()};
+$('#rotR').onclick=()=>{person.angle=wrap(person.angle+90);syncControls();mark()};
+$('#flipH').onclick=()=>{person.flip_h=!person.flip_h;syncControls();mark()};
+$('#flipV').onclick=()=>{person.flip_v=!person.flip_v;syncControls();mark()};
+$('#resetT').onclick=()=>{Object.assign(person,{angle:0,flip_h:false,flip_v:false});syncControls();mark()};
+$('#resetG').onclick=()=>{Object.assign(person,GRADE);syncControls();mark()};
+$('#camWide').onclick=()=>{Object.assign(camera,{zoom:1,center_x:960,center_y:540,name:'wide'});syncControls();mark()};
+$('#camGerman').onclick=()=>{const {w,h}=geom();Object.assign(camera,{zoom:1.6,center_x:Math.round(person.x+w/2),center_y:Math.round(person.y+h/2),name:'close'});syncControls();mark()};
+
+/* Match room: compare German's graded average color with the plate around him */
+$('#match').onclick=()=>{
+  if(!renderLayers()||!plateReady)return status('Wait for the video to load.');
+  const {W,H}=layerInfo;gl.bindFramebuffer(gl.FRAMEBUFFER,fbos[0].fb);const px=new Uint8Array(W*H*4);gl.readPixels(0,0,W,H,gl.RGBA,gl.UNSIGNED_BYTE,px);
+  let a=[0,0,0],n=0;for(let i=0;i<px.length;i+=16)if(px[i+3]>200){a[0]+=px[i];a[1]+=px[i+1];a[2]+=px[i+2];n++}
+  if(n<50)return status('Could not find enough of German to sample.');a=a.map(v=>v/n/255);
+  const {w,h}=geom(),x0=Math.max(0,Math.round(person.x-w*.5)),y0=Math.max(0,Math.round(person.y-h*.25)),x1=Math.min(1920,Math.round(person.x+w*1.5)),y1=Math.min(1080,Math.round(person.y+h*1.25));
+  if(x1-x0<4||y1-y0<4)return status('German is off-frame; move him into the room first.');
+  const d=pc.getImageData(x0,y0,x1-x0,y1-y0).data;let e=[0,0,0],m=0;for(let i=0;i<d.length;i+=16){e[0]+=d[i];e[1]+=d[i+1];e[2]+=d[i+2];m++}e=e.map(v=>v/m/255);
+  const mean=v=>(v[0]+v[1]+v[2])/3,lum=v=>.2126*v[0]+.7152*v[1]+.0722*v[2],an=a.map(v=>v/mean(a)),en=e.map(v=>v/mean(e));
+  ['gain_r','gain_g','gain_b'].forEach((k,i)=>person[k]=+Math.min(1.5,Math.max(.5,person[k]*Math.pow(en[i]/an[i],.5))).toFixed(3));
+  person.exposure=+Math.min(.5,Math.max(-.5,person.exposure+(lum(e)-lum(a))*.35)).toFixed(3);
+  syncControls();mark();status(`Nudged toward the room (room RGB ${e.map(v=>Math.round(v*255))}, German ${a.map(v=>Math.round(v*255))}). Press again to push further.`)};
+
+/* ---------- transport / clips / save / render ---------- */
+$('#play').onclick=()=>{playing=!playing;for(const v of[actor,plate])playing?v.play().catch(()=>{}):v.pause();$('#play').textContent=playing?'Pause':'Play'};
+$('#seek').oninput=e=>{actor.currentTime=Math.min(+e.target.value,Math.max(0,(actor.duration||8)-.05))};
+function setClip(c){clip=c;$('#clip').value=c;person={...GRADE,angle:0,flip_h:false,flip_v:false,...cfg.person,...(cfg.clips[c].person||{})};
+  actor.src='/media/actor/'+c;actor.load();if(playing)actor.play().catch(()=>{});syncControls();dirty=false;status('Previewing '+c+'.')}
+$('#clip').onchange=e=>{if(dirty&&!confirm('Discard unsaved changes for this take?')){e.target.value=clip;return}setClip(e.target.value)};
+function payload(){const o={};for(const k of [...TRANSFORM_KEYS,...Object.keys(GRADE)])o[k]=person[k];cfg.clips[clip].person=o;
+  cfg.back_matte={...matte};cfg.camera={...camera};cfg.front_arm_polygon=armPoly;return cfg}
+async function save(){const r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload())});
+  const d=await r.json();if(!r.ok)throw Error(d.error||r.status);dirty=false;status('Saved.')}
+$('#save').onclick=()=>save().catch(e=>status('Save failed: '+e.message));
+/* ---------- apply to all ---------- */
+$('#applyAll').onclick=async()=>{
+  const keys=[...($('#applyPos').checked?['x','y','width']:[]),...($('#applyRot').checked?['angle','flip_h','flip_v']:[]),...($('#applyColor').checked?Object.keys(GRADE):[])];
+  if(!keys.length)return status('Tick at least one group to apply.');
+  payload();for(const c of Object.keys(cfg.clips)){cfg.clips[c].person=cfg.clips[c].person||{};for(const k of keys)cfg.clips[c].person[k]=person[k]}
+  try{await save();status(`Applied ${clip}'s ${[$('#applyPos').checked&&'position/scale',$('#applyRot').checked&&'rotate/flip',$('#applyColor').checked&&'color'].filter(Boolean).join(', ')} to all 7 takes and saved.`)}catch(e){status('Apply failed: '+e.message)}};
+
+/* ---------- render queue ---------- */
+const picked=new Set();
+function drawPick(){$('#pick').innerHTML=Object.keys(cfg.clips).map(c=>`<button class="pk${picked.has(c)?' on':''}" data-c="${c}">${c.slice(4)}</button>`).join('');
+  $('#pick').querySelectorAll('.pk').forEach(b=>b.onclick=()=>{picked.has(b.dataset.c)?picked.delete(b.dataset.c):picked.add(b.dataset.c);drawPick()})}
+$('#pickAll').onclick=()=>{Object.keys(cfg.clips).forEach(c=>picked.add(c));drawPick()};
+$('#pickNone').onclick=()=>{picked.clear();drawPick()};
+async function queue(clips){try{payload();const r=await fetch('/api/queue/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:cfg,clips})});
+  const d=await r.json();if(!r.ok)throw Error(d.error||r.status);dirty=false;status(`Queued ${d.added.map(j=>j.clip).join(', ')} (${camera.name} pass).`);pollQueue()}catch(e){status('Queue failed: '+e.message)}}
+$('#render').onclick=()=>queue([clip]);
+$('#queueSel').onclick=()=>picked.size?queue(Object.keys(cfg.clips).filter(c=>picked.has(c))):status('Select takes to queue first.');
+const post=(u,b)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})}).then(pollQueue);
+$('#clearDone').onclick=()=>post('/api/queue/clear');
+const fmt=s=>s>=60?`${Math.floor(s/60)}m ${Math.round(s%60)}s`:`${Math.round(s)}s`;
+async function pollQueue(){try{const {jobs}=await(await fetch('/api/queue')).json();const now=Date.now()/1000;
+  $('#queue').innerHTML=jobs.length?jobs.slice().reverse().map(j=>{let info=j.status;
+    if(j.status==='running'){const el=now-j.started,eta=j.progress>.02?el/j.progress-el:null;info=`rendering ${Math.round(j.progress*100)}%${eta?` · ~${fmt(eta)} left`:''}`}
+    if(j.status==='done')info=`done in ${fmt(j.finished-j.started)}`;
+    const act=j.status==='queued'||j.status==='running'?`<button data-x="${j.id}">Cancel</button>`:j.status==='done'?`<a href="/media/output/${j.clip}?pass=${encodeURIComponent(j.pass)}&dl=1">Download</a>`:`<button data-r="${j.id}">Retry</button>`;
+    return `<div class="job"><div class="top"><b>${j.clip} · ${j.pass}</b>${act}</div>${j.status==='running'||j.status==='done'?`<div class="bar"><i style="width:${Math.round((j.progress||0)*100)}%"></i></div>`:''}<div class="st-${j.status}">${info}${j.error?': '+j.error.replace(/</g,'&lt;'):''}</div></div>`}).join(''):'<small>Queue is empty.</small>';
+  $('#queue').querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>post('/api/queue/cancel',{id:b.dataset.x}));
+  $('#queue').querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>post('/api/queue/retry',{id:b.dataset.r}))}catch(e){}}
+setInterval(pollQueue,2500);
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
+
+(async()=>{try{initGL()}catch(e){status('WebGL unavailable: '+e.message);return}
+  cfg=await(await fetch('/api/config')).json();
+  matte={color:'#481b16',opacity:0,spread:12,offset_x:0,offset_y:0,...cfg.back_matte};
+  camera={name:'wide',zoom:1,center_x:960,center_y:540,...(cfg.camera||{})};armPoly=cfg.front_arm_polygon;
+  buildControls();$('#clip').innerHTML=Object.keys(cfg.clips).map(c=>`<option>${c}</option>`).join('');
+  setClip(Object.keys(cfg.clips)[0]);drawPick();pollQueue();$('#help').textContent=HELP.move;plate.play().catch(()=>{});
+  document.addEventListener('pointerdown',()=>{if(playing){plate.play().catch(()=>{});actor.play().catch(()=>{})}},{once:true});
+  requestAnimationFrame(frame)})();
+</script>
+</body>
+</html>
