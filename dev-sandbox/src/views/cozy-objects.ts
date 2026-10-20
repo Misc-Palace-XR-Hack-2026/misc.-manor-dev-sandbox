@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { glowIndicator } from './glow';
 
 // Base-centered, +Z forward, slot-sized models. Detail offsets avoid coplanar skins.
 const wood = 0x995d38, brass = 0xc6a264, cream = 0xf4e4c3, dark = 0x292b30;
@@ -14,7 +15,12 @@ export function applyLampLightBudget(root: THREE.Object3D): void {
   });
   const keep = lampLightBudget(lights.length);
   lights.forEach((light, i) => {
-    light.intensity = i < keep ? LAMP_LIGHT.intensity : 0;
+    // Lights may be moodier than a reading lamp (a lava lamp); the budget decides *whether* a light
+    // burns, never how bright its own source is. `lit` is what per-frame pulses must respect.
+    const base = typeof light.userData.baseIntensity === 'number' ? light.userData.baseIntensity : LAMP_LIGHT.intensity;
+    const lit = i < keep;
+    light.userData.lit = lit;
+    light.intensity = lit ? base : 0;
   });
 }
 const material = (color: number) => new THREE.MeshStandardMaterial({color,roughness:.72});
@@ -60,7 +66,8 @@ export const cozyBuilders = {
     const p:THREE.Object3D[]=[block('synth-case',.72,.105,.35,dark,0,.0575),block('synth-cheek-left',.035,.13,.36,wood,-.3775,.065),block('synth-cheek-right',.035,.13,.36,wood,.3775,.065)];
     for(let i=0;i<14;i++) p.push(block(`synth-white-key-${i}`,.043,.023,.16,cream,-.304+i*.047,.119,.081));
     for(let i=0;i<13;i++) if(![2,6,9].includes(i)) p.push(block(`synth-black-key-${i}`,.022,.022,.092,dark,-.2805+i*.047,.140,.045));
-    p.push(block('synth-display',.14,.008,.065,0x72a6a0,-.23,.114,-.09));
+    // Backlit LCD: a calm breath, the one lit part of the panel.
+    p.push(glowIndicator(block('synth-display',.14,.008,.065,0x72a6a0,-.23,.114,-.09),{color:0x7fe6d8,base:.3,amp:.35,speed:.18,wave:'sine'}));
     for(let i=0;i<7;i++) p.push(cylinder(`synth-knob-${i}`,.016,.016,.027,i===6?0xc56548:brass,-.07+i*.056,.122,-.09));
     return p;
   },
@@ -82,7 +89,7 @@ export const cozyBuilders = {
     return [cylinder('lamp-base',.15,.16,.04,wood),cylinder('lamp-foot',.09,.11,.03,brass,0,.045),cylinder('lamp-stem',.015,.02,.39,brass,0,.25),shade,cylinder('lamp-finial',.02,.02,.025,brass,0,.588),light];
   },
   coffeeMaker: (): THREE.Object3D[] => {
-    const p:THREE.Object3D[]=[block('coffee-base',.37,.04,.32,dark),block('coffee-reservoir',.32,.46,.12,0x47756c,0,.27,-.095),block('coffee-brew-head',.33,.10,.30,0x47756c,0,.46,-.01),cylinder('coffee-hotplate',.117,.117,.014,brass,0,.047,.045),cylinder('coffee-carafe',.102,.11,.20,0x73503b,0,.151,.045),cylinder('coffee-carafe-lid',.115,.115,.023,dark,0,.262,.045),cylinder('coffee-spout',.024,.018,.06,brass,0,.390,.045),block('coffee-switch',.035,.025,.016,0xd18757,.105,.46,.140)];
+    const p:THREE.Object3D[]=[block('coffee-base',.37,.04,.32,dark),block('coffee-reservoir',.32,.46,.12,0x47756c,0,.27,-.095),block('coffee-brew-head',.33,.10,.30,0x47756c,0,.46,-.01),cylinder('coffee-hotplate',.117,.117,.014,brass,0,.047,.045),cylinder('coffee-carafe',.102,.11,.20,0x73503b,0,.151,.045),cylinder('coffee-carafe-lid',.115,.115,.023,dark,0,.262,.045),cylinder('coffee-spout',.024,.018,.06,brass,0,.390,.045),glowIndicator(block('coffee-switch',.035,.025,.016,0xd18757,.105,.46,.140),{color:0xff7a3c,base:.35,amp:.95,speed:.4,wave:'blink'})];
     const handle=part('coffee-handle',new THREE.TorusGeometry(.07,.014,8,16,Math.PI),dark,.108,.15,.045);handle.rotation.z=-Math.PI/2;p.push(handle);
     return p;
   },
