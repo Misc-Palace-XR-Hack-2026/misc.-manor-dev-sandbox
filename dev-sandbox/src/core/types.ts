@@ -13,6 +13,7 @@ export const OBJECT_KINDS = [
   'clock', 'guitar', 'synthesizer', 'drum', 'lamp', 'coffeeMaker',
   'cat', 'teapot', 'lantern', 'headphones', 'cassette', 'cushion',
   'console', 'cartridge', 'vhs', 'recordSleeve', 'spoon', 'robot', 'telescope', 'car', 'motorcycle',
+  'rocket',
 ] as const;
 export type ObjectKind = (typeof OBJECT_KINDS)[number];
 
@@ -26,7 +27,7 @@ export const OBJECT_LABELS: Record<ObjectKind, string> = {
   headphones: 'Headphones', cassette: 'Cassette tape', cushion: 'Floor cushion',
   console: 'Retro console', cartridge: 'Game cartridge', vhs: 'VHS tape',
   recordSleeve: 'Vinyl jacket', spoon: 'Spoon', robot: 'Robot',
-  telescope: 'Telescope', car: 'Car', motorcycle: 'Motorcycle',
+  telescope: 'Telescope', car: 'Car', motorcycle: 'Motorcycle', rocket: 'Toy rocket',
   clock: 'Mantel clock', guitar: 'Acoustic guitar', synthesizer: 'Synthesizer',
   drum: 'Drum', lamp: 'Table lamp', coffeeMaker: 'Coffee maker',
 };
@@ -56,6 +57,8 @@ export interface ContentItem {
   sourceRef: string;
   tags: string[];
   createdAt: string;
+  /** Link and text are fixed (the demo's starter objects). The object kind can still change and it can be stashed. */
+  locked?: boolean;
 }
 
 /** The visible object standing in for a content item. */

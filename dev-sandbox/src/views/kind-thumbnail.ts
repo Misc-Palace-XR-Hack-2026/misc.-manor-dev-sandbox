@@ -31,6 +31,7 @@ const GLYPHS: Record<ObjectKind, string> = {
   telescope: '🔭',
   car: '🚗',
   motorcycle: '🏍️',
+  rocket: '🚀',
   clock: '🕰️', guitar: '🎸', synthesizer: '🎹', drum: '🥁', lamp: '💡', coffeeMaker: '☕',
 };
 

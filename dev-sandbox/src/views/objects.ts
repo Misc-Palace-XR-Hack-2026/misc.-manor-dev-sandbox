@@ -224,6 +224,28 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
     cyl(0.035, 0.035, 0.02, 0x2b2b2e, 0.07, 0.04, 0),
     box(0.12, 0.018, 0.06, 0xc0463b, 0, 0.01, 0.09),
   ],
+  // Toy rocket standing on its fins, window toward the camera (+z).
+  rocket: () => {
+    const red = 0xd9382f;
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.062, 0.12, 16), mat(red));
+    nose.position.set(0, 0.345, 0);
+    const parts: THREE.Object3D[] = [
+      named('rocket-nozzle', cyl(0.03, 0.045, 0.035, 0x3a3a40, 0, 0.01)),
+      named('rocket-body', cyl(0.062, 0.062, 0.24, 0xf4f4ef, 0, 0.045)),
+      named('rocket-band', cyl(0.064, 0.064, 0.03, red, 0, 0.095)),
+      named('rocket-nose', nose),
+      named('rocket-window-rim', box(0.07, 0.07, 0.012, 0xc6a264, 0, 0.19, 0.058)),
+      named('rocket-window', box(0.05, 0.05, 0.012, 0x7fd6f0, 0, 0.2, 0.064)),
+    ];
+    for (let i = 0; i < 3; i++) {
+      const holder = new THREE.Group();
+      holder.name = `rocket-fin-${i}`;
+      holder.rotation.y = (i / 3) * Math.PI * 2 + Math.PI / 2;
+      holder.add(box(0.05, 0.12, 0.012, red, 0.08, 0.0, 0));
+      parts.push(holder);
+    }
+    return parts;
+  },
   cushion: () => {
     const pillow = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.08, 8), mat(0xc46a4a));
     pillow.position.set(0, 0.04, 0);

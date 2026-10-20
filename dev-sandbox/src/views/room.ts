@@ -12,6 +12,7 @@ import { LIGHTING_PRESETS } from '../core/appearance';
 import { buildPreview, type Preview } from '../core/preview';
 import { PreviewCardView } from './preview-card';
 import { mediaArt, type MediaArt } from '../core/media-art';
+import { safeUrl } from '../core/content';
 import { canEnterVr, enterReason, type NeighborhoodRoom } from '../xr/interaction';
 import { XrSession } from '../xr/session';
 
@@ -20,6 +21,21 @@ import { XrSession } from '../xr/session';
 
 const YAW = Math.PI / 4; // objects face the isometric camera
 const HOVER_DWELL_MS = 400; // tooltip appears only after the pointer rests on an object
+
+/**
+ * Opt-in hooks for the curated demo. The sandbox never sets them. With a camera the view renders through it and the
+ * orbit controls are off; with slots only those slots show markers and accept a drop.
+ */
+export interface DemoHooks {
+  camera?: THREE.PerspectiveCamera;
+  slots?: ReadonlySet<string>;
+  /** Which way objects face (radians). Defaults to facing the isometric camera. */
+  yaw?: number;
+  /** Called every rendered frame with time in seconds. */
+  frame?: (t: number) => void;
+  /** A fixed panel (bottom right) the preview card always docks above, in place of the menu's item sheet. */
+  dock?: HTMLElement;
+}
 
 interface Entry {
   group: THREE.Group;
@@ -61,6 +77,7 @@ export class RoomView {
   private cardArt: MediaArt | null = null;
   private xr: XrSession | null = null;
   private vrButton = document.createElement('button');
+  private demo: DemoHooks | null = null;
 
   constructor(private container: HTMLElement, private store: Store, rooms: NeighborhoodRoom[] = []) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -140,7 +157,7 @@ export class RoomView {
     this.markerGroup.visible = false;
     const copy = document.createElement('canvas');
     try {
-      this.renderer.render(this.scene, this.camera);
+      this.renderer.render(this.scene, this.activeCamera);
       copy.width = this.renderer.domElement.width;
       copy.height = this.renderer.domElement.height;
       const context = copy.getContext('2d');
@@ -150,6 +167,26 @@ export class RoomView {
       this.markerGroup.visible = visible;
     }
     return new Promise((resolve, reject) => copy.toBlob(blob => blob ? resolve(blob) : reject(new Error('PNG encoding failed.')), 'image/png'));
+  }
+
+  // ---- demo hooks ---------------------------------------------------------
+  setDemo(hooks: DemoHooks | null): void {
+    this.demo = hooks;
+    this.resize();
+    this.sync();
+  }
+
+  /** Extra scenery that is not part of the saved room (the demo's crate and jukebox). */
+  addToScene(...objects: THREE.Object3D[]): void {
+    this.scene.add(...objects);
+  }
+
+  get activeCamera(): THREE.Camera {
+    return this.demo?.camera ?? this.camera;
+  }
+
+  private get yaw(): number {
+    return this.demo?.yaw ?? YAW;
   }
 
   // ---- scene setup ------------------------------------------------------
@@ -267,6 +304,8 @@ export class RoomView {
     this.camera.top = this.viewHeight / 2;
     this.camera.bottom = -this.viewHeight / 2;
     this.camera.updateProjectionMatrix();
+    const cam = this.demo?.camera;
+    if (cam) { cam.aspect = aspect; cam.updateProjectionMatrix(); }
   }
 
   // ---- state -> scene ---------------------------------------------------
@@ -303,7 +342,7 @@ export class RoomView {
       }
       if (!entry) {
         const group = buildObject(rep.objectKind, content);
-        group.rotation.y = YAW;
+        group.rotation.y = this.yaw;
         group.position.set(slot.pos[0], slot.pos[1], slot.pos[2]);
         group.userData.repId = rep.id;
         this.objectsGroup.add(group);
@@ -322,8 +361,12 @@ export class RoomView {
     applyLampLightBudget(this.objectsGroup);
 
     const held = this.store.holding !== null;
-    this.markerGroup.visible = held || (this.store.selectedId !== null && !this.objects.has(this.store.selectedId));
+    const restricted = this.demo?.slots;
+    this.markerGroup.visible = restricted
+      ? held || this.store.selectedId !== null
+      : held || (this.store.selectedId !== null && !this.objects.has(this.store.selectedId));
     for (const [slotId, m] of this.markers) {
+      m.visible = !restricted || restricted.has(slotId);
       const occupant = this.store.repAt(slotId);
       const color = !occupant ? 0xfff2b0 : occupant === this.store.selectedId ? 0x9be39b : 0xff9ec4;
       (m.material as THREE.MeshBasicMaterial).color.setHex(color);
@@ -341,7 +384,7 @@ export class RoomView {
       if (id === selected && !e.selectedState) {
         e.selectedState = {
           originalPos: e.target.clone(),
-          targetRotation: this.minimalClockwiseRotation(e.group.rotation.y, YAW),
+          targetRotation: this.minimalClockwiseRotation(e.group.rotation.y, this.yaw),
         };
       }
       if (id !== selected && e.selectedState) {
@@ -404,7 +447,7 @@ export class RoomView {
         e.group.scale.z += (targetScale - e.group.scale.z) * 0.15;
       } else {
         // Return to rest state: face isometric camera (YAW), scale to original 1.6
-        e.group.rotation.y = YAW;
+        e.group.rotation.y = this.yaw;
         const restScale = 1.6; // OBJECT_SCALE
         e.group.scale.x += (restScale - e.group.scale.x) * 0.15;
         e.group.scale.y += (restScale - e.group.scale.y) * 0.15;
@@ -415,6 +458,7 @@ export class RoomView {
       const pulse = 0.4 + Math.sin(t * 5) * 0.12;
       for (const m of this.markers.values()) (m.material as THREE.MeshBasicMaterial).opacity = pulse;
     }
+    this.demo?.frame?.(t);
     const xrCamera = this.xr?.tick() ?? null;
     if (xrCamera) {
       this.controls.enabled = false;
@@ -423,10 +467,10 @@ export class RoomView {
       return;
     }
     const inspecting = Boolean(this.store.selectedId && this.objects.has(this.store.selectedId));
-    if (!inspecting) this.controls.update();
+    if (!inspecting && !this.demo?.camera) this.controls.update();
     this.frameSelection();
     this.fitBackground();
-    this.renderer.render(this.scene, this.camera);
+    this.renderer.render(this.scene, this.activeCamera);
   }
 
   /**
@@ -441,8 +485,10 @@ export class RoomView {
     // Every preview kind docks above the item sheet (bottom right) so it sits still and is easy to reach. Without the
     // sheet it floats over the object. An object that is selected but not placed yet has nowhere to float, so it
     // only shows when the sheet is there.
-    const sheet = document.querySelector<HTMLElement>('.item-sheet:not([hidden])');
-    if (!content || (!entry && !sheet)) { this.card.show(null); return; }
+    const sheet = this.demo?.dock && !this.demo.dock.hidden
+      ? this.demo.dock
+      : document.querySelector<HTMLElement>('.item-sheet:not([hidden])');
+    if (!content || (!entry && !sheet) || (this.demo?.dock && !sheet)) { this.card.show(null); return; }
     // Rebuild the preview only when the content changed. The card swaps DOM on a new preview object, and an iframe
     // must not reload every frame.
     const key = [content.id, content.type, content.title, content.sourceKind, content.sourceRef,
@@ -452,7 +498,7 @@ export class RoomView {
       this.cardPreview = buildPreview(content);
       this.cardArt = mediaArt(content);
     }
-    this.card.show(this.cardPreview, this.cardArt);
+    this.card.show(this.cardPreview, this.cardArt, content.sourceKind === 'url' ? safeUrl(content.sourceRef) : null);
     if (sheet) {
       // Position the card with its bottom-right corner 10px above and aligned with the sheet's top-right.
       // dockBottomRight handles viewport clamping so the card never goes off-page.
@@ -462,15 +508,16 @@ export class RoomView {
     }
     // Floating mode: anchor the card above the selected object, projected through the camera.
     this.cardAnchor.copy(entry!.target).y += 2;
-    this.camera.updateMatrixWorld();
-    const ndc = this.cardAnchor.project(this.camera);
+    const cam = this.activeCamera;
+    cam.updateMatrixWorld();
+    const ndc = this.cardAnchor.project(cam);
     this.card.moveTo(((ndc.x + 1) / 2) * this.container.clientWidth, ((1 - ndc.y) / 2) * this.container.clientHeight);
   }
 
   private frameSelection(): void {
     // Camera no longer moves to face selected objects. Objects instead rotate to face the camera and scale up,
     // avoiding jarring view jumps. Camera stays enabled for free panning/orbiting at all times.
-    this.controls.enabled = true;
+    this.controls.enabled = !this.demo?.camera;
   }
 
   /**
@@ -514,7 +561,7 @@ export class RoomView {
   private ray(e: PointerEvent): void {
     const r = this.renderer.domElement.getBoundingClientRect();
     const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-    this.raycaster.setFromCamera(ndc, this.camera);
+    this.raycaster.setFromCamera(ndc, this.activeCamera);
   }
 
   private repIdAt(e: PointerEvent): string | null {
@@ -527,7 +574,8 @@ export class RoomView {
 
   private slotIdAt(e: PointerEvent): string | null {
     this.ray(e);
-    const hit = this.raycaster.intersectObjects(this.markerGroup.children, false)[0];
+    const allowed = this.demo?.slots;
+    const hit = this.raycaster.intersectObjects(this.markerGroup.children, false).find((h) => !allowed || allowed.has(h.object.userData.slotId as string));
     return (hit?.object.userData.slotId as string | undefined) ?? null;
   }
 

@@ -118,18 +118,18 @@ test('seedRoom creates proper room instances', () => {
   assert.equal(guest.representations.length, 0);
   assert.equal(guest.placements.length, 0);
 
-  // seedRoom('german', {'curious-web': <room>}) uses the repo seed
+  // seedRoom('german', {'sample': <room>}) uses the repo seed
   const curioused = newRoom('Seeded');
   curioused.owner = 'Test';
   curioused.contentItems.push({ id: 'ci1', type: 'link', title: 'Test', sourceRef: 'https://example.com', tags: [], sourceKind: 'url', createdAt: new Date().toISOString() });
 
-  const german = seedRoom('german', { 'curious-web': curioused });
+  const german = seedRoom('german', { 'sample': curioused });
   assert.equal(german.id, 'german');
   assert.equal(german.owner, "German's room");
   assert.equal(german.contentItems.length, 1);
 
   // A repo key equal to room id wins over the slot's seed
-  const repo = { 'german': newRoom('Direct'), 'curious-web': newRoom('Fallback') };
+  const repo = { 'german': newRoom('Direct'), 'sample': newRoom('Fallback') };
   repo.german.contentItems.push({ id: 'ci2', type: 'link', title: 'Direct', sourceRef: 'https://direct.com', tags: [], sourceKind: 'url', createdAt: new Date().toISOString() });
   const germanDirect = seedRoom('german', repo);
   assert.equal(germanDirect.contentItems[0].title, 'Direct');
@@ -140,9 +140,9 @@ test('seedRoom creates proper room instances', () => {
 
 test('ROOM_DIRECTORY has expected entries', () => {
   const roomIds = ROOM_DIRECTORY.map(r => r.id);
-  assert.equal(roomIds.length, 7, 'should have 7 rooms');
+  assert.equal(roomIds.length, 5, 'should have 5 rooms');
 
-  for (const id of ['guest', 'german', 'matt', 'levi', 'jawan', 'omari', 'daniel']) {
+  for (const id of ['guest', 'german', 'matt', 'levi', 'jawan']) {
     assert.ok(roomIds.includes(id), `missing room ${id}`);
   }
 });
@@ -194,6 +194,25 @@ test('Per-room saves: Store saves to per-room keys and can switch rooms', () => 
   const leviBefore = store.state;
   assert.throws(() => store.switchRoom('levi', newRoom('Levi')), /could not be loaded/i);
   assert.equal(store.state, leviBefore, 'state should be unchanged after corrupt load');
+});
+
+test('quarantineSaved sets an unreadable save aside without losing it, so the room can reseed', () => {
+  const saved = new Map<string, string>();
+  globalThis.localStorage = {
+    getItem: (k: string) => saved.get(k) ?? null,
+    setItem: (k: string, v: string) => { saved.set(k, v); },
+    removeItem: (k: string) => { saved.delete(k); },
+  } as unknown as Storage;
+
+  const key = 'mp-sandbox:rooms:german';
+  saved.set(key, '{"schemaVersion": 999}');
+  assert.throws(() => Store.loadSaved('german'), /could not be loaded/i);
+
+  const copies = Store.quarantineSaved('german');
+  assert.equal(copies.length, 1);
+  assert.equal(saved.get(copies[0]), '{"schemaVersion": 999}', 'original data is kept');
+  assert.equal(saved.has(key), false, 'broken save is cleared');
+  assert.equal(Store.loadSaved('german'), null, 'room can now start from its seed');
 });
 
 test('Pickup safety: pick and place operations work correctly', () => {

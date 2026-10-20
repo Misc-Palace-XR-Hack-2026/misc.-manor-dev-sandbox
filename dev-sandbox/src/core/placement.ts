@@ -11,7 +11,7 @@ const LARGE = new Set<ObjectKind>([
   'guitar', 'synthesizer', 'drum', 'car', 'motorcycle',
 ]);
 const SMALL = new Set<ObjectKind>([
-  'mug', 'cassette', 'clock', 'cartridge', 'headphones', 'spoon', 'trophy', 'photoFrame', 'igniteLogo',
+  'mug', 'cassette', 'clock', 'cartridge', 'headphones', 'spoon', 'trophy', 'photoFrame', 'igniteLogo', 'rocket',
 ]);
 const BESIDE = new Set<ObjectKind>(['lamp', 'sideTable', 'coffeeMaker']);
 const LOW = new Set<ObjectKind>(['notebook', 'book', 'recordSleeve']);

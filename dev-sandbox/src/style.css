@@ -100,6 +100,7 @@ button:disabled { opacity: 0.4; cursor: default; }
 }
 .preview-card[hidden] { display: none; }
 .preview-card.preview-interactive { width: min(300px, calc(100vw - 24px)); pointer-events: auto; }
+.preview-card.preview-openable { pointer-events: auto; cursor: pointer; }
 .preview-hero { display: grid; place-content: center; justify-items: center; gap: 4px; background: linear-gradient(135deg, #3a3546, #2a2733); }
 .preview-glyph { font-size: 44px; line-height: 1; }
 .preview-hero-caption { max-width: 100%; padding: 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
