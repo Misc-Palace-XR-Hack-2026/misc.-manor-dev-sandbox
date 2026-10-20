@@ -91,7 +91,7 @@ function fishBowl(): THREE.Object3D[] {
     (() => {
       const tail = new THREE.Mesh(new THREE.ConeGeometry(0.032, 0.06, 4), std(0xff9d4a));
       tail.name = 'fish-tail';
-      tail.rotation.z = Math.PI / 2; // apex toward -X, wide end against the body
+      tail.rotation.z = -Math.PI / 2; // narrow attachment toward +X, fan trails behind
       tail.scale.set(1, 1, 0.35);
       tail.position.set(-0.085, 0, 0);
       return tail;
@@ -106,6 +106,13 @@ function fishBowl(): THREE.Object3D[] {
     sph('fish-eye-l', 0.008, 0x1d1d22, 0.05, 0.01, 0.022, [1, 1, 1], undefined, [8, 6]),
     sph('fish-eye-r', 0.008, 0x1d1d22, 0.05, 0.01, -0.022, [1, 1, 1], undefined, [8, 6]),
   );
+  // Swims a closed Lissajous loop well inside the water sphere, nose always along the path. The amplitudes
+  // leave the fish's 0.12 m reach clear of the 0.185 m water radius and keep the dorsal fin under the surface.
+  fish.userData.animate = (t: number) => {
+    const x = 0.035 * Math.cos(t * 0.45), z = 0.03 * Math.sin(t * 0.57);
+    fish.position.set(x, 0.25 + 0.018 * Math.sin(t * 0.31), z);
+    fish.rotation.y = Math.atan2(-0.03 * 0.57 * Math.cos(t * 0.57), -0.035 * 0.45 * Math.sin(t * 0.45));
+  };
   parts.push(fish);
 
   // Weed and pebbles on the bottom.
@@ -177,9 +184,10 @@ function skateboard(): THREE.Object3D[] {
   for (const [name, y] of [['lo', 0.135], ['hi', 0.445]] as const) {
     parts.push(
       bx(`skate-truck-plate-${name}`, 0.06, 0.045, 0.005, 0xb9c0c8, 0, y, 0.0105),
-      bx(`skate-truck-hanger-${name}`, 0.115, 0.016, 0.016, 0xb9c0c8, 0, y, 0.021),
-      cyl(`skate-wheel-${name}-l`, 0.028, 0.028, 0.02, 0xff8a3d, -0.068, y, 0.021, 'x', undefined, 14),
-      cyl(`skate-wheel-${name}-r`, 0.028, 0.028, 0.02, 0xff8a3d, 0.068, y, 0.021, 'x', undefined, 14),
+      bx(`skate-truck-support-${name}`, 0.024, 0.024, 0.035, 0xb9c0c8, 0, y, 0.028),
+      bx(`skate-truck-hanger-${name}`, 0.14, 0.016, 0.016, 0xb9c0c8, 0, y, 0.045),
+      cyl(`skate-wheel-${name}-l`, 0.028, 0.028, 0.02, 0xff8a3d, -0.068, y, 0.045, 'x', undefined, 14),
+      cyl(`skate-wheel-${name}-r`, 0.028, 0.028, 0.02, 0xff8a3d, 0.068, y, 0.045, 'x', undefined, 14),
     );
   }
   return parts;
@@ -254,15 +262,25 @@ function flyingSaucer(): THREE.Object3D[] {
 }
 
 function lavaLamp(): THREE.Object3D[] {
-  const glow: Extra = { transparent: true, opacity: 0.8, emissive: new THREE.Color(0xff4f8a), emissiveIntensity: 0.55 };
-  const wax = (name: string, y: number, x: number, s: number) =>
-    sph(name, s, 0xffa63a, x, y, 0, [1, 1.25, 1], { emissive: new THREE.Color(0xff8a1a), emissiveIntensity: 0.8 }, [10, 8]);
+  // depthWrite:false so the wax behind this shell is never depth-culled as the blobs move.
+  const glow: Extra = { transparent: true, opacity: 0.8, depthWrite: false, emissive: new THREE.Color(0xff4f8a), emissiveIntensity: 0.55 };
+  // The vessel is a frustum from r 0.07 at y 0.1 to r 0.035 at y 0.37. Each blob's rise is capped so its
+  // whole silhouette stays inside that cone at the TOP of its travel, where the glass is narrowest.
+  const wax = (name: string, r: number, midY: number, riseY: number, xMid: number, xSway: number, speed: number, phase: number) => {
+    const m = sph(name, r, 0xffa63a, xMid, midY, 0, [1, 1.25, 1],
+      { emissive: new THREE.Color(0xff8a1a), emissiveIntensity: 0.8 }, [10, 8]);
+    m.userData.animate = (t: number) => {
+      m.position.set(xMid + xSway * Math.sin(t * speed * 1.7 + phase), midY + riseY * Math.sin(t * speed + phase), 0);
+    };
+    m.userData.animate(0);
+    return m;
+  };
   return [
     cyl('lava-base', 0.05, 0.09, 0.11, 0xd9382f, 0, 0.055, 0),
     cyl('lava-glass', 0.035, 0.07, 0.27, 0xff7aa8, 0, 0.235, 0, 'y', glow),
-    wax('lava-blob-a', 0.15, -0.012, 0.035),
-    wax('lava-blob-b', 0.24, 0.012, 0.028),
-    wax('lava-blob-c', 0.31, -0.006, 0.02),
+    wax('lava-blob-a', 0.035, 0.195, 0.045, -0.004, 0.004, 0.21, 0),
+    wax('lava-blob-b', 0.028, 0.235, 0.065, 0.004, 0.003, 0.29, 1.9),
+    wax('lava-blob-c', 0.02, 0.27, 0.07, -0.004, 0.004, 0.37, 3.6),
     cyl('lava-cap', 0.012, 0.04, 0.07, 0xd9382f, 0, 0.405, 0),
     sph('lava-finial', 0.016, 0xc6a264, 0, 0.45, 0, [1, 1, 1], undefined, [10, 8]),
   ];
@@ -327,13 +345,74 @@ function rubberDuck(): THREE.Object3D[] {
   ];
 }
 
+// Coarse continent outlines as closed [lon, lat] degree rings, west-to-east. They are filled on a
+// latitude/longitude cell grid (below) rather than triangulated directly, so every land vertex lands
+// exactly on the sphere instead of chording through the ocean shell.
+const CONTINENTS: Record<string, Array<[number, number]>> = {
+  africa: [[-6, 36], [10, 37], [33, 31], [43, 12], [51, 12], [41, -2], [40, -15], [35, -24], [20, -35],
+    [14, -23], [12, -5], [9, 4], [-5, 5], [-17, 15], [-13, 28]],
+  eurasia: [[-9, 38], [-9, 43], [-2, 48], [4, 52], [8, 55], [18, 59], [30, 60], [28, 70], [40, 68], [60, 70],
+    [80, 74], [105, 77], [130, 73], [160, 70], [180, 66], [170, 60], [160, 58], [142, 54], [135, 44], [127, 38],
+    [122, 31], [110, 21], [105, 10], [100, 7], [97, 16], [90, 22], [80, 8], [72, 21], [62, 25], [57, 25],
+    [48, 30], [56, 25], [52, 15], [43, 13], [38, 22], [34, 29], [36, 36], [27, 40], [23, 40], [19, 42],
+    [13, 45], [3, 43], [-3, 36]],
+  northAmerica: [[-168, 65], [-165, 71], [-130, 70], [-95, 68], [-80, 62], [-64, 60], [-56, 51], [-66, 44],
+    [-75, 36], [-81, 25], [-91, 29], [-97, 26], [-95, 18], [-88, 15], [-83, 9], [-92, 15], [-105, 20],
+    [-110, 25], [-117, 32], [-124, 40], [-124, 48], [-135, 57], [-150, 59], [-165, 60]],
+  southAmerica: [[-77, 8], [-60, 10], [-50, 0], [-35, -6], [-39, -18], [-48, -25], [-58, -35], [-62, -40],
+    [-65, -50], [-68, -55], [-75, -50], [-73, -40], [-71, -30], [-70, -18], [-75, -10], [-80, -4], [-79, 2]],
+  australia: [[113, -22], [114, -34], [129, -32], [138, -35], [146, -39], [151, -34], [153, -27], [145, -15],
+    [136, -12], [130, -11], [125, -14], [118, -20]],
+  greenland: [[-45, 60], [-20, 70], [-20, 76], [-30, 82], [-55, 82], [-70, 78], [-55, 68]],
+  antarctica: [[-180, -90], [180, -90], [180, -70], [-180, -70]],
+  antarcticPeninsula: [[-62, -63], [-55, -64], [-58, -72], [-66, -72]],
+  madagascar: [[44, -16], [50, -16], [48, -25], [44, -22]],
+};
+
+/** Even-odd point-in-ring test in flat lon/lat degrees. */
+function inRing(ring: Array<[number, number]>, lon: number, lat: number): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if ((yi > lat) !== (yj > lat) && lon < xi + ((lat - yi) / (yj - yi)) * (xj - xi)) inside = !inside;
+  }
+  return inside;
+}
+
+/** One mesh per landmass: every filled grid cell becomes two outward-wound triangles on radius `r`. */
+function landShell(r: number): THREE.Mesh[] {
+  const CELL = 5;
+  const point = (lon: number, lat: number, out: number[]) => {
+    const a = (lat * Math.PI) / 180, b = (lon * Math.PI) / 180, c = Math.cos(a) * r;
+    out.push(c * Math.cos(b), Math.sin(a) * r, c * Math.sin(b));
+  };
+  return Object.entries(CONTINENTS).map(([name, ring]) => {
+    const verts: number[] = [];
+    for (let lat = -90; lat < 90; lat += CELL) {
+      for (let lon = -180; lon < 180; lon += CELL) {
+        if (!inRing(ring, lon + CELL / 2, lat + CELL / 2)) continue;
+        const a: number[] = [], b: number[] = [], c: number[] = [], d: number[] = [];
+        point(lon, lat, a); point(lon + CELL, lat, b); point(lon + CELL, lat + CELL, c); point(lon, lat + CELL, d);
+        verts.push(...a, ...c, ...b, ...a, ...d, ...c);
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+    geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, std(0x4f9d58, { roughness: 0.85 }));
+    m.name = `globe-land-${name}`;
+    return m;
+  });
+}
+
 function globe(): THREE.Object3D[] {
   const tilt = new THREE.Group();
   tilt.name = 'globe-tilt';
   tilt.position.set(0, 0.25, 0);
   tilt.rotation.z = 0.4;
   tilt.add(
-    sph('globe-ocean', 0.13, 0x3a7fc4, 0, 0, 0, [1, 1, 1], undefined, [18, 12]),
+    // Enough segments that the faceted ocean never sags below the land shell draped 1.8 mm above it.
+    sph('globe-ocean', 0.13, 0x3a7fc4, 0, 0, 0, [1, 1, 1], undefined, [48, 32]),
     (() => {
       const m = new THREE.Mesh(new THREE.TorusGeometry(0.147, 0.007, 6, 24, Math.PI), std(0xc6a264));
       m.name = 'globe-meridian';
@@ -342,14 +421,7 @@ function globe(): THREE.Object3D[] {
     })(),
     bx('globe-axis', 0.012, 0.33, 0.012, 0xc6a264, 0, 0, 0),
   );
-  const land = 0x58a85c;
-  [[0.6, 0.5, 0.6], [-0.7, 0.2, 0.7], [0.1, -0.5, 0.9], [-0.5, -0.4, -0.7], [0.8, 0.1, -0.5], [0.0, 0.9, -0.3]].forEach((d, i) => {
-    const n = new THREE.Vector3(...(d as [number, number, number])).normalize();
-    const patch = sph(`globe-land-${i}`, 0.05, land, 0, 0, 0, [1, 0.28, 1], undefined, [8, 6]);
-    orient(patch, n);
-    patch.position.copy(n).multiplyScalar(0.127);
-    tilt.add(patch);
-  });
+  tilt.add(...landShell(0.1318));
   return [
     cyl('globe-base', 0.07, 0.085, 0.035, 0x6f4a2d, 0, 0.0175, 0),
     cyl('globe-stem', 0.012, 0.012, 0.05, 0xc6a264, 0, 0.06, 0),
@@ -435,9 +507,17 @@ function rocket(): THREE.Object3D[] {
     const holder = new THREE.Group();
     holder.name = `rocket-fin-${i}`;
     holder.rotation.y = (i / 3) * Math.PI * 2 + Math.PI / 2;
-    const fin = bx(`rocket-fin-blade-${i}`, 0.05, 0.12, 0.012, 0xd9382f, 0.08, 0.075, 0);
-    fin.rotation.z = -0.35;
-    fin.position.y = 0.065;
+    // A swept silhouette with a full root embedded in the hull, not a rotated detached box.
+    const outline = new THREE.Shape();
+    outline.moveTo(0.052, 0.17);
+    outline.lineTo(0.12, 0.045);
+    outline.lineTo(0.12, 0);
+    outline.lineTo(0.086, 0);
+    outline.lineTo(0.052, 0.085);
+    outline.closePath();
+    const fin = mesh(`rocket-fin-blade-${i}`,
+      new THREE.ExtrudeGeometry(outline, { depth: 0.012, bevelEnabled: false }),
+      0xd9382f, 0, 0, -0.006);
     holder.add(fin);
     parts.push(holder);
   }
