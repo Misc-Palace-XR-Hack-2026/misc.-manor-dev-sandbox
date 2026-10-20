@@ -1,0 +1,14 @@
+[Unit]
+Description=Shot 01 composite editor (loopback, share with: tailscale serve --bg --http=5191 http://127.0.0.1:5191)
+After=network.target
+
+[Service]
+Environment=SHOT01_WORK_DIR=%h/Footage/Keyed
+Environment=SHOT01_FOOTAGE_DIR=%h/Footage
+WorkingDirectory=%h/src/misc.-palace-dev-sandbox/tools/shot01-composite-editor
+ExecStart=/usr/bin/python3 %h/src/misc.-palace-dev-sandbox/tools/shot01-composite-editor/shot01_editor_server.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
