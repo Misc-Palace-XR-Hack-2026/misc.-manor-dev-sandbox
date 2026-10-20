@@ -59,7 +59,7 @@ test('the web manifest installs as Misc. Manor with a maskable icon', () => {
   assert.ok(existsSync(manifestPath), 'missing public/site.webmanifest');
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 
-  assert.equal(manifest.name, 'Misc. Manor');
+  assert.equal(manifest.name, 'Miscellaneous Manor');
   assert.equal(manifest.short_name, 'Misc. Manor');
   assert.equal(manifest.display, 'standalone');
   assert.equal(manifest.start_url, '/');

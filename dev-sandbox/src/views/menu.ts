@@ -111,7 +111,7 @@ export class MenuView {
 
     root.append(
       this.editorClose,
-      el('h1', { textContent: 'Misc. Palace sandbox' }),
+      el('h1', { textContent: 'Misc. Manor' }),
       this.ownerInput,
       this.buildLighting(),
       this.buildSurfaces(),

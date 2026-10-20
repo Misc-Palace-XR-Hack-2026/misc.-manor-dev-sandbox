@@ -173,7 +173,7 @@ export class XrPanel {
     c.fillRect(0, 0, W, H);
     c.fillStyle = '#ece7f5';
     c.font = '700 48px system-ui, sans-serif';
-    c.fillText('Misc. Palace', 48, 72);
+    c.fillText('Misc. Manor', 48, 72);
     c.font = '28px system-ui, sans-serif';
     const preview = this.store.selectedId ? inspectPreview(this.store, this.store.selectedId) : null;
     c.fillStyle = '#a39cb5';

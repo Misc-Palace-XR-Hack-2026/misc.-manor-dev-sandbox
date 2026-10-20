@@ -1,6 +1,6 @@
 # misc.-palace-dev-sandbox
 
-Misc. Palace build-off repo (XR Hack 2026): a dev sandbox where each dev tinkers with their own room, plus the pitch-off materials.
+Miscellaneous Manor ("Misc. Manor") build-off repo (XR Hack 2026): a dev sandbox where each dev tinkers with their own room, plus the pitch-off materials.
 
 ```
 dev-sandbox/           Vite + TypeScript + Three.js app (see dev-sandbox/plan.md)
