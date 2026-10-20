@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { igniteBuilders } from './ignite-objects';
 import { cozyBuilders } from './cozy-objects';
+import { toyBuilders } from './toy-objects';
 import { buildArmchair, buildSideTable, buildTurntable, buildRug, buildLeafyPlant } from './study-decor';
 import type { ObjectKind, ContentItem } from '../core/types';
 import { mediaArt } from '../core/media-art';
@@ -40,6 +41,7 @@ function rod(name: string, from: [number, number, number], to: [number, number, 
 
 const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
   ...cozyBuilders,
+  ...toyBuilders,
   ...igniteBuilders,
   // Standing book, cover toward the camera, with a cream page block and a matching back cover.
   book: () => {
