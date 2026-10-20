@@ -1,3 +1,6 @@
+- this is pretty good, but we need to zoom out and tilt down enough to work on mobile, maybe for now just zoom out and make it work for mobile where its more zoomed out in the intro sequecen w the shelves and whatever that leaves us for web is fine too, rn i can only see the drum in mobile view, maybe we should also allow the user to move the camera tilt by clicking adn moving the screen a bit in this sequnce?
+idk we can discuss
+
 - audio will change now, audio will be driven from interactions with the jukebox in the demo and inthe dev sandbox, all the inputs for music when you click the jukebox will be the same as wehnw e were pickign music in the editer, now remove those from
 being friven by the editor to being driven throughthe jukebox, for now a simple clic of jukebox will bring up the music selection settings or whatver, for now simple version where its the prselected music we have now, and when music is on fromthejukebox is when the audio mute button appears in the top left) 
 do this for the demo space only for now not the /dev, later in dev we add the jukebox off to the side too 
