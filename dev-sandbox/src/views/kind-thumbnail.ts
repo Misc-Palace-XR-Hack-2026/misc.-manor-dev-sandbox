@@ -32,6 +32,8 @@ const GLYPHS: Record<ObjectKind, string> = {
   car: '🚗',
   motorcycle: '🏍️',
   clock: '🕰️', guitar: '🎸', synthesizer: '🎹', drum: '🥁', lamp: '💡', coffeeMaker: '☕',
+  fishBowl: '🐠', yoyo: '🪀', skateboard: '🛹', soccerBall: '⚽', flyingSaucer: '🛸', lavaLamp: '🌋',
+  rubiksCube: '🧩', rubberDuck: '🦆', globe: '🌍', cactus: '🌵', dice: '🎲', rocket: '🚀',
 };
 
 export function kindThumbnail(kind: ObjectKind): HTMLElement {

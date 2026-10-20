@@ -13,6 +13,8 @@ export const OBJECT_KINDS = [
   'clock', 'guitar', 'synthesizer', 'drum', 'lamp', 'coffeeMaker',
   'cat', 'teapot', 'lantern', 'headphones', 'cassette', 'cushion',
   'console', 'cartridge', 'vhs', 'recordSleeve', 'spoon', 'robot', 'telescope', 'car', 'motorcycle',
+  'fishBowl', 'yoyo', 'skateboard', 'soccerBall', 'flyingSaucer', 'lavaLamp', 'rubiksCube', 'rubberDuck',
+  'globe', 'cactus', 'dice', 'rocket',
 ] as const;
 export type ObjectKind = (typeof OBJECT_KINDS)[number];
 
@@ -29,6 +31,9 @@ export const OBJECT_LABELS: Record<ObjectKind, string> = {
   telescope: 'Telescope', car: 'Car', motorcycle: 'Motorcycle',
   clock: 'Mantel clock', guitar: 'Acoustic guitar', synthesizer: 'Synthesizer',
   drum: 'Drum', lamp: 'Table lamp', coffeeMaker: 'Coffee maker',
+  fishBowl: 'Fish bowl', yoyo: 'Yo-yo', skateboard: 'Skateboard', soccerBall: 'Soccer ball',
+  flyingSaucer: 'Flying saucer', lavaLamp: 'Lava lamp', rubiksCube: 'Puzzle cube', rubberDuck: 'Rubber duck',
+  globe: 'Globe', cactus: 'Cactus', dice: 'Dice', rocket: 'Toy rocket',
 };
 
 /** Which object represents which media by default. Devs can change any object freely. */
