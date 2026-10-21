@@ -452,3 +452,15 @@ body:has(.item-sheet:not([hidden])) .fab-menu { display: none; }
 .tutorial-card button { min-height:44px; }
 .tutorial-progress { margin:0; color:#a39cb5; }
 @media (prefers-reduced-motion: reduce) { .tutorial-highlight { box-shadow:none; } }
+
+.practice-pad { position:fixed; width:36px; height:36px; border:2px solid #ffe9a0; border-radius:50%; pointer-events:none; z-index:18; }
+.practice-pad[hidden], .chrome button[hidden] { display:none; }
+.tutorial-card h2 { margin:0; font-size:18px; }
+.tutorial-card p { margin:0; }
+.tutorial-card a { font-size:13px; }
+.tutorial-card button { flex-shrink:0; }
+.tutorial-card:has(.tutorial-body) { overflow:hidden; }
+.tutorial-body { min-height:0; overflow:auto; display:flex; flex-direction:column; gap:8px; }
+.tutorial-body > * { flex-shrink:0; }
+.tutorial-actions { display:flex; gap:8px; flex-shrink:0; }
+.tutorial-actions button { flex:1; }

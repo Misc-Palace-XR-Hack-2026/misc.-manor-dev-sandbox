@@ -16,7 +16,7 @@ Update the checklist and decisions as work lands.
 - **Mechanism**: `RoomView.setDemo(hooks)` takes optional `DemoHooks` (`camera` override, restricted `slots`, object `yaw`, per-frame `frame` callback). Passing a camera disables OrbitControls. `release()` calls `setDemo({ frame })`, which restores the default camera and slots while the jukebox keeps animating. Edit tools (`src/demo/room-app.ts`, `mountEditTools`) load lazily after release, so the locked tutorial shows only the room.
 - **Entrance and jukebox**: both on the open east side. The jukebox stands at ground level beside where the east wall ends (`JUKEBOX_POS` in `core/intro-timeline.ts`), outside the room with its face toward the room. Scaled to 0.6 and about 55% opaque so it does not distract. Look unchanged, no mouth yet, non-interactive. The camera does not glance at it.
 - **Intro objects**: hardcoded rocket, drum, cassette (`src/demo/intro-objects.ts`), seeded as locked url content in tray slots `floor-7/8/9` in a decorative open wooden box (to be revisited): rocket = Unpacking (unpackinggame.com), drum = the about page, cassette = lofi YouTube (inline embed). `locked` content: link, text, rename and delete are fixed; the object kind can change and the object can be stashed. Dropped-object policy: link not editable, can be stashed (discuss later).
-- **Previews**: one predictable place. The card is anchored by its bottom-right corner above a panel (`.demo-dock` in the tutorial, `.item-sheet` after release), so it grows upward, never overlaps the panel, and has a max height that stops below the top of the viewport. Cards for links are clickable and have an Open link. Locked starter links show the text card only (no picture) for now; only the YouTube one is an embed. The dock also holds the kind picker.
+- **Previews**: one predictable place. The card is anchored by its bottom-right corner above a panel (`.demo-dock` in the tutorial, `.item-sheet` after release), so it grows upward, never overlaps the panel, and has a max height that stops below the top of the viewport. Cards for links are clickable and have an Open in browser link. What embeds follows main's public preview blocklist policy (`docs/public-preview-policy.md`, `core/preview.ts`): any public HTTPS page that isn't blocklisted tries a sandboxed iframe, so the rocket (unpackinggame.com) and drum (about page) may now preview live, and the cassette uses the official YouTube player. `show(preview, art, openUrl)` takes an optional override (the watch page behind an embed); otherwise cards use the policy's `openHref`. The dock also holds the kind picker.
 - **Persistence (simplest version)**: the visitor's room autosaves through `Store` to `localStorage` key `mp-demo:rooms:demo-visit`. `roomKeys` routes room ids starting `demo-` to the `mp-demo:` prefix (sandbox stays `mp-sandbox:`). Intro-seen flag: `mp-demo:intro-seen`. An unreadable save is never overwritten, an error is shown instead. Per-visitor storage (accounts/server) is planned later.
 - **Return visits**: straight into the open room with edit tools. Skip is always available.
 - **Web first**; Quest/VR entry later (the VR enter button is hidden while locked).
@@ -29,7 +29,8 @@ Update the checklist and decisions as work lands.
 - Thumbnail pictures for the rocket and drum link cards (text card only for now).
 - Where intro object text/links live (hardcoded now).
 - Policy for editing dropped-object links.
-- Rocket kind was added to main's schema (`types.ts`, `placement.ts`, `objects.ts`, thumbnail). If `trailer/scenes` merges later, reconcile with its `toy-objects.ts` version.
+- Rocket kind: main now ships it with the other toys (`views/toy-objects.ts`); the demo's own rocket model was dropped in the merge.
+- The drum links to the about page. When the demo is hosted on that same origin, the preview policy refuses to iframe it (same-origin rule) and shows a "Preview unavailable" card. Decide: point it elsewhere, or special-case it.
 - Jukebox mouth: deferred. The look is the priority.
 - Intro tuning (camera path, timing, tutorial framing) needs the owner's eyes. No frozen-frame `?t=` param anymore; use Skip/`?intro` to replay.
 
@@ -50,6 +51,7 @@ Update the checklist and decisions as work lands.
 - [x] tsc clean, 208 tests pass, `vite build` green
 - [x] Walk-in rework: straight look-ahead (fixes the door flip, which came from the look target equalling the camera position), light wall hides the room, box, no text, auto-release
 - [x] Locked intro links with Open, kind-only edit, real door + darkness, ground-level jukebox, spline walk-in, bottom-anchored preview card + dock
+- [x] Merge `origin/main` (toys, glow, app icon and rename, public preview blocklist, practice tutorials, VR button gating). Browser harnesses that need the sandbox must point at `/dev/`.
 - [ ] Owner visual check: `/` first visit, `/intro` replay, return visit, `/dev/`, `/about/`
 - [ ] Tune walk-in timing, tutorial camera, jukebox placement after owner review
 - [ ] Decide camera approach (see open questions)

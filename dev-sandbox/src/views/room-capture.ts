@@ -16,7 +16,7 @@ export function createRoomCapture(capture: () => Promise<Blob>): HTMLButtonEleme
     try {
       const blob = await capture();
       if (!dialog.open) return;
-      const file = new File([blob], 'misc-palace-room.png', {type: 'image/png'});
+      const file = new File([blob], 'misc-manor-room.png', {type: 'image/png'});
       url = URL.createObjectURL(file);
       const image = document.createElement('img'); image.src = url; image.alt = 'Captured room';
       const download = document.createElement('button'); download.textContent = 'Download PNG';
@@ -30,7 +30,7 @@ export function createRoomCapture(capture: () => Promise<Blob>): HTMLButtonEleme
         const share = document.createElement('button'); share.textContent = 'Share photo';
         share.onclick = async () => {
           share.disabled = true;
-          try { await navigator.share({files: [file], title: 'My Misc. Palace room'}); }
+          try { await navigator.share({files: [file], title: 'My Misc. Manor room'}); }
           catch (error) {
             status.textContent = error instanceof Error && error.name === 'AbortError'
               ? 'Sharing cancelled. Your photo is still available.'

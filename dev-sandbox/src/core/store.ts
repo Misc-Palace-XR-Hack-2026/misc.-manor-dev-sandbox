@@ -113,6 +113,38 @@ export class Store {
   /** An object the user picked up from a slot and has not put down yet (never saved). */
   private pickup: { repId: string; slotId: string; depth: number } | null = null;
 
+  /** A disposable session. Personal objects and history are retained by reference, never restored through save(). */
+  private personal: { state: RoomState; roomId?: string; history: string[]; selectedId: string | null;
+    pickup: Store['pickup']; visiting: string | null; homeSnapshot: string | null; saveError: string | null } | null = null;
+  private practiceRooms = new Map<string, RoomState>();
+  epoch = 0;
+  lastCommand = '';
+  get practicing(): boolean { return this.personal !== null; }
+  /** Capture before any asynchronous read/decode; invalid across room and practice transitions. */
+  sessionGuard(): () => boolean {
+    const epoch = this.epoch;
+    return () => epoch === this.epoch;
+  }
+  beginPractice(): void {
+    this.endPractice();
+    this.personal = { state: this.state, roomId: this.roomId, history: this.history, selectedId: this.selectedId,
+      pickup: this.pickup, visiting: this.visiting, homeSnapshot: this.homeSnapshot, saveError: this.saveError };
+    this.epoch++;
+    this.state = newRoom('Practice');
+    this.history = []; this.pickup = null; this.selectedId = null;
+    this.visiting = null; this.homeSnapshot = null; this.saveError = null;
+    this.practiceRooms.clear();
+    this.emit();
+  }
+  endPractice(): void {
+    if (!this.personal) return;
+    const personal = this.personal;
+    this.personal = null;
+    Object.assign(this, personal);
+    this.practiceRooms.clear(); this.epoch++;
+    this.emit();
+  }
+
   constructor(initial: RoomState, roomId?: string) {
     this.state = normalizeRoom(initial);
     this.roomId = roomId;
@@ -216,6 +248,7 @@ export class Store {
    * something else) the object goes back where it was instead of being lost.
    */
   pickUp(repId: string): void {
+    this.lastCommand = 'pickUp';
     const slotId = this.slotOf(repId);
     if (!slotId) {
       this.select(repId);
@@ -249,6 +282,7 @@ export class Store {
 
   // ---- commands (every one is undoable) ---------------------------------
   addItem(input: { title: string; sourceRef: string; type?: ContentType | 'auto'; kind?: ObjectKind; place?: boolean }): string {
+    this.lastCommand = 'addItem';
     const ref = normalizeRef(input.sourceRef.trim());
     const type = !input.type || input.type === 'auto' ? guessType(ref) : input.type;
     let repId = '';
@@ -260,6 +294,7 @@ export class Store {
   }
 
   addPhoto(title: string, imageData: string): string {
+    this.lastCommand = 'addPhoto';
     if (!validPhotoData(imageData)) throw new Error('Invalid photo image data (PNG/JPEG, max 1024px and 1.5 MB encoded).');
     let repId = '';
     this.commit(s => {
@@ -300,6 +335,7 @@ export class Store {
   }
 
   setSurface(target: SurfaceTarget, selection: SurfaceSelection | undefined): void {
+    this.lastCommand = 'setSurface';
     if (!['floor','wall','background'].includes(target) || (selection !== undefined && !validSurface(target, selection))) throw new Error('Invalid surface selection.');
     this.commit(s => {
       s.surfaces = {...s.surfaces};
@@ -310,6 +346,7 @@ export class Store {
   }
 
   setLighting(lighting: Lighting | undefined): void {
+    this.lastCommand = 'setLighting';
     if (lighting !== undefined && !validLighting(lighting)) throw new Error('Invalid room lighting.');
     this.commit((s) => {
       if (lighting) s.lighting = lighting;
@@ -319,6 +356,7 @@ export class Store {
 
   /** Apply a theme's look (floor, wall, background, lighting) in one undoable step. Content and layout are untouched. */
   applyLook(look: { surfaces?: SurfaceSettings; lighting?: Lighting }): void {
+    this.lastCommand = 'applyLook';
     if (look.surfaces !== undefined && !validSurfaces(look.surfaces)) throw new Error('Invalid theme surfaces.');
     if (look.lighting !== undefined && !validLighting(look.lighting)) throw new Error('Invalid theme lighting.');
     this.commit((s) => {
@@ -352,6 +390,7 @@ export class Store {
 
   /** Move an object to a slot. If the slot is taken, the two swap (or the target is unplaced if source is being held). */
   place(repId: string, slotId: string): void {
+    this.lastCommand = 'place';
     if (!this.layout.slots.some((sl) => sl.id === slotId)) return;
     if (this.slotOf(repId) === slotId) return;
     const wasHeld = this.pickup?.repId === repId;
@@ -391,6 +430,7 @@ export class Store {
 
   /** Remove the object from the room. The content stays saved in the inbox. */
   stash(repId: string): void {
+    this.lastCommand = 'stash';
     this.commit((s) => {
       s.placements = s.placements.filter((p) => p.representationId !== repId);
       s.representations = s.representations.filter((r) => r.id !== repId);
@@ -401,6 +441,7 @@ export class Store {
 
   /** Give saved content an object again and put it somewhere free. */
   bringOut(contentId: string): void {
+    this.lastCommand = 'bringOut';
     this.commit((s) => {
       const c = s.contentItems.find((x) => x.id === contentId);
       if (!c || s.representations.some((r) => r.contentItemId === contentId)) return;
@@ -444,7 +485,8 @@ export class Store {
 
   importBookmarks(entries: BookmarkEntry[]): { added: number; placed: number } {
     const known = new Set(this.state.contentItems.map((c) => c.sourceRef));
-    const fresh = entries.filter((e) => !known.has(e.url));
+    const fresh = entries.filter((e) => { if (known.has(e.url)) return false; known.add(e.url); return true; });
+    if (!fresh.length) return { added: 0, placed: 0 };
     let placed = 0;
     this.commit((s) => {
       for (const e of fresh) {
@@ -490,7 +532,12 @@ export class Store {
    * Throws (and changes nothing) if that room's save is unreadable.
    */
   switchRoom(roomId: string, seed: unknown): void {
-    const next = Store.loadSaved(roomId) ?? normalizeRoom(seed);
+    this.lastCommand = 'switchRoom';
+    const next = this.practicing
+      ? this.practiceRooms.get(roomId) ?? newRoom(`Practice · ${roomId}`)
+      : Store.loadSaved(roomId) ?? normalizeRoom(seed);
+    if (this.practicing) this.practiceRooms.set(this.roomId ?? 'guest', this.state);
+    this.epoch++;
     this.roomId = roomId;
     this.state = next;
     this.history = [];
@@ -500,7 +547,7 @@ export class Store {
     this.pickup = null;
     this.saveError = null;
     try {
-      localStorage.setItem(ACTIVE_KEY, roomId);
+      if (!this.practicing) localStorage.setItem(ACTIVE_KEY, roomId);
     } catch {
       /* Remembering the last room is a convenience only. */
     }
@@ -508,6 +555,7 @@ export class Store {
   }
 
   undo(): void {
+    this.lastCommand = 'undo';
     this.pickup = null;
     const prev = this.history.pop();
     if (!prev) return;
@@ -606,7 +654,7 @@ export class Store {
   }
 
   private changed(): void {
-    if (!this.visiting) this.save();
+    if (!this.visiting && !this.practicing) this.save();
     this.emit();
   }
 

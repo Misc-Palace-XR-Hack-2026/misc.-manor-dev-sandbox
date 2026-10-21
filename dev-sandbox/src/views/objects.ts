@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { igniteBuilders } from './ignite-objects';
 import { cozyBuilders } from './cozy-objects';
+import { toyBuilders } from './toy-objects';
 import { buildArmchair, buildSideTable, buildTurntable, buildRug, buildLeafyPlant } from './study-decor';
+import { glowIndicator } from './glow';
 import type { ObjectKind, ContentItem } from '../core/types';
 import { mediaArt } from '../core/media-art';
 import { validPhotoData, photoDimensions } from '../core/photos';
@@ -40,6 +42,7 @@ function rod(name: string, from: [number, number, number], to: [number, number, 
 
 const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
   ...cozyBuilders,
+  ...toyBuilders,
   ...igniteBuilders,
   // Standing book, cover toward the camera, with a cream page block and a matching back cover.
   book: () => {
@@ -65,6 +68,10 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
     const cabinet = box(0.62, 0.46, 0.42, 0x56575c);
     const screen = box(0.38, 0.28, 0.02, 0x9fc7cf, -0.06, 0.1, 0.22);
     screen.name = 'tv-screen';
+    // A lit picture tube: a slow bloom with a faster scan beat on top, never fully dark.
+    glowIndicator(screen, { color: 0x9fd8e6, base: 0.22, amp: 0.3, speed: 0.9, wave: 'flicker' });
+    const powerLed = named('tv-power-led', box(0.03, 0.012, 0.012, 0xff5a3c, 0.22, 0.02, 0.225));
+    glowIndicator(powerLed, { color: 0xff5a3c, base: 0.5, amp: 0.9, speed: 0.33, wave: 'sine' });
     const bezel = box(0.08, 0.28, 0.02, 0x2a2a2e, 0.22, 0.1, 0.22);
     const knob = (name: string, y: number) => {
       const k = cyl(0.028, 0.028, 0.018, 0xc9c4b8, 0.22, y, 0.23);
@@ -82,6 +89,7 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
       cabinet,
       screen,
       bezel,
+      powerLed,
       knob('tv-knob-l', 0.16),
       knob('tv-knob-r', 0.08),
       antenna('tv-antenna-l', -0.08, 0.35),
@@ -93,7 +101,9 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
     const s1 = cyl(0.09, 0.09, 0.03, 0x1e1e22, -0.18, 0.08, 0.1);
     const s2 = cyl(0.09, 0.09, 0.03, 0x1e1e22, 0.18, 0.08, 0.1);
     s1.rotation.x = s2.rotation.x = Math.PI / 2;
-    return [box(0.62, 0.34, 0.2, 0xcf3f3a), s1, s2, box(0.4, 0.04, 0.05, 0x2b2b2e, 0, 0.34, 0)];
+    const led = named('boombox-power-led', box(0.03, 0.014, 0.012, 0xff4d4d, 0, 0.255, 0.1));
+    glowIndicator(led, { color: 0xff4d4d, base: 0.45, amp: 1.0, speed: 0.75, wave: 'blink' });
+    return [box(0.62, 0.34, 0.2, 0xcf3f3a), s1, s2, led, box(0.4, 0.04, 0.05, 0x2b2b2e, 0, 0.34, 0)];
   },
   box: () => [box(0.58, 0.36, 0.46, 0xb98b57), box(0.5, 0.02, 0.38, 0xe3c58f, 0, 0.36, 0)],
   plant: () => [buildLeafyPlant()],
@@ -192,6 +202,8 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
     paper.emissiveIntensity = 0.35;
     const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.18, 8), paper);
     shade.position.set(0, 0.16, 0);
+    // Candle inside: an uneven flicker, no extra real light (the lamp budget stays for lamps).
+    glowIndicator(named('lantern-paper', shade), { color: 0xffcc77, base: 0.3, amp: 0.45, speed: 0.8, wave: 'flicker' });
     return [
       cyl(0.04, 0.04, 0.04, 0x6f4e37),
       shade,
@@ -224,28 +236,6 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
     cyl(0.035, 0.035, 0.02, 0x2b2b2e, 0.07, 0.04, 0),
     box(0.12, 0.018, 0.06, 0xc0463b, 0, 0.01, 0.09),
   ],
-  // Toy rocket standing on its fins, window toward the camera (+z).
-  rocket: () => {
-    const red = 0xd9382f;
-    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.062, 0.12, 16), mat(red));
-    nose.position.set(0, 0.345, 0);
-    const parts: THREE.Object3D[] = [
-      named('rocket-nozzle', cyl(0.03, 0.045, 0.035, 0x3a3a40, 0, 0.01)),
-      named('rocket-body', cyl(0.062, 0.062, 0.24, 0xf4f4ef, 0, 0.045)),
-      named('rocket-band', cyl(0.064, 0.064, 0.03, red, 0, 0.095)),
-      named('rocket-nose', nose),
-      named('rocket-window-rim', box(0.07, 0.07, 0.012, 0xc6a264, 0, 0.19, 0.058)),
-      named('rocket-window', box(0.05, 0.05, 0.012, 0x7fd6f0, 0, 0.2, 0.064)),
-    ];
-    for (let i = 0; i < 3; i++) {
-      const holder = new THREE.Group();
-      holder.name = `rocket-fin-${i}`;
-      holder.rotation.y = (i / 3) * Math.PI * 2 + Math.PI / 2;
-      holder.add(box(0.05, 0.12, 0.012, red, 0.08, 0.0, 0));
-      parts.push(holder);
-    }
-    return parts;
-  },
   cushion: () => {
     const pillow = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.08, 8), mat(0xc46a4a));
     pillow.position.set(0, 0.04, 0);
@@ -253,13 +243,22 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
     top.position.set(0, 0.085, 0);
     return [pillow, top];
   },
-  console: () => [
-    box(0.5, 0.08, 0.32, 0x6f737a),
-    box(0.42, 0.03, 0.22, 0x2b2b2e, 0, 0.08, 0),
-    box(0.08, 0.02, 0.08, 0xc0463b, -0.16, 0.08, 0.08),
-    box(0.08, 0.02, 0.08, 0x3a6ea5, -0.05, 0.08, 0.08),
-    cyl(0.02, 0.02, 0.03, 0xd8d4c8, 0.16, 0.10, 0.06),
-  ],
+  console: () => {
+    const buttonA = named('console-button-a', box(0.08, 0.02, 0.08, 0xc0463b, -0.16, 0.08, 0.08));
+    const buttonB = named('console-button-b', box(0.08, 0.02, 0.08, 0x3a6ea5, -0.05, 0.08, 0.08));
+    const power = named('console-power-led', cyl(0.02, 0.02, 0.03, 0x4de08a, 0.16, 0.10, 0.06));
+    // Power burns steady-ish; the two action buttons alternate, half a cycle apart.
+    glowIndicator(power, { color: 0x4de08a, base: 0.7, amp: 0.45, speed: 0.22, wave: 'sine' });
+    glowIndicator(buttonA, { color: 0xff6b55, base: 0.25, amp: 1.1, speed: 0.6, wave: 'blink', phase: 0 });
+    glowIndicator(buttonB, { color: 0x5aa8ff, base: 0.25, amp: 1.1, speed: 0.6, wave: 'blink', phase: 0.5 });
+    return [
+      box(0.5, 0.08, 0.32, 0x6f737a),
+      box(0.42, 0.03, 0.22, 0x2b2b2e, 0, 0.08, 0),
+      buttonA,
+      buttonB,
+      power,
+    ];
+  },
   cartridge: () => [
     box(0.28, 0.08, 0.2, 0x3d6b3a),
     box(0.22, 0.02, 0.14, 0xe8dbc2, 0, 0.08, 0),
@@ -293,8 +292,10 @@ const BUILDERS: Record<ObjectKind, () => THREE.Object3D[]> = {
   robot: () => [
     box(0.22, 0.22, 0.18, 0x8a8d93, 0, 0.12, 0),
     named('robot-head', box(0.16, 0.12, 0.16, 0x6f737a, 0, 0.34, 0)),
-    rod('robot-eye-l', [-0.045, 0.405, 0.074], [-0.045, 0.405, 0.092], 0.022, 0xc9c4b8),
-    rod('robot-eye-r', [0.045, 0.405, 0.074], [0.045, 0.405, 0.092], 0.022, 0xc9c4b8),
+    glowIndicator(rod('robot-eye-l', [-0.045, 0.405, 0.074], [-0.045, 0.405, 0.092], 0.022, 0xc9c4b8),
+      { color: 0x6fe3ff, base: 0.3, amp: 0.9, speed: 0.28, wave: 'sine' }),
+    glowIndicator(rod('robot-eye-r', [0.045, 0.405, 0.074], [0.045, 0.405, 0.092], 0.022, 0xc9c4b8),
+      { color: 0x6fe3ff, base: 0.3, amp: 0.9, speed: 0.28, wave: 'sine' }),
     box(0.05, 0.16, 0.05, 0x8a8d93, -0.16, 0.16, 0),
     box(0.05, 0.16, 0.05, 0x8a8d93, 0.16, 0.16, 0),
     box(0.05, 0.12, 0.05, 0x6f737a, -0.06, 0, 0),

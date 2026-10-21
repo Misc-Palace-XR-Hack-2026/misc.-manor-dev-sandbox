@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
 const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--use-angle=gl','--enable-webgl','--ignore-gpu-blocklist']});
 try {
- const page=await browser.newPage(); await page.goto(process.env.MP_URL ?? 'http://127.0.0.1:5174');
+ // ignoreHTTPSErrors lets the HTTPS/mixed-content branch run against a local self-signed test server.
+ const page=await browser.newPage({ignoreHTTPSErrors:true}); await page.goto(process.env.MP_URL ?? 'http://127.0.0.1:5174');
  await page.waitForFunction(()=>window.store);
  const skip=page.getByRole('button',{name:'Go to room'}); if(await skip.count()) await skip.click();
  await page.evaluate(async()=>{
@@ -63,11 +64,26 @@ try {
   document.querySelector('#test-preview').remove();
   const seed=await (await fetch('/rooms/matt.json')).json();window.store.switchRoom('matt',seed);
  });
- for (const id of ['matt-cyber-funk','matt-neon-arcade','matt-tree-bar','matt-youtube','matt-solar-book']) {
-  const expected=await page.evaluate(id=>{const s=window.store;s.select(s.repFor(id).id);return new URL(s.content(id).sourceRef).href;},id);
-  const open=page.locator('.item-sheet a[target="_blank"]');
-  assert.ok(await open.isVisible());assert.equal(await open.getAttribute('href'),expected);
-  assert.equal(await page.locator('.preview-card iframe').count(),0);
- }
+ // Seed destinations are official Spotify albums and a YouTube watch URL, which legitimately get
+// provider players; only the Amazon short link is a blocklisted card. A blanket "no iframe" assertion
+// is stale. Assert the real classification plus the preserved outbound link for each.
+const seedExpectations = {
+ 'matt-cyber-funk': 'spotify', 'matt-neon-arcade': 'spotify', 'matt-tree-bar': 'spotify',
+ 'matt-youtube': 'youtube', 'matt-solar-book': null,
+};
+for (const [id, provider] of Object.entries(seedExpectations)) {
+ const seen=await page.evaluate(async id=>{
+  const s=window.store;s.select(s.repFor(id).id);
+  const {buildPreview}=await import('/src/core/preview.ts');
+  const c=s.content(id);const p=buildPreview(c);
+  return {href:new URL(c.sourceRef).href, kind:p.kind, provider:p.kind==='embed'?p.provider:null, openHref:p.kind==='card'?p.openHref:null};
+ },id);
+ const open=page.locator('.item-sheet a[target="_blank"]');
+ assert.ok(await open.isVisible(), id);assert.equal(await open.getAttribute('href'),seen.href,id);
+ assert.equal(seen.provider,provider,id);
+ const frames=await page.locator('.preview-card iframe').evaluateAll(fs=>fs.map(f=>f.getAttribute('src')));
+ if (provider) assert.ok(frames.some(src=>src&&src.startsWith('https://')),`${id} gets an official player`);
+ else { assert.equal(frames.length,0,`${id} stays a card`); assert.equal(seen.openHref,seen.href,`${id} keeps its outbound link`); }
+}
  console.log('PASS real browser sandbox, same-origin/redirect isolation, CSP/XFO refusal, network failure, provider permissions and original-link fallback;', origin.startsWith('https:') ? 'HTTPS mixed-content refusal verified' : 'mixed-content check requires HTTPS MP_URL');
 }finally{await browser.close();}

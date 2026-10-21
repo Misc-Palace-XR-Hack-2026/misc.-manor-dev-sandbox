@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 import type { Store } from '../core/store';
-import { inspectPreview, panelButtons, runPanelAction, type NeighborhoodRoom, type PanelActionResult, type PanelPage } from './interaction';
+import { guideActionMatches, inspectPreview, panelButtons, runPanelAction, type NeighborhoodRoom, type PanelActionResult, type PanelPage } from './interaction';
 import { XrCreation } from './creation';
-import type { OnboardingState } from '../core/onboarding';
+import { currentStep, type OnboardingState } from '../core/onboarding';
 
 const W = 1024;
 const H = 1408;
 const GW = 768;
-const GH = 640;
+const GH = 900;
 const ROW = 92;
 const TOP = 220;
 
@@ -94,7 +94,12 @@ export class XrPanel {
   }
 
   setGuide(guide: OnboardingState | null): void {
+    if (this.guide === guide) return;
     this.guide = guide;
+    const step=currentStep(guide ?? {lesson:null} as OnboardingState);
+    const index=panelButtons(this.store,this.page,this.rooms,this.draft,guide).findIndex(b=>guideActionMatches(step?.id ?? '',b.id));
+    if(index>=0) this.scroll=Math.floor(index/10);
+    this.redraw();
     this.redrawGuide();
     this.syncVisible();
   }
@@ -132,6 +137,14 @@ export class XrPanel {
       const y = (1 - uv.y) * GH;
       const button = this.guideShown.find((b) => Math.abs(b.y - y) < ROW / 2);
       if (!button) return;
+      if (button.id==='guide:reveal') {
+        const step=currentStep(this.guide!);
+        const allPages:PanelPage[]=['home','create','rooms','themes','lighting','surfaces','inbox'];
+        const page=allPages.find(page=>panelButtons(this.store,page,this.rooms,this.draft,this.guide).some(b=>guideActionMatches(step?.id ?? '',b.id) && !b.id.startsWith('page:'))) ?? 'home';
+        if(page==='create' && this.page==='create') { this.open=true; this.redraw(); this.syncVisible(); }
+        else this.onAction(runPanelAction(this.store,`page:${page}`,this.rooms,this.draft));
+        return;
+      }
       const result = runPanelAction(this.store, button.id, this.rooms, this.draft);
       this.onAction(result);
       this.redrawGuide();
@@ -173,7 +186,7 @@ export class XrPanel {
     c.fillRect(0, 0, W, H);
     c.fillStyle = '#ece7f5';
     c.font = '700 48px system-ui, sans-serif';
-    c.fillText('Misc. Palace', 48, 72);
+    c.fillText('Misc. Manor', 48, 72);
     c.font = '28px system-ui, sans-serif';
     const preview = this.store.selectedId ? inspectPreview(this.store, this.store.selectedId) : null;
     c.fillStyle = '#a39cb5';
@@ -192,7 +205,9 @@ export class XrPanel {
     let y = TOP;
     const draw = (id: string, label: string, i: number) => {
       const active = i === this.hover;
-      c.fillStyle = active ? '#dba08f' : '#3a3546';
+      const step=currentStep(this.guide ?? {lesson:null} as OnboardingState);
+      const matched=step?.id==='rooms-home' ? id===`room:${this.guide?.roomId}` : guideActionMatches(step?.id ?? '',id);
+      c.fillStyle = active || matched ? '#99705f' : '#3a3546';
       c.fillRect(48, y - 36, 928, 76);
       c.fillStyle = '#ece7f5';
       c.fillText(label, 72, y + 10);
@@ -226,11 +241,14 @@ export class XrPanel {
     buttons.forEach((button, i) => {
       const active = i === this.guideHover;
       c.fillStyle = active ? '#dba08f' : '#3a3546';
-      c.fillRect(28, y - 32, 712, 72);
-      c.fillStyle = '#ece7f5';
-      c.fillText(button.label.slice(0, 42), 48, y + 12);
-      this.guideShown.push({ id: button.id, y });
-      y += 88;
+      const words=button.label.split(' '); const lines:string[]=[]; let line='';
+      for(const word of words) { if((line+' '+word).length>44){lines.push(line);line=word;} else line+=(line?' ':'')+word; }
+      if(line)lines.push(line);
+      c.fillRect(28,y-32,712,Math.max(72,lines.length*36+20));
+      c.fillStyle='#ece7f5';
+      lines.forEach((text,j)=>c.fillText(text,48,y+12+j*36));
+      if (!['guide:status','guide:copy'].includes(button.id)) this.guideShown.push({id:button.id,y});
+      y+=Math.max(88,lines.length*36+36);
     });
     this.guideTexture.needsUpdate = true;
     this.syncVisible();

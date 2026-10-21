@@ -1,4 +1,4 @@
-import type { Preview } from '../core/preview';
+import { publicPreviewUrl, previewOpenUrl, type Preview } from '../core/preview';
 import type { MediaArt } from '../core/media-art';
 
 // DOM card shown for the selected object. Built with textContent only, never innerHTML, so titles and notes from
@@ -31,7 +31,7 @@ export function createEmbedFrame(preview: Extract<Preview, { kind: 'embed' }>): 
   frame.allowFullscreen = !page;
   frame.referrerPolicy = 'strict-origin-when-cross-origin';
   const destination = new URL(preview.src);
-  if (destination.protocol === 'https:' && destination.origin !== globalThis.location?.origin) frame.src = preview.src;
+  if (publicPreviewUrl(destination)) frame.src = preview.src;
   return frame;
 }
 
@@ -43,6 +43,16 @@ function hero(art: PreviewArt): HTMLElement {
   glyph.setAttribute('aria-hidden', 'true');
   frame.append(glyph, make('span', 'preview-hero-caption', art.label));
   return frame;
+}
+
+/** Open in browser: the one action that must be reachable in every preview state. */
+function openAction(href: string | null | undefined): HTMLAnchorElement | null {
+  if (!href) return null;
+  const open = make('a', 'preview-open', 'Open in browser');
+  open.href = href;
+  open.target = '_blank';
+  open.rel = 'noopener noreferrer';
+  return open;
 }
 
 export class PreviewCardView {
@@ -63,11 +73,13 @@ export class PreviewCardView {
 
   /**
    * Show a preview, or hide the card with null. Rebuilds DOM only when the preview, its art or its link changes.
-   * With `openUrl` (an http(s) link) the whole card is clickable and has an explicit Open link.
+   * `openUrl` overrides where Open in browser goes (e.g. the watch page behind a provider embed); otherwise a card
+   * uses its policy `openHref`. A card with a link is clickable anywhere.
    */
   show(preview: Preview | null, art: PreviewArt | null = null, openUrl: string | null = null): void {
     const artKey = art ? `${art.type}:${art.glyph}:${art.label}` : '';
-    const link = preview ? openUrl : null;
+    const link = !preview ? null
+      : (openUrl ? previewOpenUrl(openUrl) : null) ?? (preview.kind === 'card' ? preview.openHref ?? null : null);
     if (preview === this.shown && artKey === this.shownArt && link === this.openUrl) return;
     this.shown = preview;
     this.shownArt = artKey;
@@ -75,10 +87,13 @@ export class PreviewCardView {
     this.root.replaceChildren();
     this.root.hidden = preview === null;
     const embed = preview?.kind === 'embed';
-    this.root.classList.toggle('preview-interactive', embed);
+    // A card that offers Open in browser is a real control: it must be clickable (pointer-events)
+    // and present in the accessibility tree, or the "always reachable" fallback is a lie.
+    const actionable = embed || link !== null;
+    this.root.classList.toggle('preview-interactive', actionable);
     this.root.classList.toggle('preview-openable', link !== null && !embed);
-    // Decorative cards are described by the item sheet; a focusable iframe or link must stay in the accessibility tree.
-    if (embed || link) this.root.removeAttribute('aria-hidden'); else this.root.setAttribute('aria-hidden', 'true');
+    // Decorative cards are described by the item sheet; a focusable iframe or link must stay in the tree.
+    if (actionable) this.root.removeAttribute('aria-hidden'); else this.root.setAttribute('aria-hidden', 'true');
     if (preview) this.root.append(this.render(preview, art));
   }
 
@@ -124,18 +139,17 @@ export class PreviewCardView {
     const body = make('div', `preview-body preview-kind-${p.kind}`);
     if (p.kind === 'embed') {
       const frame = createEmbedFrame(p);
-      const destination = new URL(p.src);
-      if (destination.protocol === 'https:' && destination.origin !== location.origin) {
-        frame.src = p.src;
-        body.append(frame);
-      }
+      if (frame.getAttribute('src')) body.append(frame);
       body.append(make('div', 'preview-title', p.title));
-      const guidance = make('div', 'preview-text', 'Loading or blank? This site may block previews or need browser features.');
-      const open = make('a', 'preview-open', 'Open in browser');
-      open.href = this.openUrl ?? p.src;
-      open.target = '_blank';
-      open.rel = 'noopener noreferrer';
-      body.append(guidance, open);
+      const fallback = 'This site may block previews or need browser features.';
+      const guidance = make('div', 'preview-text', `Loading preview… Blank? ${fallback}`);
+      guidance.setAttribute('role', 'status');
+      // Cross-origin failures often fire load too. Never mark the page as successfully rendered.
+      frame.addEventListener('load', () => { guidance.textContent = `Preview availability unverified. ${fallback}`; });
+      frame.addEventListener('error', () => { guidance.textContent = `Preview could not load. ${fallback}`; });
+      const open = openAction(this.openUrl ?? previewOpenUrl(p.src));
+      body.append(guidance);
+      if (open) body.append(open);
     } else if (p.kind === 'image') {
       const frame = make('div', 'preview-frame');
       const img = make('img');
@@ -166,13 +180,13 @@ export class PreviewCardView {
       if (art) body.append(hero(art));
       body.append(head, make('div', 'preview-title', p.title));
       if (p.detail) body.append(make('div', 'preview-text', p.detail));
+      // A blocked / unsupported / ineligible destination must still offer the external handoff.
+      const open = openAction(this.openUrl);
+      if (open) body.append(open);
     }
-    if (this.openUrl && p.kind !== 'embed') {
-      const open = make('a', 'preview-open', 'Open');
-      open.href = this.openUrl;
-      open.target = '_blank';
-      open.rel = 'noopener noreferrer';
-      body.append(open);
+    if (p.kind === 'image' || p.kind === 'note') {
+      const open = openAction(this.openUrl);
+      if (open) body.append(open);
     }
     return body;
   }

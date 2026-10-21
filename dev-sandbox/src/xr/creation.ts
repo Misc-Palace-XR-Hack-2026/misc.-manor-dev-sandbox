@@ -36,11 +36,12 @@ export class XrCreation {
     if (!title) { this.error = 'Enter a title.'; return null; }
     let sourceRef = this.text.trim();
     let type: 'link' | 'note' = this.mode;
+    if (!sourceRef) { this.error='Enter content.'; return null; }
     if (this.mode === 'link') {
       if (/^[a-z][a-z0-9+.-]*:/i.test(sourceRef) && !/^https?:/i.test(sourceRef)) { this.error = 'Enter a valid http or https URL.'; return null; }
       const url = safeUrl(sourceRef.startsWith('http') ? sourceRef : `https://${sourceRef}`);
       if (url) sourceRef = url;
-      else type = 'note';
+      else { this.error='Enter a valid http or https URL.'; return null; }
     }
     const kind = this.kind && OBJECT_KINDS.includes(this.kind) ? this.kind : undefined;
     const before = store.state.contentItems.length;
