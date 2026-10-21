@@ -14,6 +14,7 @@ const TOP = 220;
 /** A painted hit target. x/y are the rect centre so a ray test is a simple half-extent compare. */
 interface Hit {
   id: string;
+  label: string;
   x: number;
   y: number;
   w: number;
@@ -226,7 +227,7 @@ export class XrPanel {
     } else {
       c.fillText(text, x + 24, y + h / 2 + 11);
     }
-    this.shown.push({ id, x: x + w / 2, y: y + h / 2, w, h });
+    this.shown.push({ id, label, x: x + w / 2, y: y + h / 2, w, h });
   }
 
   private textWidth(c: CanvasRenderingContext2D, text: string): number {
@@ -251,6 +252,8 @@ export class XrPanel {
 
   private redraw(): void {
     const c = this.canvas.getContext('2d')!;
+    // The backdrop is 94% opaque, so without a clear the previous page bleeds through.
+    if (typeof c.clearRect === 'function') c.clearRect(0, 0, W, H);
     c.fillStyle = 'rgba(28, 28, 32, 0.94)';
     c.fillRect(0, 0, W, H);
     c.fillStyle = '#ece7f5';

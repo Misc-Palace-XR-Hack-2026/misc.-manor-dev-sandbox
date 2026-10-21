@@ -8,7 +8,7 @@ export type DraftMode = 'link' | 'note';
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
 export const URL_PUNCT = ".,-/'!?:&=_%#+@";
 /** Multi-character inserts that save a lot of ray-aiming on URLs. */
-export const SHORTCUTS: Record<string, string> = { https: 'https://', com: '.com', www: 'www.' };
+export const SHORTCUTS: Record<string, string> = { https: 'https://', com: '.com' };
 const CONTROLS = ['space', 'backspace', 'caps', ...Object.keys(SHORTCUTS)] as const;
 
 function keyboardKeys(caps: boolean): string[] {
@@ -23,7 +23,7 @@ const ROW_LETTERS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
 const ROW_DIGITS = '0123456789';
 const ROW_PUNCT_A = ".,-/'!?:&=_%#";
 const ROW_PUNCT_B = '+@';
-const ROW_CONTROLS = ['caps', 'space', 'backspace', 'https', 'www', 'com'];
+const ROW_CONTROLS = ['caps', 'space', 'backspace', 'https', 'com'];
 
 /** The on-panel keyboard layout: rows of key tokens, mirroring `key()`'s token contract. */
 export function keyboardRows(draft: { caps: boolean }): string[][] {
@@ -39,7 +39,7 @@ export function keyboardRows(draft: { caps: boolean }): string[][] {
 /** Relative width of a key, in grid units, so space and the shortcuts stay easy to hit. */
 export function keyWidthUnits(token: string): number {
   if (token === 'space') return 3;
-  if (token === 'caps' || token === 'backspace' || token === 'https') return 2;
+  if (token === 'caps' || token === 'backspace' || token === 'https' || token === 'com') return 2;
   return 1;
 }
 
