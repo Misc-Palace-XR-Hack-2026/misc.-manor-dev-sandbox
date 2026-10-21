@@ -3,6 +3,7 @@ import { preparePhoto } from './photo-upload';
 
 /** Draft stays outside the store; cancel/Escape never creates history or saves. */
 export function openContentEditor(store: Store, contentId: string): void {
+  const current = store.sessionGuard();
   const content = store.content(contentId);
   if (!content) return;
   const snapshot = JSON.stringify(content), roomId = store.state.id;
@@ -46,7 +47,7 @@ export function openContentEditor(store: Store, contentId: string): void {
   form.onsubmit = event => {
     event.preventDefault();
     try {
-      if (store.state.id !== roomId || JSON.stringify(store.content(contentId)) !== snapshot) throw new Error('This item changed while editing. Cancel and reopen it to edit the latest version.');
+      if (!current() || store.state.id !== roomId || JSON.stringify(store.content(contentId)) !== snapshot) throw new Error('This item changed while editing. Cancel and reopen it to edit the latest version.');
       store.updateContent(contentId, {title: title.value, sourceRef: ref.value, imageData, notes: notes.value});
       if (store.saveError) {
         error.textContent = `Changes kept in memory only. Export your room before leaving. ${store.saveError}`;
@@ -55,6 +56,7 @@ export function openContentEditor(store: Store, contentId: string): void {
       dialog.close();
     } catch (e) { error.textContent = e instanceof Error ? e.message : String(e); error.hidden = false; }
   };
-  dialog.addEventListener('close', () => { dialog.remove(); if (returnFocus?.isConnected) returnFocus.focus(); });
+  const unsubscribe = store.subscribe(() => { if (!current()) dialog.close(); });
+  dialog.addEventListener('close', () => { unsubscribe(); dialog.remove(); if (returnFocus?.isConnected) returnFocus.focus(); });
   document.body.append(dialog); dialog.showModal(); title.focus();
 }
