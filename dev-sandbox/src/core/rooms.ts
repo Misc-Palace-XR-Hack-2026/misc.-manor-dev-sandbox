@@ -1,7 +1,7 @@
 import { newRoom, normalizeRoom } from './store';
 import type { RoomState } from './types';
 
-// The sandbox's fixed set of rooms. A room belongs to one person; the Guest room is where new users land.
+// The sandbox's fixed set of rooms. A room belongs to one person; 'My room' is where new users land.
 // Look and feel (theme, lighting) and layout are per-room selections, never tied to who owns the room.
 
 export interface RoomSlot {
@@ -15,7 +15,7 @@ export interface RoomSlot {
 export const GUEST_ROOM_ID = 'guest';
 
 export const ROOM_DIRECTORY: readonly RoomSlot[] = [
-  { id: GUEST_ROOM_ID, defaultName: 'Guest room' },
+  { id: GUEST_ROOM_ID, defaultName: 'My room' },
   { id: 'german', defaultName: "German's room", seed: 'sample' }, // placeholder template until German's own room is ready
   { id: 'matt', defaultName: "Matt's room", seed: 'vinyl-lounge' },
   { id: 'levi', defaultName: "Levi's room", seed: 'creative-atelier' },

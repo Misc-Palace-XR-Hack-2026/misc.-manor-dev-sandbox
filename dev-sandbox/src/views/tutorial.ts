@@ -1,5 +1,6 @@
 import { Store } from '../core/store';
 import { EMPTY_BOOKMARKS, tutorialBookmarks, type BookmarkEntry } from '../core/bookmarks';
+import { INTRO_PATH } from '../core/demo-flags';
 import { advance, beginLesson, currentStep, finish, LESSONS, loadOnboarding, persistOnboarding, progressLabel, skip, visibleTarget, type LessonId, type OnboardingState } from '../core/onboarding';
 
 /** Shared lesson runner: UI events for controls, state transitions for successful mutations. */
@@ -84,6 +85,10 @@ export class TutorialView {
     this.goToRoom(); this.overlay.hidden = false; this.card.replaceChildren();
     Object.assign(this.card.style,{top:'72px',bottom:'auto',maxHeight:'60vh'});
     const title = document.createElement('h2'); title.textContent = 'Practice lessons'; this.card.append(title);
+    // The walk-in intro is the first thing offered under Help, ahead of the practice lessons.
+    const intro = button('Watch the intro', () => { window.location.assign(INTRO_PATH); });
+    intro.dataset.tutorial = 'watch-intro';
+    this.card.append(intro);
     for (const [id,label] of Object.entries({bookmarks:'Import bookmarks',create:'Create content',move:'Move, stash and restore',rooms:'Visit local rooms',style:'Themes, lighting and surfaces'})) this.card.append(button(label,()=>this.start(id as LessonId)));
     this.card.append(button('Go to room',()=>this.goToRoom()));
   }

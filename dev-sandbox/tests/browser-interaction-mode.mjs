@@ -66,7 +66,7 @@ try {
     await page.getByRole('dialog',{name:'Rooms',exact:true}).getByRole('button',{name:"Matt's room",exact:true}).click();
     assert.equal(await page.evaluate(()=>window.store.mode),'preview');
     await page.getByTitle('Switch room').click();
-    await page.getByRole('dialog',{name:'Rooms',exact:true}).getByRole('button',{name:'Guest room',exact:true}).click();
+    await page.getByRole('dialog',{name:'Rooms',exact:true}).getByRole('button',{name:'My room',exact:true}).click();
     assert.equal(await page.evaluate(() => window.store.exportJson()),snapshot);
     await page.getByRole('button',{name:'Edit room',exact:true}).click();
     await page.getByLabel('Lighting preset').waitFor({state:'visible'});

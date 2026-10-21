@@ -1,5 +1,6 @@
 import type { Store } from '../core/store';
 import { preparePhoto } from './photo-upload';
+import { SHOW_PREVIEW_BUTTON } from '../core/demo-flags';
 
 /** Draft stays outside the store; cancel/Escape never creates history or saves. */
 export function openContentEditor(store: Store, contentId: string): void {
@@ -44,6 +45,7 @@ export function openContentEditor(store: Store, contentId: string): void {
   }
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Cancel'; cancel.onclick = () => dialog.close();
   const preview = document.createElement('button'); preview.type = 'button'; preview.textContent = 'Preview room';
+  if (!SHOW_PREVIEW_BUTTON) preview.hidden = true;
   preview.title = 'Discard this draft and enter desktop/mobile Preview';
   preview.onclick = () => store.setMode('preview');
   const actions = document.createElement('div'); actions.className = 'dialog-actions'; actions.append(save, cancel, preview);

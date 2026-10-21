@@ -16,7 +16,7 @@ import { TutorialView } from './views/tutorial';
 const repoRooms: RepoRoom[] = REPO_ROOMS;
 const repo = REPO_ROOM_MAP;
 
-// Last room you were in, else the empty Guest room.
+// Last room you were in, else the empty 'My room'.
 const active = Store.activeRoomId();
 const roomId = active && isRoomId(active) ? active : GUEST_ROOM_ID;
 let initial: RoomState | undefined;

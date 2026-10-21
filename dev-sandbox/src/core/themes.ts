@@ -12,7 +12,7 @@ export interface Theme {
 }
 
 export const THEMES: Record<string, Theme> = {
-  // The look a new Guest room starts with: original finishes and original lighting (nothing set).
+  // The look a new 'My room' starts with: original finishes and original lighting (nothing set).
   default: {
     label: 'Default',
     surfaces: {},
