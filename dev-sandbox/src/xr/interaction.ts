@@ -3,7 +3,7 @@ import { OBJECT_KINDS, OBJECT_LABELS, type ObjectKind } from '../core/types';
 import { LIGHTING_PRESETS, type Lighting } from '../core/appearance';
 import { ROOM_TRACKS, TRACK_LABELS, type RoomTrack } from '../core/soundtrack';
 import { SURFACE_PRESETS, type SurfaceTarget } from '../core/surfaces';
-import { ROOM_DIRECTORY, seedRoom } from '../core/rooms';
+import { ROOM_DIRECTORY, openRoom } from '../core/rooms';
 import { THEMES } from '../core/themes';
 import { safeUrl } from '../core/content';
 import { creationButtons, XrCreation } from './creation';
@@ -480,7 +480,7 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   if (id.startsWith('room:')) {
     const roomId = id.slice(5);
     const repo = Object.fromEntries(rooms.map((room) => [room.name, room.data]));
-    store.switchRoom(roomId, seedRoom(roomId, repo));
+    store.switchRoom(roomId, openRoom(roomId, repo));
     return { page: 'home', tutorialEvent: 'switched' };
   }
   if (id.startsWith('theme:')) {

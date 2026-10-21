@@ -39,6 +39,7 @@ export function validateRoom(input: unknown): string | null {
   if (!input || typeof input !== 'object') return 'Not a room file.';
   const s = input as Partial<RoomState>;
   if (s.schemaVersion !== SCHEMA_VERSION) return `Unsupported schemaVersion: ${String(s.schemaVersion)}.`;
+  if (s.seedRevision !== undefined && typeof s.seedRevision !== 'string') return 'Invalid seed revision.';
   if (!Array.isArray(s.contentItems) || !Array.isArray(s.representations) || !Array.isArray(s.placements)) {
     return 'Missing contentItems, representations or placements.';
   }
