@@ -5,6 +5,7 @@ import { parseBookmarksHtml } from '../core/bookmarks';
 import { openContentEditor } from './content-editor';
 import { preparePhoto } from './photo-upload';
 import { previewOpenUrl } from '../core/preview';
+import { SHOW_PREVIEW_BUTTON } from '../core/demo-flags';
 import { safeUrl } from '../core/content';
 import { Store } from '../core/store';
 import { ROOM_DIRECTORY, seedRoom } from '../core/rooms';
@@ -113,6 +114,8 @@ export class MenuView {
     cancelMove.addEventListener('click',()=>store.select(null));
     store.subscribe(()=>{ cancelMove.hidden=!store.holding; });
     this.chrome.append(this.editBtn, this.previewBtn, this.roomsBtn, this.helpBtn, cancelMove);
+    // Demo day: the Preview entry points are hidden (see SHOW_PREVIEW_BUTTON). Preview mode still works.
+    if (!SHOW_PREVIEW_BUTTON) this.previewBtn.remove();
     this.itemSheet.setAttribute('role', 'dialog');
     this.itemSheet.setAttribute('aria-label', 'Item');
     this.itemSheet.append(
@@ -120,7 +123,7 @@ export class MenuView {
       this.itemBody,
     );
     this.fillDialog(this.roomsSheet, 'Rooms',
-      el('p', { class: 'sheet-copy', textContent: 'Each room saves on its own in this browser. Guest room starts empty.' }),
+      el('p', { class: 'sheet-copy', textContent: 'Each room saves on its own in this browser. My room starts empty.' }),
       this.roomList);
     this.fillDialog(this.addSheet, 'Add object', this.buildAddForm());
     this.fillDialog(this.importSheet, 'Import', this.buildImport());
@@ -128,6 +131,7 @@ export class MenuView {
 
     const previewFromEditor = el('button', { type: 'button', textContent: 'Preview room' });
     previewFromEditor.addEventListener('click', () => store.setMode('preview'));
+    if (!SHOW_PREVIEW_BUTTON) previewFromEditor.hidden = true;
     root.append(
       this.editorClose, previewFromEditor,
       el('h1', { textContent: 'Misc. Manor' }),
@@ -522,7 +526,7 @@ export class MenuView {
     this.root.inert = !canEdit;
     this.fab.hidden = !canEdit;
     this.helpBtn.hidden = !canEdit;
-    this.previewBtn.hidden = !canEdit;
+    this.previewBtn.hidden = !canEdit || !SHOW_PREVIEW_BUTTON;
     this.modeNote.hidden = canEdit;
     this.editBtn.title = canEdit ? 'Open room editor' : 'Leave Preview and edit this room';
     if (document.activeElement !== this.ownerInput) this.ownerInput.value = state.owner;

@@ -113,7 +113,7 @@ test('seedRoom creates proper room instances', () => {
   // seedRoom('guest', {}) creates guest room with no content
   const guest = seedRoom('guest', {});
   assert.equal(guest.id, 'guest');
-  assert.equal(guest.owner, 'Guest room');
+  assert.equal(guest.owner, 'My room');
   assert.equal(guest.contentItems.length, 0);
   assert.equal(guest.representations.length, 0);
   assert.equal(guest.placements.length, 0);
