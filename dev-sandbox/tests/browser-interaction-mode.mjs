@@ -27,6 +27,11 @@ try {
     await photo.getByRole('button',{name:'Close',exact:true}).click();
     assert.equal(await page.evaluate(()=>window.store.exportJson()), snapshot);
     assert.equal(await page.evaluate(() => window.store.mode), 'preview');
+    await page.evaluate(() => window.store.visit({...JSON.parse(window.store.exportJson()), owner:'Visited'}, 'Visited'));
+    assert.equal(await page.evaluate(() => window.store.visiting), null);
+    assert.equal(await page.evaluate(() => window.store.exportJson()), snapshot);
+    await page.evaluate(() => window.store.returnHome());
+    assert.equal(await page.evaluate(() => window.store.exportJson()), snapshot);
     assert.equal(await page.getByRole('button', {name:'Add to room',exact:true}).isVisible(), false);
     assert.equal(await page.getByRole('button', {name:'Help',exact:true}).isVisible(), false);
     await page.getByText('Preview · desktop/mobile only. Return to Edit room for VR.', {exact:true}).waitFor();

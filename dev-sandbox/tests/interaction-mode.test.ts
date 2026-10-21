@@ -18,11 +18,13 @@ test('Preview guards mutation commands and preserves saves/history while rooms r
     () => s.autoOrganize(), () => s.importFiles([{title:'Bad',ref:'bad.pdf'}]),
     () => s.importBookmarks([{title:'Bad',url:'https://example.org',folder:''}]),
     () => s.bringOut(c.id), () => s.undo(), () => s.replaceState(newRoom('Bad')),
+    () => s.visit(newRoom('Visited'), 'Visited'), () => s.returnHome(),
   ];
   for (const command of commands) {
     command();
     assert.equal(s.exportJson(), before);
     assert.equal(s.holding, null);
+    assert.equal(s.visiting, null);
     assert.deepEqual([...saved], storage);
   }
   s.switchRoom('preview-test', newRoom('Other'));

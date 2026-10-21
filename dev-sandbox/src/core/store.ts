@@ -603,10 +603,13 @@ export class Store {
 
   /** Visit an example/neighborhood room without writing it over the personal save. */
   visit(data: unknown, name?: string): void {
+    if (!this.canEdit) return;
     const error = validateRoom(data);
     if (error) throw new Error(error);
     if (!this.visiting) this.homeSnapshot = JSON.stringify(this.state);
     this.pushHistory();
+    // A room transition invalidates in-flight imports/uploads, as sessionGuard() promises.
+    this.epoch++;
     this.state = normalizeRoom(data);
     this.visiting = name ?? this.state.owner;
     this.selectedId = null;
@@ -614,8 +617,10 @@ export class Store {
   }
 
   returnHome(): void {
+    if (!this.canEdit) return;
     if (!this.homeSnapshot) return;
     this.pushHistory();
+    this.epoch++;
     this.state = JSON.parse(this.homeSnapshot) as RoomState;
     this.homeSnapshot = null;
     this.visiting = null;
