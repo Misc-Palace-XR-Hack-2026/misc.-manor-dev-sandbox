@@ -17,6 +17,7 @@ export function createSoundtrackControl(player: SoundtrackPlayer): HTMLButtonEle
   player.subscribe(() => {
     const state = player.soundState;
     const label = state === 'off' ? 'Room music is off — choose a track in Edit room' :
+      state === 'paused' ? 'Mute room music (temporarily paused)' :
       state === 'playing' ? 'Mute room music' : 'Unmute room music';
     button.dataset.soundState = state;
     button.setAttribute('aria-label', label);

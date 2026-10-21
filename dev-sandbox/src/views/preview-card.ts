@@ -1,4 +1,5 @@
 import { publicPreviewUrl, previewOpenUrl, type Preview } from '../core/preview';
+import { registerEmbedAudio, supportsEmbedAudio } from './embed-audio';
 import type { MediaArt } from '../core/media-art';
 
 // DOM card shown for the selected object. Built with textContent only, never innerHTML, so titles and notes from
@@ -31,7 +32,12 @@ export function createEmbedFrame(preview: Extract<Preview, { kind: 'embed' }>): 
   frame.allowFullscreen = !page;
   frame.referrerPolicy = 'strict-origin-when-cross-origin';
   const destination = new URL(preview.src);
-  if (publicPreviewUrl(destination)) frame.src = preview.src;
+  // Main's public-HTTPS preview policy decides eligibility; audio coordination only ever attaches to a frame
+  // that policy already allowed to load. No proxying, no header rewriting, no sandbox relaxation.
+  if (publicPreviewUrl(destination)) {
+    frame.src = preview.src;
+    registerEmbedAudio(frame, preview.provider);
+  }
   return frame;
 }
 
@@ -148,6 +154,11 @@ export class PreviewCardView {
       frame.addEventListener('load', () => { guidance.textContent = `Preview availability unverified. ${fallback}`; });
       frame.addEventListener('error', () => { guidance.textContent = `Preview could not load. ${fallback}`; });
       const open = openAction(this.openUrl ?? previewOpenUrl(p.src));
+      // PR #81: providers without a supported player API cannot be coordinated automatically; tell the user how to
+      // avoid double audio instead of silently overlapping the room soundtrack.
+      if (!supportsEmbedAudio(p.provider, p.src)) {
+        body.append(make('div', 'preview-text', 'Automatic audio coordination is unavailable for this preview. Mute room music before playing media here, or use Open in browser.'));
+      }
       body.append(guidance);
       if (open) body.append(open);
     } else if (p.kind === 'image') {

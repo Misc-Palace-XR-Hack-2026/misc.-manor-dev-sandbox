@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SoundtrackPlayer, embedMessageIsPlaying, type AudioLike } from '../src/views/soundtrack';
+import { SoundtrackPlayer, type AudioLike } from '../src/views/soundtrack';
 import { Store, newRoom } from '../src/core/store';
 import { trackUrl } from '../src/core/soundtrack';
 
@@ -208,6 +208,76 @@ test('after toggleSound() then toggleSound() (muted), changing store lighting mu
   assert.equal(audio.paused, true);
 });
 
+test('embed pause is immediate and independent of away, selection changes and speaker gestures', async () => {
+  const store = new Store(newRoom());
+  const { player, audio } = makePlayer(store);
+  await player.idle();
+  player.toggleSound();
+  player.setEmbedPlaying(true);
+  assert.equal(audio.paused, true, 'no fade overlap with embed');
+  player.return();
+  player.toggleSound(); // mute while suspended
+  player.toggleSound(); // re-enable intent, but do not play
+  store.setLighting('dawn');
+  await player.idle();
+  assert.equal(audio.paused, true, 'return, speaker and sync cannot override embed');
+  player.leave();
+  player.setEmbedPlaying(false);
+  await player.idle();
+  assert.equal(audio.paused, true, 'ending embed must not clear away');
+  player.return();
+  await player.idle();
+  assert.equal(audio.paused, false);
+});
+
+test('embed interruption invalidates an in-flight fade and clamps volume writes', async () => {
+  const store = new Store(newRoom());
+  const audio = new FakeAudio();
+  let release: (() => void) | undefined;
+  const player = new SoundtrackPlayer(store, { audio, listen: false,
+    fade: async (_from, to, _ms, set) => {
+      set(-0.01); assert.equal(audio.volume, 0);
+      set(1.01); assert.equal(audio.volume, 1);
+      if (to === 0) await new Promise<void>(resolve => { release = resolve; });
+      set(to);
+    },
+  });
+  await player.idle();
+  player.toggleSound();
+  store.setLighting('dawn');
+  await Promise.resolve();
+  assert.ok(release, 'track fade is in flight');
+  player.setEmbedPlaying(true);
+  assert.equal(audio.paused, true, 'embed pauses before pending fade resolves');
+  release();
+  await player.idle();
+  assert.equal(audio.paused, true);
+  player.setEmbedPlaying(false);
+  await player.idle();
+  assert.equal(audio.paused, false);
+});
+
+test('disabled, off and user-muted music do not resume after embed dismissal', async () => {
+  const store = new Store(newRoom());
+  const {player, audio} = makePlayer(store);
+  await player.idle();
+  player.setEmbedPlaying(true);
+  player.setEmbedPlaying(false);
+  await player.idle();
+  assert.equal(audio.plays, 0);
+  player.toggleSound();
+  player.setEmbedPlaying(true);
+  player.toggleSound();
+  player.setEmbedPlaying(false);
+  await player.idle();
+  assert.equal(audio.paused, true);
+  store.setSoundtrack({mode:'off'});
+  player.setEmbedPlaying(true);
+  player.setEmbedPlaying(false);
+  await player.idle();
+  assert.equal(audio.paused, true);
+});
+
 test('an in-environment embed play message pauses room music; mere iframe presence does not', async () => {
   const store = new Store(newRoom());
   const { player, audio } = makePlayer(store);
@@ -215,7 +285,6 @@ test('an in-environment embed play message pauses room music; mere iframe presen
   player.toggleSound();
   await player.idle();
   assert.equal(audio.paused, false);
-  assert.equal(embedMessageIsPlaying({ event: 'play' }), true);
   player.setEmbedPlaying(true);
   await player.idle();
   assert.equal(audio.paused, true, 'actual embed playback pauses room music');
