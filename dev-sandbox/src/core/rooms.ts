@@ -16,12 +16,10 @@ export const GUEST_ROOM_ID = 'guest';
 
 export const ROOM_DIRECTORY: readonly RoomSlot[] = [
   { id: GUEST_ROOM_ID, defaultName: 'Guest room' },
-  { id: 'german', defaultName: "German's room", seed: 'curious-web' },
+  { id: 'german', defaultName: "German's room", seed: 'sample' }, // placeholder template until German's own room is ready
   { id: 'matt', defaultName: "Matt's room", seed: 'vinyl-lounge' },
   { id: 'levi', defaultName: "Levi's room", seed: 'creative-atelier' },
   { id: 'jawan', defaultName: "Jawan's room", seed: 'garden-notebook' },
-  { id: 'omari', defaultName: "Omari's room", seed: 'greenhouse-conservatory' },
-  { id: 'daniel', defaultName: "Daniel's room", seed: 'sample' },
 ];
 
 export const isRoomId = (id: string | null | undefined): id is string =>

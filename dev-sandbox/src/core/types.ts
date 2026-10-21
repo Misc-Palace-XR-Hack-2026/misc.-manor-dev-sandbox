@@ -61,6 +61,8 @@ export interface ContentItem {
   sourceRef: string;
   tags: string[];
   createdAt: string;
+  /** Link and text are fixed (the demo's starter objects). The object kind can still change and it can be stashed. */
+  locked?: boolean;
 }
 
 /** The visible object standing in for a content item. */

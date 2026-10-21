@@ -10,6 +10,9 @@ import type { MediaArt } from '../core/media-art';
 
 export type PreviewArt = MediaArt;
 
+/** Space kept free at the top of the viewport (the Skip button, browser chrome) so a tall card never runs under it. */
+const TOP_CLEARANCE = 64;
+
 const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string) => {
   const e = document.createElement(tag);
   if (className) e.className = className;
@@ -56,53 +59,84 @@ export class PreviewCardView {
   readonly root = make('div', 'preview-card');
   private shown: Preview | null = null;
   private shownArt = '';
+  private openUrl: string | null = null;
 
   constructor(container: HTMLElement) {
     this.root.hidden = true;
     container.appendChild(this.root);
+    // A card for a link opens it when clicked anywhere (the iframe and real anchors handle themselves).
+    this.root.addEventListener('click', (event) => {
+      if (!this.openUrl || (event.target as HTMLElement).closest('a, iframe')) return;
+      window.open(this.openUrl, '_blank', 'noopener,noreferrer');
+    });
   }
 
-  /** Show a preview, or hide the card with null. Rebuilds DOM only when the preview or its art changes. */
-  show(preview: Preview | null, art: PreviewArt | null = null): void {
+  /**
+   * Show a preview, or hide the card with null. Rebuilds DOM only when the preview, its art or its link changes.
+   * `openUrl` overrides where Open in browser goes (e.g. the watch page behind a provider embed); otherwise a card
+   * uses its policy `openHref`. A card with a link is clickable anywhere.
+   */
+  show(preview: Preview | null, art: PreviewArt | null = null, openUrl: string | null = null): void {
     const artKey = art ? `${art.type}:${art.glyph}:${art.label}` : '';
-    if (preview === this.shown && artKey === this.shownArt) return;
+    const link = !preview ? null
+      : (openUrl ? previewOpenUrl(openUrl) : null) ?? (preview.kind === 'card' ? preview.openHref ?? null : null);
+    if (preview === this.shown && artKey === this.shownArt && link === this.openUrl) return;
     this.shown = preview;
     this.shownArt = artKey;
+    this.openUrl = link;
     this.root.replaceChildren();
     this.root.hidden = preview === null;
     const embed = preview?.kind === 'embed';
     // A card that offers Open in browser is a real control: it must be clickable (pointer-events)
     // and present in the accessibility tree, or the "always reachable" fallback is a lie.
-    const actionable = embed || (preview?.kind === 'card' && !!preview.openHref);
+    const actionable = embed || link !== null;
     this.root.classList.toggle('preview-interactive', actionable);
+    this.root.classList.toggle('preview-openable', link !== null && !embed);
     // Decorative cards are described by the item sheet; a focusable iframe or link must stay in the tree.
     if (actionable) this.root.removeAttribute('aria-hidden'); else this.root.setAttribute('aria-hidden', 'true');
     if (preview) this.root.append(this.render(preview, art));
   }
 
-  /** Dock the card with its bottom-right corner at (x, y) in viewport pixels. Clamps to stay in viewport. */
+  /**
+   * Dock the card with its bottom-right corner at (x, y) in viewport pixels. The card is anchored by its BOTTOM and
+   * RIGHT edges, so it never needs its own height: longer content grows upward and can't reach the panel below it.
+   * Its max height stops short of the top of the viewport (room for the Skip button) and scrolls beyond that.
+   */
   dockBottomRight(x: number, y: number): void {
-    const rect = this.root.getBoundingClientRect();
-    const cardWidth = rect.width || 240; // fallback to default width
-    const cardHeight = rect.height || 200;
-    // Clamp x so the card's right edge doesn't exceed viewport, leaving 12px margin
-    const viewportWidth = window.innerWidth;
-    const clampedX = Math.min(x, viewportWidth - 12);
-    const clampedX2 = Math.max(clampedX - cardWidth, 12);
-    // Clamp y so card's bottom edge stays in viewport
-    const viewportHeight = window.innerHeight;
-    const clampedY = Math.min(y, viewportHeight - 12);
-    // Position with bottom-right corner at the clamped point
-    this.root.style.transform = `translate(${Math.round(clampedX2)}px, ${Math.round(clampedY - cardHeight)}px)`;
+    const s = this.root.style;
+    const right = Math.max(12, Math.round(window.innerWidth - x));
+    const bottom = Math.max(12, Math.round(window.innerHeight - y));
+    s.left = 'auto';
+    s.top = 'auto';
+    s.right = `${right}px`;
+    s.bottom = `${bottom}px`;
+    s.transform = 'none';
+    s.maxHeight = `${Math.max(120, window.innerHeight - bottom - TOP_CLEARANCE)}px`;
+    s.overflowY = 'auto';
   }
 
   /** Float the card with its bottom-centre at a point in viewport pixels (for floating above objects). */
   moveTo(x: number, y: number): void {
-    this.root.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -100%)`;
+    const s = this.root.style;
+    const width = this.root.offsetWidth || 240;
+    const margin = 12;
+    const cx = Math.min(Math.max(x, width / 2 + margin), window.innerWidth - width / 2 - margin);
+    // Grows upward from the anchor; never above the top clearance.
+    const height = this.root.offsetHeight || 0;
+    const cy = Math.min(Math.max(y, height + TOP_CLEARANCE), window.innerHeight - margin);
+    s.right = 'auto';
+    s.bottom = 'auto';
+    s.left = '0';
+    s.top = '0';
+    s.maxHeight = `${Math.max(120, window.innerHeight - TOP_CLEARANCE - margin)}px`;
+    s.overflowY = 'auto';
+    s.transform = `translate(${Math.round(cx)}px, ${Math.round(cy)}px) translate(-50%, -100%)`;
   }
 
   private render(p: Preview, art: PreviewArt | null): HTMLElement {
-    const body = make('div', `preview-body preview-${p.kind}`);
+    // Not `preview-${p.kind}`: for a link card that is `preview-card`, the root's class, which would make this inner
+    // body position:fixed at the viewport corner and (inside the scrolling root) clip it to nothing.
+    const body = make('div', `preview-body preview-kind-${p.kind}`);
     if (p.kind === 'embed') {
       const frame = createEmbedFrame(p);
       if (frame.getAttribute('src')) body.append(frame);
@@ -113,7 +147,7 @@ export class PreviewCardView {
       // Cross-origin failures often fire load too. Never mark the page as successfully rendered.
       frame.addEventListener('load', () => { guidance.textContent = `Preview availability unverified. ${fallback}`; });
       frame.addEventListener('error', () => { guidance.textContent = `Preview could not load. ${fallback}`; });
-      const open = openAction(previewOpenUrl(p.src));
+      const open = openAction(this.openUrl ?? previewOpenUrl(p.src));
       body.append(guidance);
       if (open) body.append(open);
     } else if (p.kind === 'image') {
@@ -147,7 +181,11 @@ export class PreviewCardView {
       body.append(head, make('div', 'preview-title', p.title));
       if (p.detail) body.append(make('div', 'preview-text', p.detail));
       // A blocked / unsupported / ineligible destination must still offer the external handoff.
-      const open = openAction(p.openHref);
+      const open = openAction(this.openUrl);
+      if (open) body.append(open);
+    }
+    if (p.kind === 'image' || p.kind === 'note') {
+      const open = openAction(this.openUrl);
       if (open) body.append(open);
     }
     return body;

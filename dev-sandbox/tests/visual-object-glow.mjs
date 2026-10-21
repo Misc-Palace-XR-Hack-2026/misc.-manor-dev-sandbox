@@ -137,7 +137,7 @@ try {
     const room = await context.newPage();
     room.on('pageerror', (e) => errors.push(String(e)));
     room.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
-    await room.goto(base); await room.waitForFunction(() => !!window.store);
+    await room.goto(`${base}/dev/`); await room.waitForFunction(() => !!window.store);
     const reps = await room.evaluate((kinds) => {
       const s = window.store;
       const slots = ['loft-2', 'loft-3', 'floor-3', 'floor-4'];

@@ -1,0 +1,26 @@
+- this is pretty good, but we need to zoom out and tilt down enough to work on mobile, maybe for now just zoom out and make it work for mobile where its more zoomed out in the intro sequecen w the shelves and whatever that leaves us for web is fine too, rn i can only see the middle object in mobile view, maybe we should also allow the user to move the camera tilt by clicking adn moving the screen a bit in this sequnce?
+idk we can discuss, but the top shelf is ahrd to click we should be higher up and tilt down more and zoom out for best mobile experience, dont have web and mobile version zoomed out differently what im saying is we will just lead from mobile and everything wil llook fine in web version
+
+what i want to do is also change the setup of the given objects, they instead o fbeing in a tray and you can see them, i want it ot reference unapcking game a bit, meaning what the user will see is an open cardboard box with like stuffing in it, theyw ont see whats in it, 
+that way the user only needs to see one box in front of them so mobile will work better, when they click the box, one of the three given objects at random will pop up into view, as if coming out of the box, and the stuffing level of the box will decrease denoting that something has been removed from the box, the same previews and thingswill appear, but thats how the user should "click" and select an object
+not from a tray but from a cardboard box, once all objects are picked up and placed the box vanishes and everythign else stays the same.
+
+- these two fixes above are the most important rn to consider
+
+the next are ideas
+
+
+- audio will change now, audio will be driven from interactions with the jukebox in the demo and inthe dev sandbox, all the inputs for music when you click the jukebox will be the same as wehnw e were pickign music in the editer, now remove those from
+being friven by the editor to being driven throughthe jukebox, for now a simple clic of jukebox will bring up the music selection settings or whatver, for now simple version where its the prselected music we have now, and when music is on fromthejukebox is when the audio mute button appears in the top left) 
+do this for the demo space only for now not the /dev, later in dev we add the jukebox off to the side too 
+
+> also should we add the minecraft camera/movement that floats around anywhere? idk but can we add the random object import from random other rooms? it should be lie max 5-10
+  objects at a time, random number between those, and they should land on the floor somewhere or in a box for us to sort throgh? maybe we rethink this dont implment yet 
+
+whats needed next is how we determine the camera to then drive the rts of the interactions in the demo the random drio ir the import or single add manually, also editing the room should be easy and fun from the dmeo experinece but we cna discuss that later
+
+lets settle on the most focused things we need to do now to get this to the next stage, audio change, and set up for how we move and how we want to interactin the dmeo space w things and the random drops or the imported fromfiles or something, 
+
+lest come up witha  plan for doing the simple changes mentioned and the box, and plan the music and discuss the camera movement and everything else.
+
+

@@ -18,8 +18,10 @@ const MAX_HISTORY = 60;
 
 /** Each named room saves on its own. No room id = the original single-save keys (kept for old saves and tests). */
 export function roomKeys(roomId?: string): { main: string; backup: string } {
+  // The public demo keeps its visitor's room under its own prefix so it never touches the dev sandbox's saves.
+  const prefix = roomId?.startsWith('demo-') ? 'mp-demo:rooms' : 'mp-sandbox:rooms';
   return roomId
-    ? { main: `mp-sandbox:rooms:${roomId}`, backup: `mp-sandbox:rooms:${roomId}:backup` }
+    ? { main: `${prefix}:${roomId}`, backup: `${prefix}:${roomId}:backup` }
     : { main: KEY, backup: BACKUP_KEY };
 }
 
@@ -187,6 +189,25 @@ export class Store {
     return null;
   }
 
+  /**
+   * Set an unreadable saved room (and its backup) aside so the room can start from its seed again. Nothing is
+   * destroyed: each raw value is first copied to `<key>:unreadable-<timestamp>`. Returns the copy keys.
+   */
+  static quarantineSaved(roomId: string): string[] {
+    const keys = roomKeys(roomId);
+    const stamp = Date.now();
+    const copies: string[] = [];
+    for (const key of [keys.main, keys.backup]) {
+      const raw = localStorage.getItem(key);
+      if (raw === null) continue;
+      const copyKey = `${key}:unreadable-${stamp}`;
+      localStorage.setItem(copyKey, raw); // throws (and keeps the original) if the copy can't be written
+      copies.push(copyKey);
+      localStorage.removeItem(key);
+    }
+    return copies;
+  }
+
   // ---- reading ----------------------------------------------------------
   get layout(): RoomLayout {
     return getLayout(this.state.layoutId)!;
@@ -288,6 +309,7 @@ export class Store {
   updateContent(contentId: string, input: { title: string; sourceRef: string; imageData?: string; notes?: string }): void {
     const current = this.content(contentId);
     if (!current) throw new Error('Item no longer exists.');
+    if (current.locked) throw new Error('This item is fixed: its link and text cannot be edited.');
     if (typeof input.title !== 'string' || !input.title.trim() || typeof input.sourceRef !== 'string') throw new Error('A title and content are required.');
     const sourceRef = current.type === 'note' ? input.sourceRef : current.sourceKind === 'url' ? safeUrl(input.sourceRef) : input.sourceRef.trim();
     if (sourceRef === null) throw new Error('Enter a valid http or https URL.');
@@ -305,7 +327,7 @@ export class Store {
 
   renameItem(contentId: string, title: string): void {
     const t = title.trim();
-    if (!t) return;
+    if (!t || this.content(contentId)?.locked) return;
     this.commit((s) => {
       const c = s.contentItems.find((x) => x.id === contentId);
       if (c) c.title = t;
@@ -430,6 +452,7 @@ export class Store {
 
   /** Delete the content and its object for good. */
   deleteContent(contentId: string): void {
+    if (this.content(contentId)?.locked) return; // fixed items can be stashed, not destroyed
     this.commit((s) => {
       const repIds = new Set(s.representations.filter((r) => r.contentItemId === contentId).map((r) => r.id));
       s.placements = s.placements.filter((p) => !repIds.has(p.representationId));

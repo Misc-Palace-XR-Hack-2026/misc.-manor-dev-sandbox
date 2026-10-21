@@ -286,7 +286,7 @@ test('Change object and Edit open the object list, and dedicated rooms stay visi
     { name: 'sample', data: newRoom('Sample') },
     { name: 'vinyl-lounge', data: newRoom('Vinyl') },
   ];
-  assert.deepEqual(dedicatedRooms().map((r) => r.id), ['guest', 'german', 'matt', 'levi', 'jawan', 'omari', 'daniel']);
+  assert.deepEqual(dedicatedRooms().map((r) => r.id), ['guest', 'german', 'matt', 'levi', 'jawan']);
   const home = panelButtons(store, 'home', rooms).map((b) => b.id);
   assert.ok(home.includes('page:rooms'));
   assert.ok(home.includes('page:themes'));

@@ -1,0 +1,37 @@
+Misc. Manor Demo Tutorial
+
+This is NOT the dev sandbox, dev sandbox can be hosted at a different page /dev or /sandbox but this is the plan for the landing page of the demo.
+
+PROBLEM: Dont want people to fill out forms in first interactions, users shouldnt need to bring something to the table to enjoy
+
+CORE IDEA: explore new content from unique sources from others AND be able to save treasured finds, appeal to hoarders and to scavengers
+
+First experience should lead the viewer into simple actions, build atop each to introduce mechanics, and slowly open up options and intrigue
+
+quick (skippable and remembers if its ur first time) 1st person POV scene from the side of the rooms where there is no wall, thats where rhe user will enter, the demo version loads w a black screen and a light coming from a doorC we step through the door and it fades into the view of the room from that side, empty expect for objects in a box near the right hand side
+when the viewer walks more into the room, the "wall" behind is is transparent like we stepped through nothing and you see the regular room and it transitions to viewing the box next to the shelves head on in a custom set piece view, its not open movement yet, the user can pick up the objects, they come into view w a preview over them, pressinf the preview lets you new tab into the media etc., but otherwie you have some ui options idk yet, but you can set the objects down in any part of the shelf,
+
+the last objext could be a song, and its a cassete or whayever and is playable? idk or something where the last object is a little more special and then it allows the player to have view of the whole room
+so movement may be a little different or the usual islmetric style world view + vr, and the only pther option for the viewert is to import or add their own objects or selects random drop option, which from the saved personal objects of our devs rooms random cool media is dropped in the room for the viewer to explore, customize, and add or discard
+
+returning back to the experience of discovery with option to do slow personal touch or personal import or just use the service without having to bring anything to the table yet, just exploring random cool stuff.
+
+option to keep things in the room or random generate each day?
+
+by now all options are available to the user and edit modes and templates and interactions are understood
+
+FIGURE OUT where preview thumbnail goes in web/vr, above object? if so then our camera and movement have to be better in web and VR
+rough idea of what i waa thinking
+gungo — 12:32 AM
+the objects in the box intro to put away are hand picked easter eggs and references of inspirations for this project. 
+
+unpacking: game website link
+info or about page of the app idea
+psychonauts milk mans conspiracy link?
+lofi hip hop youtube link
+
+(optional, introduce concept of a magic jukebox to handle music, after the intro objects and skippable, floating in the side of the room that has no wall off of the room, and this magic jukebox can "play" any audio media from the room itself, so the lofi youtube girl link which itself is some object, doesnt matter what object, can be fed into the jukebox and it plays the audio or the yt video, if its a soundcloud it can embed, spotify idk maybe if it cant play it it wont allow to be clicked an fed into jukebox, but anything that can be played like audio can be put in there to play, and then we exit that interaction idk, idea is to allow ppl to play their own music but only some will be able to play, is it better, maybe we add this as an add on at the very end of tutorial like this juke box appears and only if ppl go up to it it will explain how to play some audio and let them try it
+
+maybe the jukebox is also how we handle music in yhe background in general, instead of a ui audio button in the top left, the juke box introduces music from an object that is outside the room so communicates its uniqueness but "global" quality, and makes it interactive
+maybe we introduce music as a side note mid into the demo to add intrigue but show the jukebox GLOWING after the demo to attract those extra players to go up and THEN it allows them to add their own music from the objects they make, makes more sense bc by then the users have already sorted through some media
+jukebox is entirely skippable too if you go from intro object placements to immediate next thing which is importing or auto randomizing objects thats okay too

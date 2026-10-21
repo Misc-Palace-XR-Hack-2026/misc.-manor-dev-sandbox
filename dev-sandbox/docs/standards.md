@@ -7,12 +7,10 @@ A room belongs to one person. The fixed set of room slots:
 | Room ID | Display Name | Seed Repo Room | Purpose |
 |---------|--------------|----------------|---------|
 | guest | Guest room | — | Landing room for new users; starts EMPTY locally |
-| german | German's room | curious-web | Dev personal room |
+| german | German's room | sample | Dev personal room (placeholder template for now) |
 | matt | Matt's room | vinyl-lounge | Dev personal room |
 | levi | Levi's room | creative-atelier | Dev personal room |
 | jawan | Jawan's room | garden-notebook | Dev personal room |
-| omari | Omari's room | greenhouse-conservatory | Dev personal room |
-| daniel | Daniel's room | sample | Dev personal room |
 
 **How it works:** Display names are stored in `RoomState.owner` and are editable by room owner. On first load, each dev room seeds from `rooms/<id>.json` if committed; otherwise from the seed's starter content (Guest room has no seed). Each room saves independently on its own localStorage key (see `roomKeys()` in store.ts). The last open room is remembered via `ACTIVE_KEY`.
 

@@ -223,6 +223,20 @@ export class MenuView {
       this.flash(`Switched to ${label}.`);
       this.closeSheets();
     } catch (e) {
+      // An unreadable saved copy would otherwise lock this room out for good. Set it aside (kept under an
+      // `unreadable-` key, never deleted) and open the room from its seed instead.
+      if (e instanceof Error && /could not be loaded/i.test(e.message)) {
+        try {
+          const kept = Store.quarantineSaved(id);
+          this.store.switchRoom(id, seedRoom(id, this.repo));
+          document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'switched' }));
+          this.flash(`${label}'s saved copy was unreadable, so it was reset. The old data is kept at ${kept.join(', ') || 'no key'}.`);
+          this.closeSheets();
+          return;
+        } catch (retry) {
+          e = retry;
+        }
+      }
       this.flash(`Could not open ${label}: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
@@ -527,8 +541,8 @@ export class MenuView {
     const slotId = rep ? store.slotOf(rep.id) : undefined;
     const slotLabel = slotId ? store.layout.slots.find((s) => s.id === slotId)?.label : undefined;
 
-    const title = el('span', { class: 'title', textContent: c.title, title: 'Double-click to rename' });
-    title.addEventListener('dblclick', () => {
+    const title = el('span', { class: 'title', textContent: c.title, title: c.locked ? '' : 'Double-click to rename' });
+    if (!c.locked) title.addEventListener('dblclick', () => {
       const next = window.prompt('Rename', c.title);
       if (next) store.renameItem(c.id, next);
     });
@@ -550,7 +564,7 @@ export class MenuView {
       });
       actions.append(b);
     };
-    act('Edit', () => openContentEditor(store, c.id));
+    if (!c.locked) act('Edit', () => openContentEditor(store, c.id));
     if (rep) {
       const kind = el('select', { class: 'kind-select', title: 'Which object shows this media' });
       for (const k of OBJECT_KINDS) kind.append(el('option', { value: k, textContent: OBJECT_LABELS[k], selected: k === rep.objectKind }));
@@ -571,7 +585,7 @@ export class MenuView {
     } else {
       act('Bring out', () => store.bringOut(c.id));
     }
-    act('Delete', () => store.deleteContent(c.id));
+    if (!c.locked) act('Delete', () => store.deleteContent(c.id));
 
     const row = el('div', { class: 'row' }, title, meta, where, actions);
     row.dataset.contentId = contentId;
