@@ -35,6 +35,8 @@ export class RoomView {
   private camera: THREE.OrthographicCamera;
   private controls: OrbitControls;
   private objectsGroup = new THREE.Group();
+  private practiceOutline = new THREE.BoxHelper(new THREE.Object3D(), 0xffe9a0);
+  private practicePad = document.createElement('div');
   private markerGroup = new THREE.Group();
   private objects = new Map<string, Entry>();
   private markers = new Map<string, THREE.Mesh>();
@@ -94,6 +96,9 @@ export class RoomView {
     this.controls.dampingFactor = 0.15; // Higher damping = stops faster after drag
     this.controls.update();
 
+    this.practicePad.dataset.tutorial='place-pad';
+    this.practicePad.className='practice-pad'; this.practicePad.hidden=true; document.body.append(this.practicePad);
+    this.scene.add(this.practiceOutline);
     this.scene.add(this.roomGroup, this.objectsGroup, this.markerGroup);
     this.addLights();
 
@@ -333,6 +338,26 @@ export class RoomView {
   }
 
   private tick(t: number): void {
+    const tutorial=(window as unknown as {tutorial?:{targetRepresentationId:string|null}}).tutorial;
+    const practice=tutorial?.targetRepresentationId ? this.objects.get(tutorial.targetRepresentationId) : null;
+    this.practiceOutline.visible=Boolean(practice && this.store.practicing);
+    if(practice) this.practiceOutline.setFromObject(practice.group);
+    this.practicePad.hidden = true;
+    if (this.store.practicing && this.store.holding && !this.xr?.presenting) {
+      const rect=this.renderer.domElement.getBoundingClientRect();
+      for (const [id,marker] of this.markers) {
+        if (this.store.repAt(id)) continue;
+        const point=marker.getWorldPosition(new THREE.Vector3()).project(this.camera);
+        const x=rect.left+(point.x+1)*rect.width/2, y=rect.top+(1-point.y)*rect.height/2;
+        if (point.z>1 || x<40 || x>innerWidth-40 || y<110 || y>innerHeight-100) continue;
+        this.raycaster.setFromCamera(new THREE.Vector2(point.x,point.y),this.camera);
+        if(this.raycaster.intersectObjects(this.objectsGroup.children,true).length) continue;
+        if(this.raycaster.intersectObjects(this.markerGroup.children,false)[0]?.object.userData.slotId!==id) continue;
+        this.practicePad.hidden=false;
+        Object.assign(this.practicePad.style,{left:`${x-18}px`,top:`${y-18}px`});
+        break;
+      }
+    }
     animateIgnite(this.objectsGroup, t, window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     const selected = this.store.selectedId;
     for (const [id, e] of this.objects) {

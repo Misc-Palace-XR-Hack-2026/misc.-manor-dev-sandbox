@@ -13,19 +13,21 @@ test('first launch, skip, completion, replay and action gating stay independent 
  assert.equal(returning.status,'done');
  assert.equal(returning.lesson,null);
  const lesson=beginLesson('create','{"safe":true}','guest');
- assert.equal(progressLabel(lesson),'1 of 5');
+ assert.equal(progressLabel(lesson),'1 of 9');
  assert.equal(currentStep(lesson)?.target.includes('add-object'),true);
  assert.equal(advance(lesson,'typed-title').step,0,'wrong action must not advance');
  const after=advance(lesson,'open-add');
  assert.equal(after.step,1);
- assert.equal(progressLabel(after),'2 of 5');
+ assert.equal(progressLabel(after),'2 of 9');
  let state=after;
- for(const event of ['typed-title','typed-content','created','placed']) state=advance(state,event);
+ for(const event of ['create-invalid','create-cancel','open-add','typed-title','typed-content','kind-chosen','created','placed']) state=advance(state,event);
  assert.equal(state.lesson,null);
  assert.equal(finish(state).status,'done');
- const replay=beginLesson('move','{"safe":true}',null);
+ const replay=beginLesson('move','{"safe":true}',null,'done');
  assert.equal(replay.step,0);
+ assert.equal(replay.status,'done');
  assert.equal(skip(replay).lesson,null);
+ assert.equal(skip(replay).status,'done');
  assert.ok(LESSONS.create.length>=4 && LESSONS.move.length>=4);
 });
 
@@ -52,4 +54,22 @@ test('visibleTarget skips hidden leftover controls so a highlight cannot stay on
   root.append(old,next);
   const found=visibleTarget('[data-tutorial="add-object"], #new-object-title', root as unknown as ParentNode);
   assert.equal(found, next);
+});
+
+test('bookmark walkthrough gates file results, duplicate retry, recovery and undo separately',()=>{
+ let s=beginLesson('bookmarks','', 'guest');
+ assert.equal(currentStep(s)?.event,'export-ready');
+ s=advance(s,'export-ready');
+ assert.equal(advance(s,'created').step,s.step);
+ assert.equal(currentStep(s)?.event,'import-empty');
+ for(const event of ['import-empty','imported','import-duplicate','inbox-open','stashed','restored','import-undone']) s=advance(s,event);
+ assert.equal(s.lesson,null);
+});
+
+test('creation explicitly practices invalid input, cancellation, representation choice and placement',()=>{
+ assert.deepEqual(LESSONS.create.map(s=>s.event),['open-add','create-invalid','create-cancel','open-add','typed-title','typed-content','kind-chosen','created','placed']);
+});
+test('move includes cancellation and style includes every individual surface and revert',()=>{
+ assert.ok(LESSONS.move.some(s=>s.event==='move-cancelled'));
+ for(const event of ['theme-applied','styled','surface-wall','surface-floor','surface-background','style-reverted']) assert.ok(LESSONS.style.some(s=>s.event===event),event);
 });
