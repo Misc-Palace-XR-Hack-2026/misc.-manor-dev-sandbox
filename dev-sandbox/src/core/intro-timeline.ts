@@ -138,9 +138,26 @@ export const INTRO_SEEN_KEY = 'mp-demo:intro-seen';
 
 interface KeyValueStore { getItem(key: string): string | null; setItem(key: string, value: string): void }
 
-/** Intro plays on a first visit, or when `?intro` is in the URL. Unreadable storage counts as "not seen". */
-export function shouldPlayIntro(storage: KeyValueStore | null, search: string): boolean {
-  if (new URLSearchParams(search).has('intro')) return true;
+/** The visitor asked for the intro: `?intro`, or `/intro/` which forwards to `/?intro`. */
+export function introRequested(search: string): boolean {
+  try {
+    return new URLSearchParams(search).has('intro');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Intro plays on an explicit request, or on a first visit. `hasSavedRoom` is what makes a real data clear
+ * work: clearing the browser *cache* leaves localStorage (and this flag) in place, so a visitor with no
+ * saved demo room is treated as a first visit even when the stale flag says the intro was seen. Leave it
+ * out to keep the flag-only behaviour. Unreadable storage counts as "not seen".
+ */
+export function shouldPlayIntro(
+  storage: KeyValueStore | null, search: string, opts?: { hasSavedRoom?: boolean },
+): boolean {
+  if (introRequested(search)) return true;
+  if (opts?.hasSavedRoom === false) return true;
   try {
     return storage?.getItem(INTRO_SEEN_KEY) !== '1';
   } catch {

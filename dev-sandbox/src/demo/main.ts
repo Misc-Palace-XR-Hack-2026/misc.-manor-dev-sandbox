@@ -1,6 +1,7 @@
 import '../style.css';
 import './demo.css';
 import { shouldPlayIntro } from '../core/intro-timeline';
+import { hasSavedDemoRoom } from './demo-room';
 
 // Demo entry: the visitor's regular room, entered from its open east side. First visit (or ?intro, or /intro): a
 // walk-in, then a locked tutorial at the shelf. Everyone else lands straight in their open room.
@@ -12,7 +13,12 @@ function storage(): Storage | null {
 const root = document.getElementById('room')!;
 
 import('./demo-app')
-  .then(({ startDemo }) => startDemo(root, shouldPlayIntro(storage(), location.search), storage(), location.search))
+  .then(({ startDemo }) => startDemo(
+    root,
+    shouldPlayIntro(storage(), location.search, { hasSavedRoom: hasSavedDemoRoom() }),
+    storage(),
+    location.search,
+  ))
   .catch((error: unknown) => {
     console.error('demo failed', error);
     const message = document.createElement('p');

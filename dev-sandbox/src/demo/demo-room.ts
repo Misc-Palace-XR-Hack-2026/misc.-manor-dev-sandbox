@@ -1,4 +1,4 @@
-import { newRoom } from '../core/store';
+import { newRoom, roomKeys } from '../core/store';
 import { guessType } from '../core/content';
 import type { RoomState } from '../core/types';
 import { INTRO_OBJECTS } from './intro-objects';
@@ -29,6 +29,16 @@ export function seedDemoRoom(): RoomState {
     room.placements.push({ representationId: repIdFor(o.id), slotId: TRAY_SLOTS[i] });
   });
   return room;
+}
+
+/** Whether this browser holds a saved demo room at all. No save = a first visit, whatever the intro flag says. */
+export function hasSavedDemoRoom(): boolean {
+  try {
+    const keys = roomKeys(DEMO_ROOM_ID);
+    return localStorage.getItem(keys.main) !== null || localStorage.getItem(keys.backup) !== null;
+  } catch {
+    return false; // storage is blocked: nothing was kept, so treat it as a first visit
+  }
 }
 
 /** The tutorial is done once every starter object stands on the bench or shelf. */
