@@ -171,6 +171,22 @@ button:disabled { opacity: 0.4; cursor: default; }
 .soundtrack-control[data-sound-state="playing"] .sound-waves { display: inline; }
 .soundtrack-control[data-sound-state="playing"] .sound-slash { display: none; }
 
+.mode-note {
+  position: fixed;
+  top: calc(64px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(270px, calc(100vw - 32px));
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(28, 28, 32, 0.88);
+  text-align: center;
+  z-index: 12;
+  pointer-events: none;
+}
+.mode-note[hidden], .chrome button[hidden], .fab[hidden] { display: none; }
+
 .chrome {
   display: flex;
   position: fixed;

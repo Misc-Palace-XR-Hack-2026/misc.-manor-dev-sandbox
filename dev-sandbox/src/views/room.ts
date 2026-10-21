@@ -159,6 +159,12 @@ export class RoomView {
     this.vrButton.disabled = true;
     container.appendChild(this.vrButton);
     this.vrButton.addEventListener('click', () => void this.enterVr());
+    let mode = this.store.mode;
+    this.store.subscribe(() => {
+      if (mode === this.store.mode) return;
+      mode = this.store.mode;
+      void this.refreshVrButton();
+    });
     void this.refreshVrButton();
     this.renderer.setAnimationLoop((t) => this.tick(t / 1000));
     // The card follows the item sheet on its own frame loop, not the 3D one. The sheet's size changes as its content
@@ -590,7 +596,15 @@ export class RoomView {
     } catch {
       // A denied or failed capability probe is unavailable, not an entry action.
     }
+    // Main's hide-unavailable-VR gating wins: an unsupported device still shows nothing at all.
     this.vrButton.hidden = !supported;
+    // PR #82: on a VR-capable device, Preview keeps the button visible but refuses entry.
+    if (supported && !this.store.canEdit) {
+      this.vrButton.disabled = true;
+      this.vrButton.textContent = 'VR: Edit only';
+      this.vrButton.title = 'Preview is desktop/mobile only. Return to Edit room to enter VR.';
+      return;
+    }
     this.vrButton.disabled = !supported;
     this.vrButton.title = reason || (supported ? 'Enter the room in VR' : 'Immersive VR is not supported here.');
     if (reason) this.vrButton.textContent = reason;
@@ -598,6 +612,7 @@ export class RoomView {
   }
 
   private async enterVr(): Promise<void> {
+    if (!this.store.canEdit) return;
     try {
       await this.xr?.enter();
     } catch (error) {
