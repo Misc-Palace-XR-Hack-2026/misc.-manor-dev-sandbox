@@ -50,4 +50,40 @@ Browser uses `/usr/bin/chromium` with `--use-angle=gl --enable-webgl --ignore-gp
 
 The overlap fixture exposes the actual RoomView through a test-only response rewrite, moves its camera (not its input handlers or raycaster), and hides unrelated floating utility controls so they cannot cover the test ray. Item-sheet buttons/layout remain unmodified. Restoring after browser reload uses the shared Store command; tutorial coverage separately exercises real Bring out buttons. Touch is Chromium emulation, not physical mobile Safari/Firefox validation.
 
-Evidence retained outside the repo at `/home/dvgpro/.hermes/artifacts/stash-input-fix/`: `red/results.json` and six baseline screenshots, `green/results.json` and six fixed screenshots, `unit.log`, and `tutorials/` screenshots. No SFX, pipe, glow, preview-policy, room seeds or tutorial production code changed.
+## Independent re-verification (second session, port 5221)
+
+The first session timed out before committing. Everything above was re-run from scratch on an
+isolated dev server at `http://127.0.0.1:5221` (`--host 127.0.0.1 --strictPort`), whose process cwd
+was checked to be this worktree and whose served source maps were compared against these files.
+`origin` was fetched: this branch's base is exactly `origin/main` **1b02ba0** (0 commits ahead,
+0 behind), so no rebase or merge was needed and no selection/stash code or test was reconciled.
+
+RED was reproved by `git checkout 1b02ba0 --` on the three production sources only, keeping the new
+tests in place so the suite total could not shrink:
+
+1. **Bug 1, unit:** 274 tests, 265 pass, **9 fail**, including `'book' !== 'robot'` in
+   `stash remembers the latest chosen kind across local save and JSON reload`.
+2. **Bug 1, real browser:** the gesture suite failed at `undefined !== 'box'` after an actual page
+   reload, i.e. the kind was absent from the real localStorage save.
+3. **Bug 2, real browser trace (full baseline, PROBE_ONLY=1):** one trusted tap per scenario gave
+   `pointerdown CANVAS, pointerup CANVAS, mousedown/mouseup/click` on **stash**, **pick-up** and
+   **delete**; touch stash and touch delete left `selected=null` with the representation gone, touch
+   pick-up was instantly held. All three mouse scenarios stayed on CANVAS.
+4. **Bug 2, isolated assertion:** with the store fix applied and only `src/views/room.ts` at
+   baseline, the three mouse scenarios passed and the run failed at
+   `touch stash: selection must survive initial gesture` (`null` vs the representation id).
+
+GREEN after restoring the fix: 274 unit tests pass / 0 fail; typecheck and build pass (build emits
+the current multi-entry output — index, demo, dev, about, intro — with only the pre-existing
+large-chunk warning); all six trusted mouse/touch overlap scenarios pass with selection surviving,
+deliberate second click/tap working, Enter and Space working, drags not selecting and trusted touch
+cancellation not selecting, zero page errors; `browser-desktop-chrome.mjs`,
+`browser-mobile-chrome.mjs`, `browser-tutorials.mjs` (desktop, mobile, small-mobile, landscape) and
+`browser-vr-button.mjs` (all ten device/capability combinations) pass.
+
+Unresolved verification: touch is Chromium emulation plus CDP-dispatched trusted touch, not physical
+mobile Safari/Firefox; no physical XR headset was exercised (XR stash/restore is covered only
+through the shared Store commands in unit tests). Mouse input never reproduced bug 2 in this
+Chromium build, so the three mouse scenarios are regression coverage rather than reproductions.
+
+Evidence retained outside the repo at `/home/dvgpro/.hermes/artifacts/stash-input-fix/`: first-session `red/` and `green/` (results.json plus six screenshots each), `unit.log`, `tutorials/`; second-session `red2/` (full-baseline assertion run), `red2-probe/` (full-baseline trusted event traces), `red2-gesture/` (room.ts-only baseline), `green2/`, `green3/` and `tutorials-rerun/`. No SFX, pipe, glow, preview-policy, room seeds or tutorial production code changed.
