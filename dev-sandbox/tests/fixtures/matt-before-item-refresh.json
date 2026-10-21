@@ -1,0 +1,379 @@
+{
+  "schemaVersion": 1,
+  "id": "matt",
+  "owner": "Matt\u2019s cyberpunk studio",
+  "layoutId": "cozy-loft",
+  "lighting": "cyber",
+  "soundtrack": {
+    "mode": "follow"
+  },
+  "surfaces": {
+    "floor": {
+      "preset": "graphite-circuit"
+    },
+    "wall": {
+      "preset": "neon-ribbed"
+    },
+    "background": {
+      "preset": "ion-aurora"
+    }
+  },
+  "contentItems": [
+    {
+      "id": "matt-cyber-funk",
+      "type": "link",
+      "title": "Cyber-Funk",
+      "sourceKind": "url",
+      "sourceRef": "https://open.spotify.com/album/3KU38XVnDkckuekCODiTLV",
+      "notes": "Official Spotify album destination from the HyperFollow page for Cyber-Funk (album 3KU38XVnDkckuekCODiTLV). HyperFollow itself refuses framing.",
+      "tags": [
+        "music",
+        "matt"
+      ],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-neon-arcade",
+      "type": "link",
+      "title": "Neon Arcade 1984",
+      "sourceKind": "url",
+      "sourceRef": "https://open.spotify.com/album/4FWcWAIGnKJfHNl4CUPYiC",
+      "notes": "Official Spotify album destination from the HyperFollow page for Neon Arcade 1984 (album 4FWcWAIGnKJfHNl4CUPYiC). HyperFollow itself refuses framing.",
+      "tags": [
+        "music",
+        "matt"
+      ],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-tree-bar",
+      "type": "link",
+      "title": "Live @ the Tree Bar",
+      "sourceKind": "url",
+      "sourceRef": "https://open.spotify.com/album/5AQx26eGwpzwacSP3hwclU",
+      "notes": "Official Spotify album destination from the HyperFollow page for Live @ the Tree Bar / fm1m (album 5AQx26eGwpzwacSP3hwclU). HyperFollow itself refuses framing.",
+      "tags": [
+        "music",
+        "matt"
+      ],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-dvgpro",
+      "type": "link",
+      "title": "Davis Video & Graphic Productions",
+      "sourceKind": "url",
+      "sourceRef": "Https://dvgpro.com",
+      "notes": "Matt\u2019s main creative-production website: video, graphics, web, print and photography, with service pages, portfolio work and articles. The frame anchors the east-side business display.",
+      "tags": [
+        "business",
+        "matt"
+      ],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-youtube",
+      "type": "link",
+      "title": "YouTube playlist",
+      "sourceKind": "url",
+      "sourceRef": "https://www.youtube.com/watch?v=XRu8zJWARoQ&list=PLEx-1H24sof6xUZGC_gfBDxU1JRbokv8T",
+      "notes": "Matt Davis playlist (watch URL with list=PLEx-1H24sof6xUZGC_gfBDxU1JRbokv8T). Playlist pages are not treated as playable video embeds.",
+      "tags": [
+        "video",
+        "matt"
+      ],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-youtube-2",
+      "type": "link",
+      "title": "YouTube playlist 2",
+      "sourceKind": "url",
+      "sourceRef": "https://www.youtube.com/watch?v=nW5NKWreRR0&list=PLEx-1H24sof5Eu36zAFmasugh8DmJjzg2",
+      "notes": "Matt Davis playlist (watch URL with list=PLEx-1H24sof5Eu36zAFmasugh8DmJjzg2). Playlist pages are not treated as playable video embeds.",
+      "tags": [
+        "video",
+        "matt"
+      ],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-youtube-3",
+      "type": "link",
+      "title": "YouTube playlist 3",
+      "sourceKind": "url",
+      "sourceRef": "https://youtube.com/playlist?list=PL34ED3BB8F4E0FAAA&si=e55QoOxOmn6ACuQY",
+      "notes": "Matt Davis playlist (exact playlist URL including si token). Playlist pages are not treated as playable video embeds.",
+      "tags": [
+        "video",
+        "matt"
+      ],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-clock",
+      "type": "link",
+      "title": "Davis Clock Services",
+      "sourceKind": "url",
+      "sourceRef": "https://davisclockservices.com/",
+      "notes": "Matt identifies this as his father\u2019s clock business. The site describes family-owned grandfather and antique clock repair, restoration and setup, founded in 1974. The mantel clock marks the family-business corner.",
+      "tags": [
+        "family",
+        "matt"
+      ],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-apollo",
+      "type": "link",
+      "title": "Apollo\u2019s Learning Corner",
+      "sourceKind": "url",
+      "sourceRef": "https://apolloslearningcorner.com",
+      "notes": "Children\u2019s learning hub with activities, videos, educational tunes and games. The site includes art, rhythm, fitness, math and nature activities; use the nearby arcade and book for deeper exploration.",
+      "tags": [
+        "learning",
+        "matt"
+      ],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-arcade",
+      "type": "link",
+      "title": "Apollo\u2019s Learning Arcade",
+      "sourceKind": "url",
+      "sourceRef": "https://apolloslearningcorner.com/Games/",
+      "notes": "The game launcher marks Art Studio, Music Maker, Fitness Fun and Patchy\u2019s Mathy Treasure as ready to play. Word Wizard and Science Explorer are listed as coming soon, not playable releases.",
+      "tags": [
+        "learning",
+        "matt"
+      ],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-solar-book",
+      "type": "link",
+      "title": "Apollo\u2019s Adventure in Our Solar System",
+      "sourceKind": "url",
+      "sourceRef": "https://amzn.to/3Snypsv",
+      "notes": "The supplied Amazon short link leads to Apollo\u2019s Adventure in Our Solar System, credited to Apollo\u2019s Learning Corner and Matthew M Davis. Friendly alien Apollo explores the planets from Mercury to Neptune in an illustrated children\u2019s book.",
+      "tags": [
+        "learning",
+        "matt"
+      ],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-refinery",
+      "type": "link",
+      "title": "Refinery Creative \u2014 Bass Station II",
+      "sourceKind": "url",
+      "sourceRef": "https://thescoobmeisterm.github.io/novation-bs2-worship-ambient/index.html",
+      "notes": "Interactive Bass Station II patch manual and Web Audio synth for worship, ambient and post-rock. The page offers a 60-patch bank and distinguishes 48 synth patches from 12 hardware bass-through patches; browser emulation is not hardware audition proof.",
+      "tags": [
+        "music",
+        "matt"
+      ],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-tinker-lab",
+      "type": "link",
+      "title": "Ignite \u2014 Tinkerer\u2019s Robot Lab",
+      "sourceKind": "url",
+      "sourceRef": "https://thescoobmeisterm.github.io/TinkerWorkbench/",
+      "notes": "Five guided circuit builds cover LED light, blinking, button input, servo sweep and potentiometer control, plus a sandbox. Tap labeled pins and assemble instruction blocks; this is a guided learning model, not a substitute for real circuit safety checks.",
+      "tags": [
+        "maker",
+        "matt"
+      ],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-robot-game",
+      "type": "link",
+      "title": "Ignite \u2014 Who\u2019s That Robot Part?",
+      "sourceKind": "url",
+      "sourceRef": "https://thescoobmeisterm.github.io/SparkTinkerGame/",
+      "notes": "A robot-component identification challenge: five mystery parts, eight seconds each and four answer choices. Its landing page invites quick rounds without sign-up. The cartridge sits beside the maker robot.",
+      "tags": [
+        "maker",
+        "matt"
+      ],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-pluto",
+      "type": "link",
+      "title": "Pluto LLC \u2014 Car Rental",
+      "sourceKind": "url",
+      "sourceRef": "https://theplutollc.com/",
+      "notes": "Central Ohio peer-to-peer car rental business operating through Turo. The site describes Columbus-area pickup and local travel articles; use the link for current vehicles and booking details rather than assuming availability.",
+      "tags": [
+        "business",
+        "matt"
+      ],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-os",
+      "type": "link",
+      "title": "DVGProOS \u2014 Business Toolkit",
+      "sourceKind": "url",
+      "sourceRef": "https://os.dvgpro.com/",
+      "notes": "Connected business-toolkit portal presenting SaaSForge, Bookloom, LocalLaunch, RankPilot, CityLead and AgentCompany. The page invites early-access requests and includes solution concepts; listings are not evidence that every tool is available now. A storage box represents the toolkit.",
+      "tags": [
+        "business",
+        "matt"
+      ],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-chair",
+      "type": "note",
+      "title": "Listening chair",
+      "sourceKind": "note",
+      "sourceRef": "Sit with the loft studio.",
+      "notes": "A sit-spot for the loft listening studio. Does not replace any destination URL.",
+      "tags": ["matt", "cozy"],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-rug",
+      "type": "note",
+      "title": "Studio rug",
+      "sourceKind": "note",
+      "sourceRef": "Warm the floor under the TVs.",
+      "notes": "A rug for the media wall. Does not replace any destination URL.",
+      "tags": ["matt", "cozy"],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    },
+    {
+      "id": "matt-lamp",
+      "type": "note",
+      "title": "Neon lamp",
+      "sourceKind": "note",
+      "sourceRef": "A lamp beside the chair.",
+      "notes": "A lamp for the sit-spot. Does not replace any destination URL.",
+      "tags": ["matt", "cozy"],
+      "createdAt": "2026-10-16T00:00:00.000Z"
+    }
+  ],
+  "representations": [
+    {
+      "id": "matt-object-cyber-funk",
+      "contentItemId": "matt-cyber-funk",
+      "objectKind": "turntable"
+    },
+    {
+      "id": "matt-object-neon-arcade",
+      "contentItemId": "matt-neon-arcade",
+      "objectKind": "cassette"
+    },
+    {
+      "id": "matt-object-tree-bar",
+      "contentItemId": "matt-tree-bar",
+      "objectKind": "guitar"
+    },
+    {
+      "id": "matt-object-dvgpro",
+      "contentItemId": "matt-dvgpro",
+      "objectKind": "photoFrame"
+    },
+    {
+      "id": "matt-object-youtube",
+      "contentItemId": "matt-youtube",
+      "objectKind": "tv"
+    },
+    {
+      "id": "matt-object-clock",
+      "contentItemId": "matt-clock",
+      "objectKind": "clock"
+    },
+    {
+      "id": "matt-object-apollo",
+      "contentItemId": "matt-apollo",
+      "objectKind": "notebook"
+    },
+    {
+      "id": "matt-object-arcade",
+      "contentItemId": "matt-arcade",
+      "objectKind": "console"
+    },
+    {
+      "id": "matt-object-solar-book",
+      "contentItemId": "matt-solar-book",
+      "objectKind": "book"
+    },
+    {
+      "id": "matt-object-refinery",
+      "contentItemId": "matt-refinery",
+      "objectKind": "synthesizer"
+    },
+    {
+      "id": "matt-object-tinker-lab",
+      "contentItemId": "matt-tinker-lab",
+      "objectKind": "robot"
+    },
+    {
+      "id": "matt-object-robot-game",
+      "contentItemId": "matt-robot-game",
+      "objectKind": "cartridge"
+    },
+    {
+      "id": "matt-object-pluto",
+      "contentItemId": "matt-pluto",
+      "objectKind": "car"
+    },
+    {
+      "id": "matt-object-os",
+      "contentItemId": "matt-os",
+      "objectKind": "box"
+    },
+    {
+      "id": "matt-object-youtube-2",
+      "contentItemId": "matt-youtube-2",
+      "objectKind": "recordSleeve"
+    },
+    {
+      "id": "matt-object-youtube-3",
+      "contentItemId": "matt-youtube-3",
+      "objectKind": "headphones"
+    },
+    {
+      "id": "matt-object-chair",
+      "contentItemId": "matt-chair",
+      "objectKind": "armchair"
+    },
+    {
+      "id": "matt-object-rug",
+      "contentItemId": "matt-rug",
+      "objectKind": "rug"
+    },
+    {
+      "id": "matt-object-lamp",
+      "contentItemId": "matt-lamp",
+      "objectKind": "lamp"
+    }
+  ],
+  "placements": [
+    { "representationId": "matt-object-cyber-funk", "slotId": "floor-front-loft-1" },
+    { "representationId": "matt-object-neon-arcade", "slotId": "block-1" },
+    { "representationId": "matt-object-tree-bar", "slotId": "floor-6" },
+    { "representationId": "matt-object-dvgpro", "slotId": "shelf-1" },
+    { "representationId": "matt-object-youtube", "slotId": "floor-1" },
+    { "representationId": "matt-object-clock", "slotId": "shelf-3" },
+    { "representationId": "matt-object-apollo", "slotId": "bench-1" },
+    { "representationId": "matt-object-arcade", "slotId": "floor-old-7" },
+    { "representationId": "matt-object-solar-book", "slotId": "bench-2" },
+    { "representationId": "matt-object-refinery", "slotId": "floor-9" },
+    { "representationId": "matt-object-tinker-lab", "slotId": "loft-4" },
+    { "representationId": "matt-object-robot-game", "slotId": "shelf-2" },
+    { "representationId": "matt-object-pluto", "slotId": "floor-8" },
+    { "representationId": "matt-object-os", "slotId": "floor-front-loft-2" },
+    { "representationId": "matt-object-youtube-2", "slotId": "bench-3" },
+    { "representationId": "matt-object-youtube-3", "slotId": "block-2" },
+    { "representationId": "matt-object-chair", "slotId": "floor-3" },
+    { "representationId": "matt-object-rug", "slotId": "floor-7" },
+    { "representationId": "matt-object-lamp", "slotId": "floor-2" }
+  ]
+}
