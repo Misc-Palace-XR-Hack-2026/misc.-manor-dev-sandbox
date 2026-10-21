@@ -49,13 +49,13 @@ try {
     panel.show('create'); panel.draft.title = 'Discard me';
     press('create:cancel');
     const cancelled = store.state.contentItems.length === count;
-    panel.show('create'); panel.draft.title = 'Exit recovery'; panel.draft.mode = 'note';
+    panel.show('create'); panel.draft.title = 'Exit recovery'; panel.draft.mode = 'note'; panel.draft.text = 'Recovered on exit';
     press('create:submit'); const exitingId = store.selectedId;
     room.xr.onEnd();
     const restoredAfterExit = !!store.slotOf(exitingId);
     room.xr.onStart();
     while (store.freeSlotIds().length) store.addItem({ title: 'Fill room', sourceRef: '', type: 'note' });
-    panel.show('create'); panel.draft.title = 'Overflow'; panel.draft.mode = 'note';
+    panel.show('create'); panel.draft.title = 'Overflow'; panel.draft.mode = 'note'; panel.draft.text = 'Overflow body';
     press('create:submit');
     const fullRoomMessage = panel.shown.some(b => b.id === 'create:done') && /Inbox/.test(panel.draft.message);
     const overflow = store.state.contentItems.at(-1);
