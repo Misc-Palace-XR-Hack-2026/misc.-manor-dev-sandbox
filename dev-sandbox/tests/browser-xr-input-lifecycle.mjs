@@ -19,9 +19,9 @@ try {
     function press(id) {
       for (let i = 0; i < 40; i++) {
         const button = panel.shown.find(b => b.id === id);
-        if (button) { panel.activate({ x: .5, y: 1 - button.y / 1408 }); return; }
+        if (button) { panel.activate({ x: button.x / 1024, y: 1 - button.y / 1408 }); return; }
         const next = panel.shown.find(b => b.id === 'ui:next');
-        if (next) { panel.activate({ x: .5, y: 1 - next.y / 1408 }); continue; }
+        if (next) { panel.activate({ x: next.x / 1024, y: 1 - next.y / 1408 }); continue; }
         if (panel.scroll > 0) {
           panel.scroll = 0;
           panel.redraw();
