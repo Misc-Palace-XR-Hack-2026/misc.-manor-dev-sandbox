@@ -55,6 +55,7 @@ export function validateRoom(input: unknown): string | null {
     if (!c || typeof c.id !== 'string' || typeof c.title !== 'string' || typeof c.sourceRef !== 'string') {
       return 'A saved item is missing its id, title or sourceRef.';
     }
+    if (c.lastObjectKind !== undefined && !(OBJECT_KINDS as readonly unknown[]).includes(c.lastObjectKind)) return 'Invalid last object kind.';
     if (c.notes !== undefined && (typeof c.notes !== 'string' || c.notes.length > 4000)) return 'Invalid item notes (text, max 4000 characters).';
     if (c.imageData !== undefined && (c.type !== 'image' || !validPhotoData(c.imageData))) return 'Invalid photo image data (PNG/JPEG, max 1024px and 1.5 MB encoded).';
     if (!(CONTENT_TYPES as readonly string[]).includes(c.type)) return `Unknown content type: ${String(c.type)}.`;
@@ -432,6 +433,9 @@ export class Store {
   stash(repId: string): void {
     this.lastCommand = 'stash';
     this.commit((s) => {
+      const rep = s.representations.find(r => r.id === repId);
+      const content = rep && s.contentItems.find(c => c.id === rep.contentItemId);
+      if (content) content.lastObjectKind = rep.objectKind;
       s.placements = s.placements.filter((p) => p.representationId !== repId);
       s.representations = s.representations.filter((r) => r.id !== repId);
     });
@@ -624,7 +628,7 @@ export class Store {
   }
 
   private createRep(s: RoomState, c: ContentItem, kind?: ObjectKind): Representation {
-    const rep: Representation = { id: uid('rp'), contentItemId: c.id, objectKind: kind ?? DEFAULT_OBJECT[c.type] };
+    const rep: Representation = { id: uid('rp'), contentItemId: c.id, objectKind: kind ?? c.lastObjectKind ?? DEFAULT_OBJECT[c.type] };
     s.representations.push(rep);
     return rep;
   }
