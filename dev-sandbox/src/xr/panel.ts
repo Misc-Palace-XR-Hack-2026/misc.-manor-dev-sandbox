@@ -139,7 +139,7 @@ export class XrPanel {
       if (!button) return;
       if (button.id==='guide:reveal') {
         const step=currentStep(this.guide!);
-        const allPages:PanelPage[]=['home','create','rooms','themes','lighting','surfaces','inbox'];
+        const allPages:PanelPage[]=['home','create','rooms','repo-rooms','themes','lighting','surfaces','inbox'];
         const page=allPages.find(page=>panelButtons(this.store,page,this.rooms,this.draft,this.guide).some(b=>guideActionMatches(step?.id ?? '',b.id) && !b.id.startsWith('page:'))) ?? 'home';
         if(page==='create' && this.page==='create') { this.open=true; this.redraw(); this.syncVisible(); }
         else this.onAction(runPanelAction(this.store,`page:${page}`,this.rooms,this.draft));
