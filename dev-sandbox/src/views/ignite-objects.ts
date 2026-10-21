@@ -40,7 +40,26 @@ export const igniteBuilders={
   strap.name='vr-strap';
   strap.rotation.x=-Math.PI/2;
   strap.position.set(0,visorY,visorZ-visorD/2);
+  // -Z is the wearer side (inside the strap). A perforated facial interface
+  // joins the shell; raised foam rims surround inset, convex optical surfaces.
+  const cushionShape=new THREE.Shape();
+  cushionShape.moveTo(-.25,.025);cushionShape.lineTo(.25,.025);
+  cushionShape.lineTo(.25,.235);cushionShape.lineTo(-.25,.235);cushionShape.closePath();
+  for(const x of [-.13,.13]) {
+   const opening=new THREE.Path();opening.absellipse(x,visorY,.064,.054,0,Math.PI*2,true);cushionShape.holes.push(opening);
+  }
+  const cushion=new THREE.Mesh(new THREE.ExtrudeGeometry(cushionShape,{depth:.042,bevelEnabled:false,curveSegments:24}),new THREE.MeshStandardMaterial({color:dark,roughness:.95}));
+  cushion.name='vr-facial-interface';cushion.position.z=-.06;
+  const eyepieces=[-1,1].flatMap(side=>{
+   const n=side<0?'left':'right';
+   const rim=new THREE.Mesh(new THREE.TorusGeometry(.075,.012,12,48),new THREE.MeshStandardMaterial({color:0x17191e,roughness:.9}));
+   rim.name='vr-eyecup-'+n;rim.position.set(side*.13,visorY,-.061);rim.scale.y=.85;
+   const lens=new THREE.Mesh(new THREE.SphereGeometry(1,40,24),new THREE.MeshStandardMaterial({color:0x466b83,metalness:.35,roughness:.14}));
+   lens.name='vr-eyepiece-'+n;lens.scale.set(.063,.053,.009);lens.position.set(side*.13,visorY,-.028);
+   return [rim,lens];
+  });
   return [
+   cushion,...eyepieces,
    block('vr-visor',.56,visorH,visorD,cream,0,visorY,visorZ),
    block('vr-face',.48,.18,.018,dark,0,visorY,visorZ+visorD/2),
    strap,

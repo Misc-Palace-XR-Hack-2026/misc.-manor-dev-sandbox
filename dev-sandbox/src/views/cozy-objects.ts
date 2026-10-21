@@ -52,9 +52,11 @@ export const cozyBuilders = {
     shape.bezierCurveTo(-.045,.495,.045,.495,.095,.47);
     shape.bezierCurveTo(.20,.42,.075,.32,.13,.29);
     shape.bezierCurveTo(.24,.25,.26,.035,0,.035);
+    // A soundhole belongs only to the soundboard, not the wooden rear panel.
+    const back=part('guitar-back',new THREE.ExtrudeGeometry(shape,{depth:.012,bevelEnabled:false,curveSegments:16}),0xc88e4f,0,0,-.05);
     const hole=new THREE.Path();hole.absellipse(0,.355,.054,.054,0,Math.PI*2,true);shape.holes.push(hole);
-    const body=part('guitar-body',new THREE.ExtrudeGeometry(shape,{depth:.10,bevelEnabled:false,curveSegments:16}),0xc88e4f,0,0,-.05);
-    const p:THREE.Object3D[]=[block('guitar-stand',.26,.035,.23,dark),body,block('guitar-neck',.057,.37,.047,wood,0,.60,0),block('guitar-fretboard',.049,.35,.012,dark,0,.605,.029),block('guitar-headstock',.083,.13,.05,wood,0,.82,0),block('guitar-bridge',.13,.027,.021,dark,0,.16,.055),block('guitar-nut',.055,.017,.038,cream,0,.752,.049),disc('guitar-soundhole-back',.075,.005,0x38251d,0,.355,.033)];
+    const body=part('guitar-body',new THREE.ExtrudeGeometry(shape,{depth:.088,bevelEnabled:false,curveSegments:16}),0xc88e4f,0,0,-.038);
+    const p:THREE.Object3D[]=[block('guitar-stand',.26,.035,.23,dark),back,body,block('guitar-neck',.057,.37,.047,wood,0,.60,0),block('guitar-fretboard',.049,.35,.012,dark,0,.605,.029),block('guitar-headstock',.083,.13,.05,wood,0,.82,0),block('guitar-bridge',.13,.027,.021,dark,0,.16,.055),block('guitar-nut',.055,.017,.038,cream,0,.752,.049),disc('guitar-soundhole-back',.075,.005,0x38251d,0,.355,.033)];
     for(let i=0;i<6;i++) {
       p.push(block(`guitar-string-${i}`,.0016,.595,.0016,cream,(i-2.5)*.006,.4575,.064));
       p.push(cylinder(`guitar-tuner-${i}`,.012,.012,.018,brass,i%2 ? .05 : -.05,.79+Math.floor(i/2)*.032));
