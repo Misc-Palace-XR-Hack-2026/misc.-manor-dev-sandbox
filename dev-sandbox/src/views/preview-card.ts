@@ -154,12 +154,14 @@ export class PreviewCardView {
       frame.addEventListener('load', () => { guidance.textContent = `Preview availability unverified. ${fallback}`; });
       frame.addEventListener('error', () => { guidance.textContent = `Preview could not load. ${fallback}`; });
       const open = openAction(this.openUrl ?? previewOpenUrl(p.src));
+      // Order matters: main's preview policy checks `.preview-text` first-match for the load guidance,
+      // so the guidance stays first and PR #81's manual-mute notice follows it.
+      body.append(guidance);
       // PR #81: providers without a supported player API cannot be coordinated automatically; tell the user how to
       // avoid double audio instead of silently overlapping the room soundtrack.
       if (!supportsEmbedAudio(p.provider, p.src)) {
         body.append(make('div', 'preview-text', 'Automatic audio coordination is unavailable for this preview. Mute room music before playing media here, or use Open in browser.'));
       }
-      body.append(guidance);
       if (open) body.append(open);
     } else if (p.kind === 'image') {
       const frame = make('div', 'preview-frame');
