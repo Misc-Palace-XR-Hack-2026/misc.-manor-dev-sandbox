@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { glowIndicator, budgetedLight, pulseBudgetedLight } from './glow';
 
 // Toys, curios and desk clutter: base-centered (origin = middle of the footprint on the floor), +Z faces the camera.
 // Everything is plain primitives with per-build materials, no textures and no DOM, so these build anywhere.
@@ -238,13 +239,14 @@ function flyingSaucer(): THREE.Object3D[] {
     sph('saucer-pilot-eye-l', 0.008, 0x14141a, -0.012, 0.128, 0.026, [1, 1.5, 0.5], undefined, [8, 6]),
     sph('saucer-pilot-eye-r', 0.008, 0x14141a, 0.012, 0.128, 0.026, [1, 1.5, 0.5], undefined, [8, 6]),
   );
-  // Rim lights.
+  // Rim lights: a chase around the ring, each lamp one tenth of a cycle behind the last.
   const lightColors = [0xffe14a, 0xff5fa8];
   for (let i = 0; i < 10; i++) {
     const a = (i / 10) * Math.PI * 2;
     const c = lightColors[i % 2];
-    parts.push(sph(`saucer-light-${i}`, 0.012, c, Math.cos(a) * 0.19, 0.062, Math.sin(a) * 0.19, [1, 1, 1],
-      { emissive: new THREE.Color(c), emissiveIntensity: 0.7 }, [8, 6]));
+    const bulb = sph(`saucer-light-${i}`, 0.012, c, Math.cos(a) * 0.19, 0.062, Math.sin(a) * 0.19, [1, 1, 1],
+      { emissive: new THREE.Color(c), emissiveIntensity: 0.7 }, [8, 6]);
+    parts.push(glowIndicator(bulb, { color: c, base: 0.35, amp: 1.5, speed: 0.55, phase: -i / 10, wave: 'blink' }));
   }
   // Three landing legs.
   for (let i = 0; i < 3; i++) {
@@ -269,12 +271,21 @@ function lavaLamp(): THREE.Object3D[] {
   const wax = (name: string, r: number, midY: number, riseY: number, xMid: number, xSway: number, speed: number, phase: number) => {
     const m = sph(name, r, 0xffa63a, xMid, midY, 0, [1, 1.25, 1],
       { emissive: new THREE.Color(0xff8a1a), emissiveIntensity: 0.8 }, [10, 8]);
+    const mat = m.material as THREE.MeshStandardMaterial;
+    // One animate per blob: it both moves the wax and breathes its glow, so there is no second
+    // traversal and no per-frame allocation.
     m.userData.animate = (t: number) => {
       m.position.set(xMid + xSway * Math.sin(t * speed * 1.7 + phase), midY + riseY * Math.sin(t * speed + phase), 0);
+      mat.emissiveIntensity = 0.75 + 0.55 * (0.5 + 0.5 * Math.sin(t * speed * 0.9 + phase));
     };
     m.userData.animate(0);
     return m;
   };
+  // A real, moody pool of light in the wax column. It joins the existing lamp-light budget, so a
+  // room full of lava lamps and table lamps still only ever lights LAMP_LIGHT.maxCount of them.
+  const light = budgetedLight(0xff5f7a, 0.5, 2.2);
+  light.position.set(0, 0.24, 0);
+  pulseBudgetedLight(light, { base: 0.34, amp: 0.3, speed: 0.11, wave: 'sine' });
   return [
     cyl('lava-base', 0.05, 0.09, 0.11, 0xd9382f, 0, 0.055, 0),
     cyl('lava-glass', 0.035, 0.07, 0.27, 0xff7aa8, 0, 0.235, 0, 'y', glow),
@@ -283,6 +294,7 @@ function lavaLamp(): THREE.Object3D[] {
     wax('lava-blob-c', 0.02, 0.27, 0.07, -0.004, 0.004, 0.37, 3.6),
     cyl('lava-cap', 0.012, 0.04, 0.07, 0xd9382f, 0, 0.405, 0),
     sph('lava-finial', 0.016, 0xc6a264, 0, 0.45, 0, [1, 1, 1], undefined, [10, 8]),
+    light,
   ];
 }
 
