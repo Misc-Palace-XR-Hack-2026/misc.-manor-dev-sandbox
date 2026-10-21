@@ -121,6 +121,8 @@ export class RoomView {
     this.vrButton.type = 'button';
     this.vrButton.className = 'vr-enter';
     this.vrButton.textContent = 'Enter VR';
+    this.vrButton.hidden = true;
+    this.vrButton.disabled = true;
     container.appendChild(this.vrButton);
     this.vrButton.addEventListener('click', () => void this.enterVr());
     void this.refreshVrButton();
@@ -494,9 +496,17 @@ export class RoomView {
 
   // ---- input ------------------------------------------------------------
   private async refreshVrButton(): Promise<void> {
+    this.vrButton.hidden = true;
+    this.vrButton.disabled = true;
     const probe = { isSecureContext: globalThis.isSecureContext, xr: navigator.xr ?? null };
     const reason = enterReason(probe);
-    const supported = await canEnterVr(probe);
+    let supported = false;
+    try {
+      supported = await canEnterVr(probe);
+    } catch {
+      // A denied or failed capability probe is unavailable, not an entry action.
+    }
+    this.vrButton.hidden = !supported;
     this.vrButton.disabled = !supported;
     this.vrButton.title = reason || (supported ? 'Enter the room in VR' : 'Immersive VR is not supported here.');
     if (reason) this.vrButton.textContent = reason;
