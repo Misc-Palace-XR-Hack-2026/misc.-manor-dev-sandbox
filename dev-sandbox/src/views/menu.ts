@@ -4,7 +4,7 @@ import { LIGHTING_PRESETS, type Lighting } from '../core/appearance';
 import { parseBookmarksHtml } from '../core/bookmarks';
 import { openContentEditor } from './content-editor';
 import { preparePhoto } from './photo-upload';
-import { safeUrl } from '../core/content';
+import { previewOpenUrl } from '../core/preview';
 import { Store } from '../core/store';
 import { ROOM_DIRECTORY, seedRoom } from '../core/rooms';
 import { THEMES } from '../core/themes';
@@ -481,7 +481,7 @@ export class MenuView {
       if (next) store.renameItem(c.id, next);
     });
 
-    const href = c.sourceKind === 'url' ? safeUrl(c.sourceRef) : null;
+    const href = c.sourceKind === 'url' ? previewOpenUrl(c.sourceRef) : null;
     const meta = el('div', { class: 'meta' }, `${c.type}${c.tags.length ? ' - ' + c.tags.join(', ') : ''} - `);
     if (href) meta.append(el('a', { href, target: '_blank', rel: 'noopener noreferrer', textContent: 'open' }));
     else meta.append(c.imageData ? 'local photo · included in export' : c.sourceRef || 'note');

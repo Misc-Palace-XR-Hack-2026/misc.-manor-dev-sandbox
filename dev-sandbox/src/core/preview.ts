@@ -4,34 +4,61 @@ import { validPhotoData } from './photos';
 
 // What the floating card above a selected object shows. Pure data: no DOM, so it is testable.
 //
-// A browser cannot reliably inspect another site's frame-blocking policy. This conservative policy opts in
-// provider players and specific page hosts, not arbitrary URLs. An opt-in is only permission to TRY a preview:
-// the destination/browser can still refuse it. No proxy, response rewriting or load-event success detection.
+// Eligibility is permission to TRY, never proof of frameability. Browser protections remain authoritative.
+// See docs/public-preview-policy.md for ownership, privacy tradeoffs and DNS/redirect limitations.
 
 export type EmbedProvider = 'youtube' | 'vimeo' | 'spotify' | 'soundcloud' | 'wikipedia' | 'page';
 
-/** Hosts (without www) known to block framing. These are skipped to avoid wasted iframe attempts. */
-const BLOCKED_SITES: ReadonlySet<string> = new Set([
+/** Exact host + dot-boundary subdomains. Official provider routes below take precedence. */
+const PAGE_BLOCKLIST = [
   'github.com', 'gitlab.com', 'codeberg.org', 'bitbucket.org',
   'developer.mozilla.org', 'news.ycombinator.com', 'reddit.com',
   'twitter.com', 'x.com', 'facebook.com', 'instagram.com',
   'linkedin.com', 'discord.com',
-]);
+  // Provider landing/channel/profile pages are not generic players.
+  'youtube.com', 'youtube-nocookie.com', 'youtu.be', 'vimeo.com',
+  'spotify.com', 'soundcloud.com', 'wikipedia.org', 'twitch.tv',
+  // Previously verified unsuitable supplied destinations (see web-previews.md).
+  'distrokid.com', 'hyperfollow.com', 'amazon.com', 'amzn.to', 'a.co',
+] as const;
 
-/** Hosts (without www) known to allow framing. Expanded list of sites that send no X-Frame-Options. */
-const FRAMABLE_SITES: ReadonlySet<string> = new Set([
-  'gungo.dev', 'medium.com', 'substack.com', 'codepen.io', 'jsfiddle.net', 'glitch.com',
-  'trinket.io', 'replit.com', 'codesandbox.io',
-  // User-owned sites checked with response headers and real sandboxed frames; see docs/web-previews.md.
-  'dvgpro.com', 'davisclockservices.com', 'apolloslearningcorner.com',
-  'thescoobmeisterm.github.io', 'theplutollc.com', 'os.dvgpro.com',
-]);
+const canonicalHost = (host: string): string => host.toLowerCase().replace(/\.$/, '');
+const hostMatches = (host: string, rule: string): boolean => host === rule || host.endsWith(`.${rule}`);
+
+/** Syntactic eligibility only, NOT DNS validation or an SSRF/network boundary.
+ * Conservatively reject ALL IP literals; URL parsing canonicalizes alternate IPv4/IPv6 forms first.
+ */
+export function publicPreviewUrl(url: URL, origin = globalThis.location?.origin): boolean {
+  if (url.protocol !== 'https:' || url.username || url.password || url.port) return false;
+  const host = canonicalHost(url.hostname);
+  if (!host.includes('.') || host.includes(':') || /^\d+(?:\.\d+){3}$/.test(host)) return false;
+  if (!host.split('.').every(label => /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label))) return false;
+  if (['localhost', 'local', 'internal', 'intranet', 'lan', 'home', 'home.arpa', 'localdomain', 'test', 'invalid', 'onion']
+    .some(rule => hostMatches(host, rule))) return false;
+  if (origin) {
+    const app = new URL(origin);
+    if (canonicalHost(app.hostname) === host && app.protocol === url.protocol && app.port === url.port) return false;
+  }
+  return true;
+}
+
+/** Explicit user handoff. Deliberately WIDER than frame eligibility: a click hands the address to the
+ * user's own browser, so HTTP, blocked hosts, ports, private hosts and our own origin are all allowed.
+ * Refused: unsafe schemes (via safeUrl) and embedded credentials, which must never be replayed.
+ */
+export function previewOpenUrl(ref: string): string | null {
+  const href = safeUrl(ref);
+  if (!href) return null;
+  const url = new URL(href);
+  if (url.username || url.password) return null;
+  return href;
+}
 
 export type Preview =
   | { kind: 'embed'; title: string; src: string; provider: EmbedProvider; height: number }
   | { kind: 'image'; title: string; src: string }
   | { kind: 'note'; title: string; text: string }
-  | { kind: 'card'; title: string; type: string; domain?: string; faviconSrc?: string; detail?: string };
+  | { kind: 'card'; title: string; type: string; domain?: string; faviconSrc?: string; detail?: string; openHref?: string };
 
 const NOTE_EXCERPT = 240;
 
@@ -50,9 +77,9 @@ export function youtubeId(url: URL): string | null {
   return id && /^[A-Za-z0-9_-]{6,15}$/.test(id) ? id : null;
 }
 
-/** An iframe-safe embed for hosts known to allow framing, else null. Only ever returns https URLs on those hosts. */
+/** Official player first, otherwise an eligible sandboxed page attempt or a card. */
 export function embedFor(url: URL): { src: string; provider: EmbedProvider; height: number } | null {
-  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.port) return null;
+  if (!publicPreviewUrl(url)) return null;
   const host = url.hostname.replace(/^www\./, '');
 
   const yt = youtubeId(url);
@@ -77,14 +104,9 @@ export function embedFor(url: URL): { src: string; provider: EmbedProvider; heig
     return { provider: 'wikipedia', src: `https://${url.hostname}${url.pathname}`, height: 220 };
   }
 
-  // Skip known frame-blockers.
-  if (BLOCKED_SITES.has(host)) return null;
-
-  // Exact host opt-in, not a guarantee: the browser still enforces the destination's frame policy.
-  // Do not silently rewrite HTTP, www, ports, query strings or fragments for ordinary pages.
-  if (url.protocol === 'https:' && FRAMABLE_SITES.has(host)) return { provider: 'page', src: url.href, height: 220 };
-
-  return null;
+  if (PAGE_BLOCKLIST.some(rule => hostMatches(canonicalHost(url.hostname), rule))) return null;
+  // Preserve the original destination; never proxy, prefetch or rewrite its headers.
+  return { provider: 'page', src: url.href, height: 220 };
 }
 
 export function buildPreview(c: ContentItem): Preview {
@@ -98,8 +120,13 @@ export function buildPreview(c: ContentItem): Preview {
 
   if (c.sourceKind === 'url') {
     const href = safeUrl(c.sourceRef);
-    if (!href) return { kind: 'card', title: c.title, type: c.type, detail: c.sourceRef };
+    const openHref = previewOpenUrl(c.sourceRef) ?? undefined;
+    if (!href) return { kind: 'card', title: c.title, type: c.type, detail: c.sourceRef, openHref };
     const url = new URL(href);
+    if (!publicPreviewUrl(url)) return {
+      kind: 'card', title: c.title, type: c.type, domain: url.hostname, openHref,
+      detail: 'Preview unavailable: requires a public HTTPS address without credentials or a custom port.',
+    };
     if (c.type === 'image' && /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(url.pathname)) {
       return { kind: 'image', title: c.title, src: href };
     }
@@ -109,6 +136,7 @@ export function buildPreview(c: ContentItem): Preview {
       kind: 'card', title: c.title, type: c.type,
       domain: url.hostname.replace(/^www\./, ''),
       faviconSrc: `${url.origin}/favicon.ico`,
+      openHref,
     };
   }
 

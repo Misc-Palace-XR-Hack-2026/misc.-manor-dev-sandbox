@@ -1,5 +1,10 @@
 # Browser webpage previews — scoped expansion for #65
 
+> **Superseded policy note.** The exact-host **allowlist** described below was replaced by a
+> documented **blocklist** policy. See [public-preview-policy.md](public-preview-policy.md) for the
+> current rules, matching semantics, maintenance process and the support/limitations matrix. The
+> header/redirect evidence recorded here is still the basis for several blocklist entries.
+
 ## Outcome and policy
 
 Matt's nine own-site URLs previously returned `kind: card` solely because their hosts were missing from `FRAMABLE_SITES`. The regression test failed with `Https://dvgpro.com: 'card' !== 'embed'` before the fix. Notes and room layout were not this gate.
