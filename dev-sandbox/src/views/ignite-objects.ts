@@ -55,7 +55,7 @@ export const igniteBuilders={
    const rim=new THREE.Mesh(new THREE.TorusGeometry(.075,.012,12,48),new THREE.MeshStandardMaterial({color:0x17191e,roughness:.9}));
    rim.name='vr-eyecup-'+n;rim.position.set(side*.13,visorY,-.061);rim.scale.y=.85;
    const lens=new THREE.Mesh(new THREE.SphereGeometry(1,40,24),new THREE.MeshStandardMaterial({color:0x466b83,metalness:.35,roughness:.14}));
-   lens.name='vr-eyepiece-'+n;lens.scale.set(.063,.053,.009);lens.position.set(side*.13,visorY,-.033);
+   lens.name='vr-eyepiece-'+n;lens.scale.set(.063,.053,.009);lens.position.set(side*.13,visorY,-.028);
    return [rim,lens];
   });
   return [

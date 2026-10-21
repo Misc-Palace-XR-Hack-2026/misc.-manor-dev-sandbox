@@ -29,6 +29,8 @@ test('guitar rear is continuous opaque wood including behind the front soundhole
 
 test('VR optics face the wearer (-Z) and sit recessed inside connected eyecups',()=>{
   const g=buildObject('vrDevice');
+  // Eye rays start inside the head strap: an external axial rear ray hits the
+  // preserved strap first. The rear/isometric visual harness checks that occlusion.
   for(const x of [-.13,.13]) {
     for(const dx of [-.025,0,.025]) for(const dy of [-.02,0,.02]) {
       const hit=ray(g,x+dx,.13+dy,true,.09)!;
@@ -38,6 +40,8 @@ test('VR optics face the wearer (-Z) and sit recessed inside connected eyecups',
       assert.ok(hit.face!.normal.clone().applyMatrix3(new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld)).normalize().z<-.7,'optics normal faces wearer, not exterior');
     }
     const center=ray(g,x,.13,true,.09)!;
+    const lensBounds=new THREE.Box3().setFromObject(center.object);
+    assert.ok(lensBounds.max.z>=-.02,'lens rear seat intersects the visor rather than floating');
     const rim=ray(g,x+.075,.13,true,.09)!;
     assert.ok(rim.point.z<center.point.z-.015,'optics recessed inside a raised eyecup');
     const housing=ray(g,x+.09,.13,true,.09)!;
