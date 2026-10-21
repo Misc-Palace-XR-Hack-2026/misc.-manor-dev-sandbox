@@ -24,7 +24,14 @@ test('Matt dedicated seed includes owner destinations, researched notes, and cyb
   assert.equal(room.representations.length, room.contentItems.length);
   assert.equal(room.placements.length, room.contentItems.length);
   assert.equal(new Set(room.placements.map(p => p.slotId)).size, room.placements.length);
-  for (const c of room.contentItems.slice(0, 16)) { assert.equal(c.type, 'link'); assert.equal(c.sourceKind, 'url'); assert.ok((c as any).notes?.length > 50); }
+  const playlistNames = new Set(['WilmU Ani321 IntroTo3D', 'Wilmington University - Ani 201 - Reels', 'Patchy the Peg-Legged Penguin Pirate']);
+  for (const c of room.contentItems.slice(0, 16)) {
+    assert.equal(c.type, 'link'); assert.equal(c.sourceKind, 'url');
+    const notes = (c as any).notes as string | undefined;
+    // Playlist items carry the verified playlist name; everything else keeps a researched blurb.
+    if (playlistNames.has(notes ?? '')) assert.ok(/[?&]list=/.test(c.sourceRef), `${c.id} must be a playlist`);
+    else assert.ok((notes?.length ?? 0) > 50, `${c.id} needs researched notes`);
+  }
   assert.ok(room.representations.some((r: {objectKind:string}) => r.objectKind === 'armchair'), 'Matt needs a sit-spot');
   assert.ok(room.placements.some((p: {slotId:string}) => p.slotId.startsWith('bench') || p.slotId.startsWith('shelf')));
 });
