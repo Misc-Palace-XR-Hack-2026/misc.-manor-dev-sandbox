@@ -57,7 +57,8 @@ export class RoomView {
   private markers = new Map<string, THREE.Mesh>();
   private raycaster = new THREE.Raycaster();
   private tooltip: HTMLDivElement;
-  private downAt: { x: number; y: number } | null = null;
+  private downAt: { x: number; y: number; pointerId: number } | null = null;
+  private clickAt: PointerEvent | null = null;
   private layoutId = '';
   private surfaceKey = '';
   private surfaceError = document.createElement('p');
@@ -119,8 +120,20 @@ export class RoomView {
     this.addLights();
 
     const el = this.renderer.domElement;
-    el.addEventListener('pointerdown', (e) => (this.downAt = { x: e.clientX, y: e.clientY }));
+    el.addEventListener('pointerdown', (e) => {
+      this.clickAt = null;
+      this.downAt = e.isPrimary && e.button === 0 ? { x: e.clientX, y: e.clientY, pointerId: e.pointerId } : null;
+    });
     el.addEventListener('pointerup', (e) => this.onPointerUp(e));
+    el.addEventListener('pointercancel', () => { this.downAt = null; this.clickAt = null; });
+    window.addEventListener('blur', () => { this.downAt = null; this.clickAt = null; });
+    el.addEventListener('click', () => {
+      const at = this.clickAt;
+      this.clickAt = null;
+      // Finish the gesture before opening overlays: touch compatibility mouse events
+      // can otherwise be hit-tested against buttons that appeared during pointerup.
+      if (at) this.activateAt(at);
+    });
     el.addEventListener('pointermove', (e) => this.onHover(e));
     el.addEventListener('pointerleave', () => this.hideTooltip());
     // Esc backs out of whatever is in hand; a held object returns to where it came from.
@@ -616,8 +629,10 @@ export class RoomView {
   private onPointerUp(e: PointerEvent): void {
     const d = this.downAt;
     this.downAt = null;
-    if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 5) return; // it was an orbit drag
+    this.clickAt = d && d.pointerId === e.pointerId && Math.hypot(e.clientX - d.x, e.clientY - d.y) <= 5 ? e : null;
+  }
 
+  private activateAt(e: PointerEvent): void {
     const selected = this.store.selectedId;
     const repId = this.repIdAt(e); // What object did we click on?
 

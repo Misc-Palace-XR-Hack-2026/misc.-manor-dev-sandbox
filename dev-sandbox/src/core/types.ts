@@ -51,6 +51,8 @@ export const DEFAULT_OBJECT: Record<ContentType, ObjectKind> = {
 
 /** The media itself. Never changes when an object is moved or swapped. */
 export interface ContentItem {
+  /** Last representation kind when stashed; absent in legacy saves and never-represented inbox items. */
+  lastObjectKind?: ObjectKind;
   imageData?: string;
   /** Optional researched context; the outbound URL stays in sourceRef. */
   notes?: string;
