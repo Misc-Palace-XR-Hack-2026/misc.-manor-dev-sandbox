@@ -191,7 +191,11 @@ export class XrPanel {
     const preview = this.store.selectedId ? inspectPreview(this.store, this.store.selectedId) : null;
     c.fillStyle = '#a39cb5';
     c.fillText(preview?.title || 'Squeeze to toggle this menu', 48, 122);
-    c.fillText(preview?.href || preview?.detail || 'Point at an object to see its name and link.', 48, 158);
+    const detail = this.page === 'create' && this.draft.error
+      ? this.draft.error
+      : preview?.href || preview?.detail || 'Point at an object to see its name and link.';
+    if (this.page === 'create' && this.draft.error) c.fillStyle = '#ffb9a8';
+    c.fillText(detail, 48, 158);
     if (this.store.saveError) {
       c.fillStyle = '#ffb9a8';
       c.fillText(this.store.saveError, 48, 194);
@@ -199,6 +203,8 @@ export class XrPanel {
 
     const all = panelButtons(this.store, this.page, this.rooms, this.draft, this.guide);
     const capacity = 10;
+    // Creation replaces its paginated form with a short completion screen.
+    this.scroll = Math.min(this.scroll, Math.max(0, Math.ceil(all.length / capacity) - 1));
     const start = this.scroll * capacity;
     const slice = all.slice(start, start + capacity);
     this.shown = [];

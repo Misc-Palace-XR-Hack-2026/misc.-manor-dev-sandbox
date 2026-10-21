@@ -14,6 +14,16 @@ test('headset draft validates, cancels without orphan, creates once and safely c
  s.select(null);assert.ok(s.slotOf(id));assert.equal(s.state.representations[0].objectKind,'fireplace');
  const cancelled=new Draft();cancelled.title='discard';assert.equal(s.state.contentItems.length,1);
 });
+test('link mode rejects malformed URLs without creating a note or changing the save',()=>{
+ const s=new Store(newRoom()); const before=JSON.stringify(s.state);
+ for(const text of ['', 'not a url', 'https://', 'https://bad host']) {
+  const d=new creation.XrCreation(); d.title='Invalid link'; d.text=text;
+  assert.equal(d.create(s),null,`reject ${JSON.stringify(text)}`);
+  // main rejects blank content ahead of URL parsing with its own message; both refuse to mutate.
+  assert.match(d.error,text===''?/enter content/i:/valid.*URL/i); assert.equal(d.created,false);
+  assert.equal(JSON.stringify(s.state),before);
+ }
+});
 test('full room creation remains recoverable in Inbox and keyboard supports edit/space/punctuation',()=>{
  const Draft=(creation as any).XrCreation;assert.equal(typeof Draft,'function');
  const s=new Store(newRoom());for(const slot of s.layout.slots)s.addItem({title:slot.id,sourceRef:''});
