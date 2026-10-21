@@ -6,6 +6,7 @@ import { RoomView } from '../views/room';
 import { buildKindInventory } from '../views/kind-picker';
 import { buildJukebox } from './jukebox';
 import { DEMO_ROOM_ID, TUTORIAL_SLOTS, seedDemoRoom, tutorialDone } from './demo-room';
+import { REPO_ROOMS } from '../core/repo-rooms';
 
 // The demo is one real room (the same RoomView the sandbox uses). A visitor's first time, a scripted walk-in plays
 // inside it and ends on a locked tutorial view of the shelf: they can only pick up the starter objects, look at
@@ -123,7 +124,8 @@ export function startDemo(container: HTMLElement, wantIntro: boolean, storage: S
   const replay = wantIntro && new URLSearchParams(search).has('intro') && tutorialDone(store.state);
   if (replay) store.replaceState(seedDemoRoom());
 
-  const view = new RoomView(container, store, []);
+  // The in-VR room picker needs the committed rooms here too: a headset visitor has no desktop toolbar.
+  const view = new RoomView(container, store, REPO_ROOMS);
   const camera = new THREE.PerspectiveCamera(TUTORIAL_VIEW.fov, 1, 0.1, 120);
 
   // ---- scenery outside the saved room -------------------------------------

@@ -25,9 +25,9 @@ try {
     const press = (id) => {
       for (let i = 0; i < 60; i++) {
         const b = panel.shown.find(b => b.id === id);
-        if (b) { panel.activate({ x: .5, y: 1 - b.y / 1408 }); return; }
+        if (b) { panel.activate({ x: b.x / 1024, y: 1 - b.y / 1408 }); return; }
         const n = panel.shown.find(b => b.id === 'ui:next');
-        if (n) { panel.activate({ x: .5, y: 1 - n.y / 1408 }); continue; }
+        if (n) { panel.activate({ x: n.x / 1024, y: 1 - n.y / 1408 }); continue; }
         if (panel.scroll > 0) { panel.scroll = 0; panel.redraw(); continue; }
         throw new Error('unreachable: ' + id);
       }

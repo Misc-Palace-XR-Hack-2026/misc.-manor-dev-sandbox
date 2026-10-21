@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Store } from '../core/store';
 import { guideActionMatches, inspectPreview, panelButtons, runPanelAction, type NeighborhoodRoom, type PanelActionResult, type PanelPage } from './interaction';
-import { XrCreation } from './creation';
+import { XrCreation, creationActionButtons, creationDoneButtons, creationFormButtons, creationKindButtons, keyLabel, keyWidthUnits, keyboardRows } from './creation';
 import { currentStep, type OnboardingState } from '../core/onboarding';
 
 const W = 1024;
@@ -10,6 +10,16 @@ const GW = 768;
 const GH = 900;
 const ROW = 92;
 const TOP = 220;
+
+/** A painted hit target. x/y are the rect centre so a ray test is a simple half-extent compare. */
+interface Hit {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 
 export class XrPanel {
   readonly group = new THREE.Group();
@@ -24,7 +34,7 @@ export class XrPanel {
   private guideHover = -1;
   private page: PanelPage = 'home';
   private scroll = 0;
-  private shown: Array<{ id: string; y: number }> = [];
+  private shown: Hit[] = [];
   private guideShown: Array<{ id: string; y: number }> = [];
   draft = new XrCreation();
   guide: OnboardingState | null = null;
@@ -97,8 +107,15 @@ export class XrPanel {
     if (this.guide === guide) return;
     this.guide = guide;
     const step=currentStep(guide ?? {lesson:null} as OnboardingState);
-    const index=panelButtons(this.store,this.page,this.rooms,this.draft,guide).findIndex(b=>guideActionMatches(step?.id ?? '',b.id));
-    if(index>=0) this.scroll=Math.floor(index/10);
+    if (this.page === 'create') {
+      // Only the kind grid pages on the create screen, so scroll in kind pages.
+      const kinds = creationKindButtons(this.draft);
+      const kindIndex = kinds.findIndex(b=>guideActionMatches(step?.id ?? '',b.id));
+      if (kindIndex > 0) this.scroll = Math.floor(kindIndex / 12);
+    } else {
+      const index=panelButtons(this.store,this.page,this.rooms,this.draft,guide).findIndex(b=>guideActionMatches(step?.id ?? '',b.id));
+      if(index>=0) this.scroll=Math.floor(index/10);
+    }
     this.redraw();
     this.redrawGuide();
     this.syncVisible();
@@ -127,9 +144,15 @@ export class XrPanel {
       this.hover = -1;
       return;
     }
-    const y = (1 - uv.y) * H;
-    this.hover = this.shown.findIndex((b) => Math.abs(b.y - y) < ROW / 2);
+    this.hover = this.hitIndex(uv);
     this.redraw();
+  }
+
+  /** Index into `shown` of the rect the ray lands in, or -1. */
+  private hitIndex(uv: { x: number; y: number }): number {
+    const x = uv.x * W;
+    const y = (1 - uv.y) * H;
+    return this.shown.findIndex((b) => Math.abs(b.x - x) <= b.w / 2 && Math.abs(b.y - y) <= b.h / 2);
   }
 
   activate(uv: { x: number; y: number }, mesh?: THREE.Mesh): void {
@@ -139,7 +162,7 @@ export class XrPanel {
       if (!button) return;
       if (button.id==='guide:reveal') {
         const step=currentStep(this.guide!);
-        const allPages:PanelPage[]=['home','create','rooms','themes','lighting','surfaces','inbox'];
+        const allPages:PanelPage[]=['home','create','rooms','repo-rooms','themes','lighting','surfaces','inbox'];
         const page=allPages.find(page=>panelButtons(this.store,page,this.rooms,this.draft,this.guide).some(b=>guideActionMatches(step?.id ?? '',b.id) && !b.id.startsWith('page:'))) ?? 'home';
         if(page==='create' && this.page==='create') { this.open=true; this.redraw(); this.syncVisible(); }
         else this.onAction(runPanelAction(this.store,`page:${page}`,this.rooms,this.draft));
@@ -150,8 +173,8 @@ export class XrPanel {
       this.redrawGuide();
       return;
     }
-    const y = (1 - uv.y) * H;
-    const button = this.shown.find((b) => Math.abs(b.y - y) < ROW / 2);
+    const index = this.hitIndex(uv);
+    const button = index >= 0 ? this.shown[index] : undefined;
     if (!button) return;
     if (button.id === 'ui:next') {
       this.scroll += 1;
@@ -180,8 +203,57 @@ export class XrPanel {
     this.group.visible = this.open || guideOn;
   }
 
+  /** Rounded-rect button; records its own hit rect. Falls back to fillRect in test canvases. */
+  private button(
+    c: CanvasRenderingContext2D,
+    id: string,
+    label: string,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    opts: { font?: string; center?: boolean; muted?: boolean } = {},
+  ): void {
+    const matched = this.matchesGuide(id);
+    const active = this.shown.length === this.hover;
+    c.fillStyle = active || matched ? '#99705f' : opts.muted ? '#2c2838' : '#3a3546';
+    c.fillRect(x, y, w, h);
+    c.fillStyle = '#ece7f5';
+    c.font = opts.font ?? '28px system-ui, sans-serif';
+    const text = this.clip(c, label, w - 20);
+    if (opts.center) {
+      const width = this.textWidth(c, text);
+      c.fillText(text, x + (w - width) / 2, y + h / 2 + 11);
+    } else {
+      c.fillText(text, x + 24, y + h / 2 + 11);
+    }
+    this.shown.push({ id, label, x: x + w / 2, y: y + h / 2, w, h });
+  }
+
+  private textWidth(c: CanvasRenderingContext2D, text: string): number {
+    try {
+      const m = c.measureText?.(text);
+      if (m && Number.isFinite(m.width)) return m.width;
+    } catch { /* stub canvases in tests have no metrics */ }
+    return text.length * 14;
+  }
+
+  private clip(c: CanvasRenderingContext2D, label: string, max: number): string {
+    if (this.textWidth(c, label) <= max) return label;
+    let text = label;
+    while (text.length > 1 && this.textWidth(c, text + '…') > max) text = text.slice(0, -1);
+    return text + '…';
+  }
+
+  private matchesGuide(id: string): boolean {
+    const step = currentStep(this.guide ?? { lesson: null } as OnboardingState);
+    return step?.id === 'rooms-home' ? id === `room:${this.guide?.roomId}` : guideActionMatches(step?.id ?? '', id);
+  }
+
   private redraw(): void {
     const c = this.canvas.getContext('2d')!;
+    // The backdrop is 94% opaque, so without a clear the previous page bleeds through.
+    if (typeof c.clearRect === 'function') c.clearRect(0, 0, W, H);
     c.fillStyle = 'rgba(28, 28, 32, 0.94)';
     c.fillRect(0, 0, W, H);
     c.fillStyle = '#ece7f5';
@@ -201,29 +273,96 @@ export class XrPanel {
       c.fillText(this.store.saveError, 48, 194);
     }
 
-    const all = panelButtons(this.store, this.page, this.rooms, this.draft, this.guide);
+    this.shown = [];
+    if (this.page === 'create' && !this.draft.created) {
+      this.drawCreate(c);
+      this.texture.needsUpdate = true;
+      return;
+    }
+
+    const all = this.page === 'create' ? creationDoneButtons(this.draft) : panelButtons(this.store, this.page, this.rooms, this.draft, this.guide);
     const capacity = 10;
-    // Creation replaces its paginated form with a short completion screen.
     this.scroll = Math.min(this.scroll, Math.max(0, Math.ceil(all.length / capacity) - 1));
     const start = this.scroll * capacity;
     const slice = all.slice(start, start + capacity);
-    this.shown = [];
     let y = TOP;
-    const draw = (id: string, label: string, i: number) => {
-      const active = i === this.hover;
-      const step=currentStep(this.guide ?? {lesson:null} as OnboardingState);
-      const matched=step?.id==='rooms-home' ? id===`room:${this.guide?.roomId}` : guideActionMatches(step?.id ?? '',id);
-      c.fillStyle = active || matched ? '#99705f' : '#3a3546';
-      c.fillRect(48, y - 36, 928, 76);
-      c.fillStyle = '#ece7f5';
-      c.fillText(label, 72, y + 10);
-      this.shown.push({ id, y });
+    const draw = (id: string, label: string) => {
+      this.button(c, id, label, 48, y - 36, 928, 76);
       y += ROW;
     };
-    slice.forEach((button, i) => draw(button.id, button.label, i));
-    if (start > 0) draw('ui:prev', 'Previous', slice.length);
-    if (start + capacity < all.length) draw('ui:next', 'More', this.shown.length);
+    slice.forEach((button) => draw(button.id, button.label));
+    if (start > 0) draw('ui:prev', 'Previous');
+    if (start + capacity < all.length) draw('ui:next', 'More');
     this.texture.needsUpdate = true;
+  }
+
+  /**
+   * The Add-object page. Form, a full QWERTY keyboard and the actions are all on screen at once;
+   * only the 50-odd object kinds page. Previously every one of the 54 keys was a full-width row
+   * rendered ten at a time, so a URL meant five screens of giant buttons.
+   */
+  private drawCreate(c: CanvasRenderingContext2D): void {
+    const M = 44;
+    const IW = W - M * 2; // 936
+
+    // ---- form ---------------------------------------------------------------
+    const form = creationFormButtons(this.draft);
+    this.button(c, form[0].id, form[0].label, M, 206, IW, 58);
+    this.button(c, form[1].id, form[1].label, M, 270, IW, 58);
+    const third = (IW - 12) / 3;
+    [form[2], form[3], form[4]].forEach((b, i) => {
+      this.button(c, b.id, b.label, M + i * (third + 6), 334, third, 54, { center: true, muted: true });
+    });
+
+    // ---- keyboard -----------------------------------------------------------
+    const rows = keyboardRows(this.draft);
+    const keyH = 70;
+    const pitch = 78;
+    let y = 404;
+    for (const row of rows) {
+      const units = row.reduce((sum, token) => sum + keyWidthUnits(token), 0);
+      const unit = IW / units;
+      let x = M;
+      for (const token of row) {
+        const w = unit * keyWidthUnits(token) - 6;
+        const label = keyLabel(token, this.draft.caps);
+        this.button(c, 'key:' + token, label, x, y, w, keyH, {
+          center: true,
+          font: label.length > 2 ? '600 26px system-ui, sans-serif' : '600 40px system-ui, sans-serif',
+        });
+        x += unit * keyWidthUnits(token);
+      }
+      y += pitch;
+    }
+
+    // ---- object kinds (the only paged section) ------------------------------
+    const kinds = creationKindButtons(this.draft);
+    const cols = 3;
+    const kindRows = 4;
+    const perPage = cols * kindRows;
+    this.scroll = Math.min(this.scroll, Math.max(0, Math.ceil(kinds.length / perPage) - 1));
+    const start = this.scroll * perPage;
+    const slice = kinds.slice(start, start + perPage);
+    const colW = (IW - (cols - 1) * 8) / cols;
+    const kindTop = y + 6;
+    slice.forEach((button, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      this.button(c, button.id, button.label, M + col * (colW + 8), kindTop + row * 56, colW, 50, {
+        center: true,
+        font: '24px system-ui, sans-serif',
+        muted: true,
+      });
+    });
+    const pagerY = kindTop + kindRows * 56 + 2;
+    const half = (IW - 8) / 2;
+    if (start > 0) this.button(c, 'ui:prev', '◀ kinds', M, pagerY, half, 46, { center: true, font: '24px system-ui, sans-serif', muted: true });
+    if (start + perPage < kinds.length) this.button(c, 'ui:next', 'more kinds ▶', M + half + 8, pagerY, half, 46, { center: true, font: '24px system-ui, sans-serif', muted: true });
+
+    // ---- actions ------------------------------------------------------------
+    const actions = creationActionButtons(this.draft);
+    this.button(c, actions[0].id, actions[0].label, M, pagerY + 54, IW, 62, { center: true, font: '600 32px system-ui, sans-serif' });
+    this.button(c, actions[1].id, actions[1].label, M, pagerY + 122, IW, 54, { center: true });
   }
 
   private redrawGuide(): void {

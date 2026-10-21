@@ -6,12 +6,49 @@ export type DraftField = 'title' | 'text';
 export type DraftMode = 'link' | 'note';
 
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
-const URL_PUNCT = ".,-/'!?:&=_%#+@";
-const CONTROLS = ['space', 'backspace', 'caps'] as const;
+export const URL_PUNCT = ".,-/'!?:&=_%#+@";
+/** Multi-character inserts that save a lot of ray-aiming on URLs. */
+export const SHORTCUTS: Record<string, string> = { https: 'https://', com: '.com' };
+const CONTROLS = ['space', 'backspace', 'caps', ...Object.keys(SHORTCUTS)] as const;
 
 function keyboardKeys(caps: boolean): string[] {
   const letters = caps ? LETTERS.toUpperCase() : LETTERS;
   return [...letters, ...'0123456789', ...URL_PUNCT, ...CONTROLS];
+}
+
+// QWERTY rows, then a digit row, then the URL punctuation, then the controls. Everything is on
+// screen at once: the old flat 54-key list was paged ten-at-a-time, which meant five screens of
+// giant buttons to type a single URL.
+const ROW_LETTERS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
+const ROW_DIGITS = '0123456789';
+const ROW_PUNCT_A = ".,-/'!?:&=_%#";
+const ROW_PUNCT_B = '+@';
+const ROW_CONTROLS = ['caps', 'space', 'backspace', 'https', 'com'];
+
+/** The on-panel keyboard layout: rows of key tokens, mirroring `key()`'s token contract. */
+export function keyboardRows(draft: { caps: boolean }): string[][] {
+  const cased = (row: string) => [...(draft.caps ? row.toUpperCase() : row)];
+  return [
+    ...ROW_LETTERS.map(cased),
+    [...ROW_DIGITS],
+    [...ROW_PUNCT_A],
+    [...ROW_PUNCT_B, ...ROW_CONTROLS],
+  ];
+}
+
+/** Relative width of a key, in grid units, so space and the shortcuts stay easy to hit. */
+export function keyWidthUnits(token: string): number {
+  if (token === 'space') return 3;
+  if (token === 'caps' || token === 'backspace' || token === 'https' || token === 'com') return 2;
+  return 1;
+}
+
+export function keyLabel(token: string, caps: boolean): string {
+  if (token === 'space') return 'Space';
+  if (token === 'backspace') return '⌫';
+  if (token === 'caps') return caps ? 'CAPS' : 'caps';
+  if (token in SHORTCUTS) return SHORTCUTS[token];
+  return token;
 }
 
 export class XrCreation {
@@ -37,6 +74,7 @@ export class XrCreation {
     const target = this.field === 'title' ? 'title' : 'text';
     if (token === 'backspace') this[target] = this[target].slice(0, -1);
     else if (token === 'space' || token === ' ') this[target] += ' ';
+    else if (token in SHORTCUTS) this[target] += SHORTCUTS[token];
     else if (/^[A-Za-z0-9]$/.test(token) || URL_PUNCT.includes(token)) this[target] += token;
     this.error = '';
   }
@@ -71,25 +109,48 @@ export class XrCreation {
   }
 }
 
-export function creationButtons(draft: XrCreation): Array<{id:string;label:string}> {
-  if (draft.created) return [
-    { id: 'create:done', label: draft.message || 'Place it, then close' },
-    { id: 'page:home', label: 'Close' },
-  ];
-  const kinds = OBJECT_KINDS.map((kind) => ({ id: 'create-kind:' + kind, label: (draft.kind === kind ? '• ' : '') + OBJECT_LABELS[kind] }));
+export function creationFormButtons(draft: XrCreation): Array<{id:string;label:string}> {
   return [
     { id: 'create:title', label: 'Title: ' + (draft.title || '(empty)') },
     { id: 'create:text', label: (draft.mode === 'link' ? 'URL: ' : 'Note: ') + (draft.text || '(empty)') },
+    { id: 'create:field-title', label: draft.field === 'title' ? '• Title' : 'Title' },
+    { id: 'create:field-text', label: draft.field === 'text' ? (draft.mode === 'link' ? '• URL' : '• Note') : (draft.mode === 'link' ? 'URL' : 'Note') },
     { id: 'create:mode', label: draft.mode === 'link' ? 'Mode: link' : 'Mode: note' },
-    { id: 'create:field-title', label: draft.field === 'title' ? '• Typing title' : 'Type title' },
-    { id: 'create:field-text', label: draft.field === 'text' ? '• Typing URL/note' : 'Type URL/note' },
-    ...draft.keys.map((k) => ({
-      id: 'key:' + k,
-      label: k === 'space' ? 'Space' : k === 'backspace' ? 'Delete' : k === 'caps' ? (draft.caps ? 'Caps on' : 'Caps') : k,
-    })),
-    { id: 'create-kind:', label: draft.kind ? OBJECT_LABELS[draft.kind] : 'Automatic object' },
-    ...kinds,
+  ];
+}
+
+export function creationKindButtons(draft: XrCreation): Array<{id:string;label:string}> {
+  return [
+    { id: 'create-kind:', label: (draft.kind ? '' : '• ') + 'Automatic object' },
+    ...OBJECT_KINDS.map((kind) => ({ id: 'create-kind:' + kind, label: (draft.kind === kind ? '• ' : '') + OBJECT_LABELS[kind] })),
+  ];
+}
+
+export function creationActionButtons(_draft: XrCreation): Array<{id:string;label:string}> {
+  return [
     { id: 'create:submit', label: 'Create object' },
     { id: 'create:cancel', label: 'Cancel' },
   ];
 }
+
+export function creationDoneButtons(draft: XrCreation): Array<{id:string;label:string}> {
+  return [
+    { id: 'create:done', label: draft.message || 'Place it, then close' },
+    { id: 'page:home', label: 'Close' },
+  ];
+}
+
+/** Flat list kept for the tutorial's action matching and for non-grid callers. */
+export function creationButtons(draft: XrCreation): Array<{id:string;label:string}> {
+  if (draft.created) return creationDoneButtons(draft);
+  const form = creationFormButtons(draft);
+  return [
+    ...form.slice(0, 2),
+    form[4],
+    ...form.slice(2, 4),
+    ...draft.keys.map((k) => ({ id: 'key:' + k, label: keyLabel(k, draft.caps) })),
+    ...creationKindButtons(draft),
+    ...creationActionButtons(draft),
+  ];
+}
+
