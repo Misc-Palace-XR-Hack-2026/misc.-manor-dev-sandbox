@@ -140,9 +140,9 @@ test('seedRoom creates proper room instances', () => {
 
 test('ROOM_DIRECTORY has expected entries', () => {
   const roomIds = ROOM_DIRECTORY.map(r => r.id);
-  assert.equal(roomIds.length, 5, 'should have 5 rooms');
+  assert.equal(roomIds.length, 6, 'should have 6 rooms');
 
-  for (const id of ['guest', 'german', 'matt', 'levi', 'jawan']) {
+  for (const id of ['guest', 'german', 'matt', 'levi', 'jawan', 'omari']) {
     assert.ok(roomIds.includes(id), `missing room ${id}`);
   }
 });
