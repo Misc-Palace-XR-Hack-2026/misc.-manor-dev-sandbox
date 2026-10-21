@@ -20,6 +20,7 @@ export const ROOM_DIRECTORY: readonly RoomSlot[] = [
   { id: 'matt', defaultName: "Matt's room", seed: 'vinyl-lounge' },
   { id: 'levi', defaultName: "Levi's room", seed: 'creative-atelier' },
   { id: 'jawan', defaultName: "Jawan's room", seed: 'garden-notebook' },
+  { id: 'omari', defaultName: "Omari's room", seed: 'omari' },
 ];
 
 export const isRoomId = (id: string | null | undefined): id is string =>

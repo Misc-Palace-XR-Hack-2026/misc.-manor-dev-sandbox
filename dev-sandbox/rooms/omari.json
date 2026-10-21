@@ -1,0 +1,886 @@
+{
+  "schemaVersion": 1,
+  "id": "omari",
+  "owner": "Omari’s room",
+  "layoutId": "cozy-loft",
+  "contentItems": [
+    {
+      "id": "omari-spoon-unexamined-life",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "The unexamined life is not worth living.",
+      "notes": "“The unexamined life is not worth living.” — Socrates, in Plato’s Apology",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-how-to-live",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "We are discussing no small matter, but how we ought to live.",
+      "notes": "“We are discussing no small matter, but how we ought to live.” — Socrates, in Plato’s Republic",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-moving-image",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "Time is the moving image of eternity.",
+      "notes": "“Time is the moving image of eternity.” — Plato, Timaeus",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-political-animal",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "Man is by nature a political animal.",
+      "notes": "“Man is by nature a political animal.” — Aristotle, Politics",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-soul-image",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "The soul never thinks without an image.",
+      "notes": "“The soul never thinks without an image.” — Aristotle, On the Soul",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-excellence-habit",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "We are what we repeatedly do. Excellence, then, is not an act but a habit.",
+      "notes": "“We are what we repeatedly do. Excellence, then, is not an act but a habit.” — Will Durant, The Story of Philosophy",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-cogito",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "I think, therefore I am.",
+      "notes": "“I think, therefore I am.” — René Descartes, Discourse on the Method",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-condemned-free",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "Man is condemned to be free.",
+      "notes": "“Man is condemned to be free.” — Jean-Paul Sartre, Being and Nothingness",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-existence-essence",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "Existence precedes essence.",
+      "notes": "“Existence precedes essence.” — Jean-Paul Sartre, Existentialism Is a Humanism",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-sisyphus",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "One must imagine Sisyphus happy.",
+      "notes": "“One must imagine Sisyphus happy.” — Albert Camus, The Myth of Sisyphus",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-why-to-live",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "He who has a why to live can bear almost any how.",
+      "notes": "“He who has a why to live can bear almost any how.” — Friedrich Nietzsche, Twilight of the Idols",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-god-is-dead",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "God is dead. God remains dead. And we have killed him.",
+      "notes": "“God is dead. God remains dead. And we have killed him.” — Friedrich Nietzsche, The Gay Science",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-silence",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "Whereof one cannot speak, thereof one must be silent.",
+      "notes": "“Whereof one cannot speak, thereof one must be silent.” — Ludwig Wittgenstein, Tractatus Logico-Philosophicus",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-limits-language",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "The limits of my language mean the limits of my world.",
+      "notes": "“The limits of my language mean the limits of my world.” — Ludwig Wittgenstein, Tractatus Logico-Philosophicus",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-born-free",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "Man is born free, and everywhere he is in chains.",
+      "notes": "“Man is born free, and everywhere he is in chains.” — Jean-Jacques Rousseau, The Social Contract",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-starry-heavens",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "Two things fill the mind with ever-increasing wonder and awe: the starry heavens above me and the moral law within me.",
+      "notes": "“Two things fill the mind with ever-increasing wonder and awe: the starry heavens above me and the moral law within me.” — Immanuel Kant, Critique of Practical Reason",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-universal-law",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "Act only according to that maxim whereby you can at the same time will that it should become a universal law.",
+      "notes": "“Act only according to that maxim whereby you can at the same time will that it should become a universal law.” — Immanuel Kant, Groundwork of the Metaphysics of Morals",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-oyster",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "The life of a man is of no greater importance to the universe than that of an oyster.",
+      "notes": "“The life of a man is of no greater importance to the universe than that of an oyster.” — David Hume, Of Suicide",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-slave-passions",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "Reason is, and ought only to be, the slave of the passions.",
+      "notes": "“Reason is, and ought only to be, the slave of the passions.” — David Hume, A Treatise of Human Nature",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-nature-hides",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "Nature loves to hide.",
+      "notes": "“Nature loves to hide.” — Heraclitus, Fragment 123",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-tao",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "The Tao that can be told is not the eternal Tao.",
+      "notes": "“The Tao that can be told is not the eternal Tao.” — Laozi, Tao Te Ching",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-impermanence",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "All conditioned things are impermanent.",
+      "notes": "“All conditioned things are impermanent.” — the Buddha, Dhammapada",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-power-over-mind",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "You have power over your mind – not outside events. Realize this, and you will find strength.",
+      "notes": "“You have power over your mind – not outside events. Realize this, and you will find strength.” — Marcus Aurelius, Meditations",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-as-it-should",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "Whatever happens at all happens as it should; you will find this true if you watch narrowly.",
+      "notes": "“Whatever happens at all happens as it should; you will find this true if you watch narrowly.” — Marcus Aurelius, Meditations",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-opinions-of-things",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "It is not things that disturb us, but our opinions about things.",
+      "notes": "“It is not things that disturb us, but our opinions about things.” — Epictetus, Enchiridion",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-imagination-suffering",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "We suffer more often in imagination than in reality.",
+      "notes": "“We suffer more often in imagination than in reality.” — Seneca, Letters to Lucilius",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-no-spoon",
+      "type": "video",
+      "title": "Spoon",
+      "sourceKind": "url",
+      "sourceRef": "https://www.youtube.com/watch?v=XO0pcWxcROI",
+      "notes": "There is no spoon",
+      "tags": [
+        "spoon",
+        "omari",
+        "matrix"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-keep-learning",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "As long as you live, keep learning how to live.",
+      "notes": "“As long as you live, keep learning how to live.” — Seneca, Letters to Lucilius",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-measure-of-things",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "Man is the measure of all things.",
+      "notes": "“Man is the measure of all things.” — Protagoras",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-heart-reasons",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "The heart has its reasons, of which reason knows nothing.",
+      "notes": "“The heart has its reasons, of which reason knows nothing.” — Blaise Pascal, Pensées",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-quiet-room",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "All of humanity’s problems stem from man’s inability to sit quietly in a room alone.",
+      "notes": "“All of humanity’s problems stem from man’s inability to sit quietly in a room alone.” — Blaise Pascal, Pensées",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-owl-of-minerva",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "The owl of Minerva spreads its wings only with the falling of the dusk.",
+      "notes": "“The owl of Minerva spreads its wings only with the falling of the dusk.” — G. W. F. Hegel, Philosophy of Right",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-rational-actual",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "What is rational is actual, and what is actual is rational.",
+      "notes": "“What is rational is actual, and what is actual is rational.” — G. W. F. Hegel, Philosophy of Right",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-backwards",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "Life can only be understood backwards; but it must be lived forwards.",
+      "notes": "“Life can only be understood backwards; but it must be lived forwards.” — Søren Kierkegaard, Journals",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-dizziness",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "Anxiety is the dizziness of freedom.",
+      "notes": "“Anxiety is the dizziness of freedom.” — Søren Kierkegaard, The Concept of Anxiety",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-change-the-world",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "Philosophers have hitherto only interpreted the world; the point is to change it.",
+      "notes": "“Philosophers have hitherto only interpreted the world; the point is to change it.” — Karl Marx, Theses on Feuerbach",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-representation",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "The world is my representation.",
+      "notes": "“The world is my representation.” — Arthur Schopenhauer, The World as Will and Representation",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "id": "omari-spoon-pendulum",
+      "type": "note",
+      "title": "Spoon",
+      "sourceKind": "note",
+      "sourceRef": "Life swings like a pendulum backward and forward between pain and boredom.",
+      "notes": "“Life swings like a pendulum backward and forward between pain and boredom.” — Arthur Schopenhauer, Essays and Aphorisms",
+      "tags": [
+        "spoon",
+        "omari",
+        "philosophy"
+      ],
+      "createdAt": "2026-10-21T00:00:00.000Z"
+    }
+  ],
+  "representations": [
+    {
+      "id": "omari-spoon-unexamined-life-rep",
+      "contentItemId": "omari-spoon-unexamined-life",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-how-to-live-rep",
+      "contentItemId": "omari-spoon-how-to-live",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-moving-image-rep",
+      "contentItemId": "omari-spoon-moving-image",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-political-animal-rep",
+      "contentItemId": "omari-spoon-political-animal",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-soul-image-rep",
+      "contentItemId": "omari-spoon-soul-image",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-excellence-habit-rep",
+      "contentItemId": "omari-spoon-excellence-habit",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-cogito-rep",
+      "contentItemId": "omari-spoon-cogito",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-condemned-free-rep",
+      "contentItemId": "omari-spoon-condemned-free",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-existence-essence-rep",
+      "contentItemId": "omari-spoon-existence-essence",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-sisyphus-rep",
+      "contentItemId": "omari-spoon-sisyphus",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-why-to-live-rep",
+      "contentItemId": "omari-spoon-why-to-live",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-god-is-dead-rep",
+      "contentItemId": "omari-spoon-god-is-dead",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-silence-rep",
+      "contentItemId": "omari-spoon-silence",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-limits-language-rep",
+      "contentItemId": "omari-spoon-limits-language",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-born-free-rep",
+      "contentItemId": "omari-spoon-born-free",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-starry-heavens-rep",
+      "contentItemId": "omari-spoon-starry-heavens",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-universal-law-rep",
+      "contentItemId": "omari-spoon-universal-law",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-oyster-rep",
+      "contentItemId": "omari-spoon-oyster",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-slave-passions-rep",
+      "contentItemId": "omari-spoon-slave-passions",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-nature-hides-rep",
+      "contentItemId": "omari-spoon-nature-hides",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-tao-rep",
+      "contentItemId": "omari-spoon-tao",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-impermanence-rep",
+      "contentItemId": "omari-spoon-impermanence",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-power-over-mind-rep",
+      "contentItemId": "omari-spoon-power-over-mind",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-as-it-should-rep",
+      "contentItemId": "omari-spoon-as-it-should",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-opinions-of-things-rep",
+      "contentItemId": "omari-spoon-opinions-of-things",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-imagination-suffering-rep",
+      "contentItemId": "omari-spoon-imagination-suffering",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-no-spoon-rep",
+      "contentItemId": "omari-spoon-no-spoon",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-keep-learning-rep",
+      "contentItemId": "omari-spoon-keep-learning",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-measure-of-things-rep",
+      "contentItemId": "omari-spoon-measure-of-things",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-heart-reasons-rep",
+      "contentItemId": "omari-spoon-heart-reasons",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-quiet-room-rep",
+      "contentItemId": "omari-spoon-quiet-room",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-owl-of-minerva-rep",
+      "contentItemId": "omari-spoon-owl-of-minerva",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-rational-actual-rep",
+      "contentItemId": "omari-spoon-rational-actual",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-backwards-rep",
+      "contentItemId": "omari-spoon-backwards",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-dizziness-rep",
+      "contentItemId": "omari-spoon-dizziness",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-change-the-world-rep",
+      "contentItemId": "omari-spoon-change-the-world",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-representation-rep",
+      "contentItemId": "omari-spoon-representation",
+      "objectKind": "spoon"
+    },
+    {
+      "id": "omari-spoon-pendulum-rep",
+      "contentItemId": "omari-spoon-pendulum",
+      "objectKind": "spoon"
+    }
+  ],
+  "placements": [
+    {
+      "representationId": "omari-spoon-unexamined-life-rep",
+      "slotId": "floor-1"
+    },
+    {
+      "representationId": "omari-spoon-how-to-live-rep",
+      "slotId": "floor-2"
+    },
+    {
+      "representationId": "omari-spoon-moving-image-rep",
+      "slotId": "floor-3"
+    },
+    {
+      "representationId": "omari-spoon-political-animal-rep",
+      "slotId": "floor-6"
+    },
+    {
+      "representationId": "omari-spoon-soul-image-rep",
+      "slotId": "floor-old-7"
+    },
+    {
+      "representationId": "omari-spoon-excellence-habit-rep",
+      "slotId": "floor-old-8"
+    },
+    {
+      "representationId": "omari-spoon-cogito-rep",
+      "slotId": "floor-4"
+    },
+    {
+      "representationId": "omari-spoon-condemned-free-rep",
+      "slotId": "floor-old-9"
+    },
+    {
+      "representationId": "omari-spoon-existence-essence-rep",
+      "slotId": "floor-old-10"
+    },
+    {
+      "representationId": "omari-spoon-sisyphus-rep",
+      "slotId": "floor-old-11"
+    },
+    {
+      "representationId": "omari-spoon-why-to-live-rep",
+      "slotId": "floor-old-12"
+    },
+    {
+      "representationId": "omari-spoon-god-is-dead-rep",
+      "slotId": "floor-5"
+    },
+    {
+      "representationId": "omari-spoon-silence-rep",
+      "slotId": "loft-1"
+    },
+    {
+      "representationId": "omari-spoon-limits-language-rep",
+      "slotId": "loft-2"
+    },
+    {
+      "representationId": "omari-spoon-born-free-rep",
+      "slotId": "loft-3"
+    },
+    {
+      "representationId": "omari-spoon-starry-heavens-rep",
+      "slotId": "loft-4"
+    },
+    {
+      "representationId": "omari-spoon-universal-law-rep",
+      "slotId": "block-1"
+    },
+    {
+      "representationId": "omari-spoon-oyster-rep",
+      "slotId": "block-2"
+    },
+    {
+      "representationId": "omari-spoon-slave-passions-rep",
+      "slotId": "floor-front-loft-1"
+    },
+    {
+      "representationId": "omari-spoon-nature-hides-rep",
+      "slotId": "floor-front-loft-2"
+    },
+    {
+      "representationId": "omari-spoon-tao-rep",
+      "slotId": "step-1"
+    },
+    {
+      "representationId": "omari-spoon-impermanence-rep",
+      "slotId": "step-2"
+    },
+    {
+      "representationId": "omari-spoon-power-over-mind-rep",
+      "slotId": "step-3"
+    },
+    {
+      "representationId": "omari-spoon-as-it-should-rep",
+      "slotId": "floor-7"
+    },
+    {
+      "representationId": "omari-spoon-opinions-of-things-rep",
+      "slotId": "floor-8"
+    },
+    {
+      "representationId": "omari-spoon-imagination-suffering-rep",
+      "slotId": "floor-9"
+    },
+    {
+      "representationId": "omari-spoon-no-spoon-rep",
+      "slotId": "floor-10"
+    },
+    {
+      "representationId": "omari-spoon-keep-learning-rep",
+      "slotId": "floor-11"
+    },
+    {
+      "representationId": "omari-spoon-measure-of-things-rep",
+      "slotId": "floor-12"
+    },
+    {
+      "representationId": "omari-spoon-heart-reasons-rep",
+      "slotId": "floor-13"
+    },
+    {
+      "representationId": "omari-spoon-quiet-room-rep",
+      "slotId": "floor-14"
+    },
+    {
+      "representationId": "omari-spoon-owl-of-minerva-rep",
+      "slotId": "floor-15"
+    },
+    {
+      "representationId": "omari-spoon-rational-actual-rep",
+      "slotId": "bench-1"
+    },
+    {
+      "representationId": "omari-spoon-backwards-rep",
+      "slotId": "bench-2"
+    },
+    {
+      "representationId": "omari-spoon-dizziness-rep",
+      "slotId": "bench-3"
+    },
+    {
+      "representationId": "omari-spoon-change-the-world-rep",
+      "slotId": "shelf-1"
+    },
+    {
+      "representationId": "omari-spoon-representation-rep",
+      "slotId": "shelf-2"
+    },
+    {
+      "representationId": "omari-spoon-pendulum-rep",
+      "slotId": "shelf-3"
+    }
+  ]
+}
