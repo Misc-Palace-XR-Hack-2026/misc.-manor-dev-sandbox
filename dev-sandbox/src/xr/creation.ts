@@ -5,9 +5,14 @@ import type { Store } from '../core/store';
 export type DraftField = 'title' | 'text';
 export type DraftMode = 'link' | 'note';
 
-const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-const PUNCT = ".,-/'!?";
-const KEYS = [...LETTERS, ...'0123456789', ...PUNCT, 'space', 'backspace'];
+const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
+const URL_PUNCT = ".,-/'!?:&=_%#+@";
+const CONTROLS = ['space', 'backspace', 'caps'] as const;
+
+function keyboardKeys(caps: boolean): string[] {
+  const letters = caps ? LETTERS.toUpperCase() : LETTERS;
+  return [...letters, ...'0123456789', ...URL_PUNCT, ...CONTROLS];
+}
 
 export class XrCreation {
   title = '';
@@ -18,15 +23,21 @@ export class XrCreation {
   error = '';
   message = '';
   created = false;
+  caps = false;
 
-  get keys(): string[] { return KEYS; }
+  get keys(): string[] { return keyboardKeys(this.caps); }
 
   key(token: string): void {
     if (this.created) return;
+    if (token === 'caps') {
+      this.caps = !this.caps;
+      this.error = '';
+      return;
+    }
     const target = this.field === 'title' ? 'title' : 'text';
     if (token === 'backspace') this[target] = this[target].slice(0, -1);
     else if (token === 'space' || token === ' ') this[target] += ' ';
-    else if (/^[A-Za-z0-9]$/.test(token) || PUNCT.includes(token)) this[target] += this.field === 'title' ? token.toUpperCase() : token.toLowerCase();
+    else if (/^[A-Za-z0-9]$/.test(token) || URL_PUNCT.includes(token)) this[target] += token;
     this.error = '';
   }
 
@@ -72,7 +83,10 @@ export function creationButtons(draft: XrCreation): Array<{id:string;label:strin
     { id: 'create:mode', label: draft.mode === 'link' ? 'Mode: link' : 'Mode: note' },
     { id: 'create:field-title', label: draft.field === 'title' ? '• Typing title' : 'Type title' },
     { id: 'create:field-text', label: draft.field === 'text' ? '• Typing URL/note' : 'Type URL/note' },
-    ...KEYS.map((k) => ({ id: 'key:' + k, label: k === 'space' ? 'Space' : k === 'backspace' ? 'Delete' : k })),
+    ...draft.keys.map((k) => ({
+      id: 'key:' + k,
+      label: k === 'space' ? 'Space' : k === 'backspace' ? 'Delete' : k === 'caps' ? (draft.caps ? 'Caps on' : 'Caps') : k,
+    })),
     { id: 'create-kind:', label: draft.kind ? OBJECT_LABELS[draft.kind] : 'Automatic object' },
     ...kinds,
     { id: 'create:submit', label: 'Create object' },
