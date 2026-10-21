@@ -24,6 +24,7 @@ export class TutorialView {
     this.card.setAttribute('aria-label','Practice tutorial');
     this.overlay.append(this.highlight, this.card); document.body.append(this.overlay);
     document.addEventListener('palace-tutorial', event => {
+      if (!this.store.canEdit) return;
       const detail = (event as CustomEvent<string>).detail;
       if (detail === 'replay') this.picker();
       else if (detail === 'start') this.start('bookmarks');
@@ -32,7 +33,7 @@ export class TutorialView {
       else this.notice(detail);
     });
     document.addEventListener('palace-import', event => {
-      if (this.state.lesson !== 'bookmarks') return;
+      if (!this.store.canEdit || this.state.lesson !== 'bookmarks') return;
       const {entries,added,placed} = (event as CustomEvent<{entries:BookmarkEntry[];added:number;placed:number}>).detail;
       this.result = `${added} added · ${placed} placed · ${added-placed} to Inbox. Folder tags: ${[...new Set(entries.map(e=>e.folder).filter(Boolean))].join(', ') || 'none'}.`;
       if (!entries.length && !added) this.accept('import-empty');
@@ -51,6 +52,7 @@ export class TutorialView {
   replay(lesson?: LessonId): void { if (lesson) this.start(lesson); else this.picker(); }
   /** Only non-mutating control events are trusted here. Successful mutations are observed below. */
   notice(event: string): void {
+    if (!this.store.canEdit) return;
     if (!this.state.lesson) return;
     if (event==='theme-applied' && this.store.lastCommand!=='applyLook') return;
     if (['open-add','open-rooms','open-style','typed-title','typed-content','kind-chosen','create-invalid','create-cancel','inbox-open','theme-applied'].includes(event)) this.accept(event);
@@ -78,6 +80,7 @@ export class TutorialView {
     this.onVr?.('welcome');
   }
   private picker(): void {
+    if (!this.store.canEdit) return;
     this.goToRoom(); this.overlay.hidden = false; this.card.replaceChildren();
     Object.assign(this.card.style,{top:'72px',bottom:'auto',maxHeight:'60vh'});
     const title = document.createElement('h2'); title.textContent = 'Practice lessons'; this.card.append(title);
@@ -85,6 +88,7 @@ export class TutorialView {
     this.card.append(button('Go to room',()=>this.goToRoom()));
   }
   private start(lesson: LessonId): void {
+    if (!this.store.canEdit) return;
     const status = this.state.status === 'fresh' ? 'fresh' : this.state.status;
     this.busy = true; this.state = skip(this.state); this.store.beginPractice();
     this.practiceId = null; this.contentId = null; this.result = ''; this.overflow.clear();
@@ -157,6 +161,8 @@ export class TutorialView {
     else { this.card.style.bottom='100px'; this.card.style.maxHeight=`${Math.min(innerHeight*.45,Math.max(100,below))}px`; }
   }
   private observeStore(): void {
+    if (!this.store.canEdit) { this.overlay.hidden = true; this.highlight.hidden = true; this.capture(); return; }
+    if (this.state.lesson && this.overlay.hidden) { this.capture(); this.render(); }
     if (this.busy || !this.state.lesson || !this.store.practicing || !this.previous) return;
     const old=JSON.parse(this.previous) as Store['state'], now=this.store.state;
     const event=currentStep(this.state)?.event;
