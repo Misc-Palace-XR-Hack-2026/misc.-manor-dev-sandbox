@@ -7,7 +7,7 @@ A room belongs to one person. The fixed set of room slots:
 | Room ID | Display Name | Seed Repo Room | Purpose |
 |---------|--------------|----------------|---------|
 | guest | Guest room | — | Landing room for new users; starts EMPTY locally |
-| german | German's room | sample | Dev personal room (placeholder template for now) |
+| german | German's room | german | Dev personal room |
 | matt | Matt's room | vinyl-lounge | Dev personal room |
 | levi | Levi's room | creative-atelier | Dev personal room |
 | jawan | Jawan's room | garden-notebook | Dev personal room |

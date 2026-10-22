@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { Store } from '../core/store';
 import type { ObjectKind } from '../core/types';
 import type { RoomLayout } from '../core/layout';
-import { animateIgnite } from './ignite-objects';
+import { animateIgniteNodes, collectIgnite } from './ignite-objects';
 import { buildObject } from './objects';
 import { applyLampLightBudget } from './cozy-objects';
 import { disposeGroup } from './resources';
@@ -77,6 +77,15 @@ interface Flight {
   onLand?: () => void;
 }
 
+function createRoomRenderer(): THREE.WebGLRenderer {
+  try {
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    if (renderer.getContext()) return renderer;
+    renderer.dispose();
+  } catch { /* the high-performance context can fail; the default one is the same picture */ }
+  return new THREE.WebGLRenderer({ antialias: true });
+}
+
 export class RoomView {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -90,6 +99,10 @@ export class RoomView {
   private flights = new Map<string, Flight>();
   private markers = new Map<string, THREE.Mesh>();
   private raycaster = new THREE.Raycaster();
+  private padPoint = new THREE.Vector3();
+  private padNdc = new THREE.Vector2();
+  private igniteNodes: THREE.Object3D[] = [];
+  private reducedMotion = false;
   private tooltip: HTMLDivElement;
   private downAt: { x: number; y: number; pointerId: number } | null = null;
   private clickAt: PointerEvent | null = null;
@@ -116,10 +129,11 @@ export class RoomView {
   private demo: DemoHooks | null = null;
 
   constructor(private container: HTMLElement, private store: Store, rooms: NeighborhoodRoom[] = []) {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer = createRoomRenderer();
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    this.bindReducedMotion();
     container.appendChild(this.renderer.domElement);
     this.surfaceError.className = 'surface-render-error';
     this.surfaceError.setAttribute('role','alert');
@@ -242,7 +256,7 @@ export class RoomView {
    * then rests as usual. Instant under reduced motion.
    */
   flyIn(repIds: readonly string[], from: THREE.Vector3, { delay = 0, stagger = 0.18, duration = 0.95 } = {}): void {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (this.reducedMotion) return;
     for (const id of this.flights.keys()) if (!this.objects.has(id)) this.flights.delete(id);
     const now = performance.now() / 1000;
     const start = now + delay;
@@ -261,7 +275,7 @@ export class RoomView {
    * reduced motion.
    */
   flyOut(repId: string, to: THREE.Vector3, duration = 0.5, onLand?: () => void): void {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (this.reducedMotion) {
       onLand?.();
       return;
     }
@@ -388,9 +402,15 @@ export class RoomView {
       floor: new THREE.MeshStandardMaterial({ color: palette.floor, roughness: 0.95 }),
       accent: new THREE.MeshStandardMaterial({ color: palette.accent, roughness: 0.9 }),
     };
+    const anisotropy = this.surfaceAnisotropy();
     for (const target of ['floor','wall'] as const) {
       const selection = surfaces?.[target];
-      if (selection) { materials[target].map = surfaceTexture(target,selection,error); materials[target].color.setHex(0xffffff); }
+      if (selection) {
+        const map = surfaceTexture(target, selection, error);
+        map.anisotropy = anisotropy;
+        materials[target].map = map;
+        materials[target].color.setHex(0xffffff);
+      }
     }
     for (const b of layout.boxes) {
       const mesh = new THREE.Mesh(surfaceGeometry(b.size,b.min), materials[b.material]);
@@ -436,9 +456,26 @@ export class RoomView {
     texture.offset.set((1-texture.repeat.x)/2,(1-texture.repeat.y)/2);
   }
 
+  private bindReducedMotion(): void {
+    if (typeof matchMedia !== 'function') return;
+    const query = matchMedia('(prefers-reduced-motion: reduce)');
+    const apply = () => { this.reducedMotion = query.matches; };
+    apply();
+    query.addEventListener('change', apply);
+  }
+
+  private surfaceAnisotropy(): number {
+    try {
+      return Math.min(8, this.renderer.capabilities.getMaxAnisotropy() || 1);
+    } catch {
+      return 1;
+    }
+  }
+
   private resize(): void {
     const w = this.container.clientWidth || 1;
     const h = this.container.clientHeight || 1;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.setSize(w, h);
     const aspect = w / h;
     this.camera.left = (-this.viewHeight * aspect) / 2;
@@ -529,6 +566,7 @@ export class RoomView {
       const color = !occupant ? 0xfff2b0 : occupant === this.store.selectedId ? 0x9be39b : 0xff9ec4;
       (m.material as THREE.MeshBasicMaterial).color.setHex(color);
     }
+    this.igniteNodes = collectIgnite(this.objectsGroup);
   }
 
   private tick(t: number): void {
@@ -541,10 +579,10 @@ export class RoomView {
       const rect=this.renderer.domElement.getBoundingClientRect();
       for (const [id,marker] of this.markers) {
         if (this.store.repAt(id)) continue;
-        const point=marker.getWorldPosition(new THREE.Vector3()).project(this.camera);
+        const point=marker.getWorldPosition(this.padPoint).project(this.camera);
         const x=rect.left+(point.x+1)*rect.width/2, y=rect.top+(1-point.y)*rect.height/2;
         if (point.z>1 || x<40 || x>innerWidth-40 || y<110 || y>innerHeight-100) continue;
-        this.raycaster.setFromCamera(new THREE.Vector2(point.x,point.y),this.camera);
+        this.raycaster.setFromCamera(this.padNdc.set(point.x, point.y),this.camera);
         if(this.raycaster.intersectObjects(this.objectsGroup.children,true).length) continue;
         if(this.raycaster.intersectObjects(this.markerGroup.children,false)[0]?.object.userData.slotId!==id) continue;
         this.practicePad.hidden=false;
@@ -552,7 +590,7 @@ export class RoomView {
         break;
       }
     }
-    animateIgnite(this.objectsGroup, t, window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    if (this.igniteNodes.length) animateIgniteNodes(this.igniteNodes, t, this.reducedMotion);
     const selected = this.demo?.liftSelected === false ? null : this.store.selectedId;
     for (const [id, e] of this.objects) {
       const flight = this.flights.get(id);

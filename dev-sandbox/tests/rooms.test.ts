@@ -123,7 +123,7 @@ test('seedRoom creates proper room instances', () => {
   curioused.owner = 'Test';
   curioused.contentItems.push({ id: 'ci1', type: 'link', title: 'Test', sourceRef: 'https://example.com', tags: [], sourceKind: 'url', createdAt: new Date().toISOString() });
 
-  const german = seedRoom('german', { 'sample': curioused });
+  const german = seedRoom('german', { 'german': curioused });
   assert.equal(german.id, 'german');
   assert.equal(german.owner, "German's room");
   assert.equal(german.contentItems.length, 1);

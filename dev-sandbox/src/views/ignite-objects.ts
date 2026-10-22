@@ -81,11 +81,22 @@ export const igniteBuilders={
   ];
  }
 };
-/** No timers or shared materials: removing a model stops its animation immediately. */
-export function animateIgnite(root:THREE.Object3D,t:number,reducedMotion=false):void {
- let lights=0;
+/** Nodes that actually move. The view caches this so an idle room does not walk the whole graph every frame. */
+export function collectIgnite(root:THREE.Object3D):THREE.Object3D[] {
+ const nodes:THREE.Object3D[]=[];
  root.traverse(o=>{
+  if((o.name==='fire-light' && o instanceof THREE.PointLight) || typeof o.userData.animate==='function') nodes.push(o);
+ });
+ return nodes;
+}
+/** No timers or shared materials: removing a model stops its animation immediately. */
+export function animateIgniteNodes(nodes:readonly THREE.Object3D[],t:number,reducedMotion=false):void {
+ let lights=0;
+ for(const o of nodes){
   if(o.name==='fire-light' && o instanceof THREE.PointLight) o.intensity=lights++<4?.65:0;
   if(typeof o.userData.animate==='function') o.userData.animate(reducedMotion?0:t);
- });
+ }
+}
+export function animateIgnite(root:THREE.Object3D,t:number,reducedMotion=false):void {
+ animateIgniteNodes(collectIgnite(root),t,reducedMotion);
 }

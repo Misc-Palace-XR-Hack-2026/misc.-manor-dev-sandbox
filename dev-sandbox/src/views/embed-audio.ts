@@ -1,9 +1,12 @@
 import type { EmbedProvider } from '../core/preview';
 
-// Provider-specific transports from official Vimeo player.js and YouTube www-widgetapi.js.
-// See docs/audio-coordination.md: no generic media messages or SDK/sandbox injection.
+// Provider-specific transports from official Vimeo player.js, YouTube www-widgetapi.js,
+// and SoundCloud Widget API. See docs/audio-coordination.md: no generic media messages
+// or SDK/sandbox injection.
 const VIMEO_ORIGIN = 'https://player.vimeo.com';
+const SOUNDCLOUD_ORIGIN = 'https://w.soundcloud.com';
 const events = ['play', 'pause', 'ended'] as const;
+const soundcloudEvents = ['play', 'pause', 'finish'] as const;
 type Registration = {
   src: string; origin: string; provider: EmbedProvider; id: number;
   playing: boolean; ready: boolean; load: () => void;
@@ -28,7 +31,9 @@ export function supportsEmbedAudio(provider: EmbedProvider, src: string): boolea
   const url = new URL(src);
   return (provider === 'vimeo' && url.origin === VIMEO_ORIGIN && /^\/video\/\d+$/.test(url.pathname)) ||
     (provider === 'youtube' && ['https://www.youtube.com', 'https://www.youtube-nocookie.com'].includes(url.origin) &&
-      /^\/embed\/[\w-]{11}$/.test(url.pathname));
+      /^\/embed\/[\w-]{11}$/.test(url.pathname)) ||
+    (provider === 'soundcloud' && url.origin === SOUNDCLOUD_ORIGIN && /^\/player\/?$/.test(url.pathname) &&
+      url.searchParams.has('url'));
 }
 
 function sendVimeo(frame: HTMLIFrameElement, method: string, value?: string): void {
@@ -37,6 +42,10 @@ function sendVimeo(frame: HTMLIFrameElement, method: string, value?: string): vo
 
 function sendYouTube(frame: HTMLIFrameElement, state: Registration, payload: object): void {
   frame.contentWindow?.postMessage(JSON.stringify({ ...payload, id: state.id, channel: 'widget' }), state.origin);
+}
+
+function sendSoundCloud(frame: HTMLIFrameElement, method: string, value?: string): void {
+  frame.contentWindow?.postMessage(JSON.stringify({ method, ...(value === undefined ? {} : { value }) }), SOUNDCLOUD_ORIGIN);
 }
 
 function unregister(frame: HTMLIFrameElement): void {
@@ -68,7 +77,11 @@ export function registerEmbedAudio(frame: HTMLIFrameElement, provider: EmbedProv
       notify();
       if (frame.src !== state.src) { unregister(frame); return; }
       if (provider === 'vimeo') sendVimeo(frame, 'ping');
-      else {
+      else if (provider === 'soundcloud') {
+        const listen = () => { for (const name of soundcloudEvents) sendSoundCloud(frame, 'addEventListener', name); };
+        listen();
+        state.retry = setInterval(listen, 250);
+      } else {
         // Like the official widget, retry listening until the asynchronously booting player responds.
         const listen = () => sendYouTube(frame, state, { event: 'listening' });
         listen();
@@ -111,6 +124,20 @@ export function registerEmbedAudio(frame: HTMLIFrameElement, provider: EmbedProv
       if (payload.info === 1) registration.playing = true;
       else if (payload.info === 0 || payload.info === 2) registration.playing = false;
       else return; // buffering/cued/unstarted must not clear an active player's pause reason
+    } else if (registration.provider === 'soundcloud') {
+      // Official Widget API: JSON { method, value } from https://w.soundcloud.com.
+      if (payload.method === 'ready') {
+        clearInterval(registration.retry);
+        if (!registration.ready) {
+          registration.ready = true;
+          for (const name of soundcloudEvents) sendSoundCloud(active, 'addEventListener', name);
+        }
+        return;
+      }
+      if (payload.method !== 'play' && payload.method !== 'pause' && payload.method !== 'finish') return;
+      clearInterval(registration.retry);
+      registration.ready = true;
+      registration.playing = payload.method === 'play';
     } else {
       if (payload.event === 'ready' || payload.method === 'ping') {
         if (!registration.ready) {
