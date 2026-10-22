@@ -8,6 +8,7 @@ import { INTRO_OBJECTS } from './intro-objects';
 
 /** The visitor's saved room. The 'demo-' prefix keeps it in the demo's own storage (see roomKeys). */
 export const DEMO_ROOM_ID = 'demo-visit';
+export const DEMO_OWNER = 'My room';
 
 /** Where the starter objects begin: three floor slots in a row in front of the bench. */
 export const TRAY_SLOTS = ['floor-7', 'floor-8', 'floor-9'] as const;
@@ -19,7 +20,7 @@ export const TUTORIAL_SLOTS: ReadonlySet<string> = new Set([...TRAY_SLOTS, ...SH
 export const repIdFor = (introId: string): string => `rep-${introId}`;
 
 export function seedDemoRoom(): RoomState {
-  const room = newRoom('Visitor');
+  const room = newRoom(DEMO_OWNER);
   const createdAt = new Date().toISOString();
   INTRO_OBJECTS.forEach((o, i) => {
     room.contentItems.push({
@@ -39,6 +40,18 @@ export function hasSavedDemoRoom(): boolean {
   } catch {
     return false; // storage is blocked: nothing was kept, so treat it as a first visit
   }
+}
+
+/**
+ * Old demo saves used owner 'Visitor'. Keep showing 'My room' without breaking the saved content.
+ * Returns true when the room was changed so callers can persist the repaired owner label.
+ */
+export function normalizeDemoOwner(room: RoomState): boolean {
+  if (/^visitor$/i.test((room.owner ?? '').trim())) {
+    room.owner = DEMO_OWNER;
+    return true;
+  }
+  return false;
 }
 
 /** The tutorial is done once every starter object stands on the bench or shelf. */

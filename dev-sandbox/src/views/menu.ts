@@ -498,8 +498,8 @@ export class MenuView {
       repo.value = '';
       if (!room) return;
       try {
-        this.store.replaceState(room.data);
-        this.flash(`Loaded ${room.name}.`);
+        this.store.visit(room.data, room.name);
+        this.flash(`Opened ${room.name} as a visit. Use Return home to get back to your saved room.`);
       } catch (e) {
         this.flash(`Could not load ${room.name}: ${e instanceof Error ? e.message : String(e)}`);
       }
