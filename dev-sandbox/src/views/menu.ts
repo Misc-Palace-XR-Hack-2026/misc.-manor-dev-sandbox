@@ -8,7 +8,7 @@ import { previewOpenUrl } from '../core/preview';
 import { SHOW_PREVIEW_BUTTON } from '../core/demo-flags';
 import { safeUrl } from '../core/content';
 import { Store } from '../core/store';
-import { ROOM_DIRECTORY, openRoom, seedRoom } from '../core/rooms';
+import { ROOM_DIRECTORY, isDemoHomeAlias, openRoom, seedRoom } from '../core/rooms';
 import { THEMES } from '../core/themes';
 import { CONTENT_TYPES, OBJECT_KINDS, OBJECT_LABELS, type ContentType, type ObjectKind } from '../core/types';
 import { buildKindInventory } from './kind-picker';
@@ -228,6 +228,14 @@ export class MenuView {
 
   private switchTo(id: string, label: string): void {
     if (id === this.store.roomId) { this.closeSheets(); return; }
+    if (isDemoHomeAlias(this.store.roomId, id)) {
+      const wasVisiting = Boolean(this.store.visiting);
+      if (wasVisiting) this.store.returnHome();
+      document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: wasVisiting ? 'returned' : 'switched' }));
+      this.flash('Back to My room.');
+      this.closeSheets();
+      return;
+    }
     try {
       // openRoom() refreshes a stale showcase save (backing the old one up) before the store reads it.
       this.store.switchRoom(id, openRoom(id, this.repo));
