@@ -29,7 +29,7 @@ class XrTeleportPillar {
   private readonly sparkSeed: Array<{ a: number; r: number; speed: number; y: number }>;
   private readonly wisps: Array<{ sprite: THREE.Sprite; phase: number }>;
   private readonly light: THREE.PointLight;
-  constructor(private radius: number, private height: number, interactive = false) {
+  constructor(private radius: number, private height: number, interactive = false, color = TELEPORT_TEAL, highlight = TELEPORT_MINT) {
     this.group.add(this.float);
     const glow = (color: number, map: THREE.Texture, opacity: number, side: THREE.Side = THREE.FrontSide) =>
       new THREE.MeshBasicMaterial({
@@ -37,30 +37,30 @@ class XrTeleportPillar {
       });
     const dot = this.dotTexture();
 
-    this.floorGlowMat = glow(TELEPORT_TEAL, dot, 0.45);
+    this.floorGlowMat = glow(color, dot, 0.45);
     const floorGlow = new THREE.Mesh(new THREE.PlaneGeometry(radius * 4, radius * 4).rotateX(-Math.PI / 2), this.floorGlowMat);
     floorGlow.position.y = 0.012;
     floorGlow.renderOrder = 5;
 
-    this.runeMat = glow(TELEPORT_TEAL, this.runeTexture(), 0.95);
+    this.runeMat = glow(color, this.runeTexture(), 0.95);
     const runes = new THREE.Mesh(new THREE.PlaneGeometry(radius * 2, radius * 2).rotateX(-Math.PI / 2), this.runeMat);
     runes.position.y = 0.02;
     runes.renderOrder = 6;
 
-    this.innerRingMat = new THREE.MeshBasicMaterial({ color: TELEPORT_MINT, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+    this.innerRingMat = new THREE.MeshBasicMaterial({ color: highlight, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
     const innerRing = new THREE.Mesh(new THREE.RingGeometry(radius * 0.52, radius * 0.6, 64).rotateX(-Math.PI / 2), this.innerRingMat);
     innerRing.position.y = 0.026;
     innerRing.renderOrder = 6;
 
     const columnTex = this.columnTexture();
     columnTex.wrapS = THREE.RepeatWrapping;
-    this.veilMat = glow(TELEPORT_TEAL, columnTex, 0.55, THREE.DoubleSide);
+    this.veilMat = glow(color, columnTex, 0.55, THREE.DoubleSide);
     const veil = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.62, radius * 0.62, height, 40, 1, true), this.veilMat);
     veil.position.y = height / 2;
     veil.renderOrder = 7;
 
     const coreTex = this.columnTexture();
-    this.coreMat = glow(TELEPORT_MINT, coreTex, 0.42, THREE.DoubleSide);
+    this.coreMat = glow(highlight, coreTex, 0.42, THREE.DoubleSide);
     const core = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.24, radius * 0.34, height * 0.8, 28, 1, true), this.coreMat);
     core.position.y = height * 0.4;
     core.renderOrder = 7;
@@ -76,23 +76,23 @@ class XrTeleportPillar {
     this.sparkGeo = new THREE.BufferGeometry();
     this.sparkGeo.setAttribute('position', new THREE.BufferAttribute(this.sparkPos, 3));
     this.sparkMat = new THREE.PointsMaterial({
-      color: TELEPORT_MINT, map: dot, size: Math.max(0.06, radius * 0.14), sizeAttenuation: true, transparent: true, opacity: 0.9,
+      color: highlight, map: dot, size: Math.max(0.06, radius * 0.14), sizeAttenuation: true, transparent: true, opacity: 0.9,
       blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
     });
     const sparkPoints = new THREE.Points(this.sparkGeo, this.sparkMat);
     sparkPoints.renderOrder = 8;
     sparkPoints.frustumCulled = false;
 
-    const wispMat = new THREE.SpriteMaterial({ color: TELEPORT_TEAL, map: dot, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+    const wispMat = new THREE.SpriteMaterial({ color, map: dot, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
     this.wisps = [0, Math.PI].map((phase) => {
       const sprite = new THREE.Sprite(wispMat);
-      sprite.scale.setScalar(radius * 0.9);
+      sprite.scale.setScalar(Math.min(radius * 0.9, height * 0.4));
       sprite.renderOrder = 8;
       this.float.add(sprite);
       return { sprite, phase };
     });
 
-    this.light = new THREE.PointLight(TELEPORT_TEAL, 3.4, Math.max(3.2, height * 1.8), 1.6);
+    this.light = new THREE.PointLight(color, 3.4, Math.max(3.2, height * 1.8), 1.6);
     this.light.position.y = Math.min(0.9, height * 0.5);
 
     const hit = new THREE.Mesh(
@@ -131,9 +131,9 @@ class XrTeleportPillar {
     this.runeMat.opacity = 0.9 * pulse;
     this.light.intensity = 3.4 * pulse;
     if (still) return;
-    this.float.position.y = (1 + Math.sin(t * 1.3)) * 0.03;
-    const runes = this.float.children[1];
-    const innerRing = this.float.children[2];
+    this.float.position.y = (1 + Math.sin(t * 1.3)) * Math.min(0.03, this.height * 0.04);
+    const runes = this.float.children[3];
+    const innerRing = this.float.children[4];
     runes.rotation.y += dt * 0.24;
     innerRing.rotation.y -= dt * 0.55;
     for (const s of this.sparkSeed) {
@@ -236,9 +236,9 @@ export class XrSession {
   private raycaster = new THREE.Raycaster();
   private temp = new THREE.Matrix4();
   private controllers: THREE.Group[] = [];
-  private marker = new XrTeleportPillar(0.24, 1.45);
+  private marker = new XrTeleportPillar(0.24, 0.12);
   private floors = new THREE.Group();
-  private loftBeacon = new XrTeleportPillar(0.34, 1.9, true);
+  private loftBeacon = new XrTeleportPillar(0.34, 1.9, true, 0x49ed65, 0xbaffc2);
   private panel: XrPanel;
   private hoverLabel = new XrHoverLabel();
   private objectMenu: XrObjectMenu;
