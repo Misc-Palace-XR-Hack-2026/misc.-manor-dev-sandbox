@@ -281,6 +281,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       last = now;
       jukebox.update(t, dt);
       box.update(t, dt);
+      if (skippingIntro) return;
       if (mode === 'intro') {
         elapsed = Math.min(INTRO_DURATION, elapsed + dt);
         const f = introFrame(elapsed, currentView());
@@ -305,6 +306,19 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       syncHeld(t);
     },
   };
+
+  /** Skip the walk-in only: cut through black to the tutorial view, where the tutorial starts as usual. */
+  let skippingIntro = false;
+  function skipIntro(): void {
+    if (mode !== 'intro' || skippingIntro) return;
+    skippingIntro = true;
+    black.style.transition = 'opacity 0.45s ease';
+    black.style.opacity = '1';
+    window.setTimeout(() => {
+      elapsed = INTRO_DURATION;
+      skippingIntro = false;
+    }, reduced ? 0 : 480);
+  }
 
   function beginTutorial(): void {
     if (mode !== 'intro') return;
@@ -357,8 +371,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
 
   /** Lift the lock, stay in first person and bring in the edit tools. The iso overview is not in the demo yet. */
   function release(): void {
-    if (mode === 'walk') return;
-    const fromIntro = mode === 'intro';
+    if (mode !== 'tutorial') return;
     window.clearTimeout(doneTimer);
     mode = 'walk';
     markIntroSeen(storage);
@@ -369,23 +382,9 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     dock.remove();
     hint.classList.remove('demo-hint-on');
     door.group.visible = false;
-    if (fromIntro) box.group.visible = false;
-    else if (!boxGone) box.vanish();
+    if (!boxGone) box.vanish();
     boxGone = true;
-    if (!fromIntro) {
-      startWalking();
-      return;
-    }
-    // Skipped mid walk-in: cut through black to the tutorial view, then walk from there.
-    black.style.transition = 'opacity 0.45s ease';
-    black.style.opacity = '1';
-    window.setTimeout(() => {
-      const v = currentView();
-      aimAt(v.camera, lookAround(v, 0, 0), v.fov);
-      door.veil.opacity = 0;
-      startWalking();
-      black.style.opacity = '0';
-    }, reduced ? 0 : 480);
+    startWalking();
   }
 
   // The dock shows the selected object's name and lets the visitor swap its object kind (the link and text stay fixed).
@@ -410,7 +409,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     checkDone();
     syncDock();
   });
-  skip.addEventListener('click', release);
+  skip.addEventListener('click', () => (mode === 'intro' ? skipIntro() : release()));
 
   // ---- start ----------------------------------------------------------------
   view.setDemo(hooks);
