@@ -96,3 +96,19 @@ test('in demo mode, selecting My room returns home instead of switching to sandb
   assert.equal(store.roomId, 'demo-visit');
   assert.equal(JSON.stringify(store.state), before);
 });
+
+test('in demo mode, selecting a built-out room is a reversible visit (not a room switch)', () => {
+  const store = new Store(newRoom('My room'), 'demo-visit');
+  const before = JSON.stringify(store.state);
+  const result = runPanelAction(store, 'room:matt', repoRooms);
+  assert.equal(result.tutorialEvent, 'switched');
+  assert.equal(store.roomId, 'demo-visit', 'demo room id must stay pinned');
+  assert.equal(store.visiting, 'matt');
+  assert.notEqual(JSON.stringify(store.state), before, 'visit should show the selected built room');
+
+  const back = runPanelAction(store, 'room:guest', repoRooms);
+  assert.equal(back.tutorialEvent, 'returned');
+  assert.equal(store.roomId, 'demo-visit');
+  assert.equal(store.visiting, null);
+  assert.equal(JSON.stringify(store.state), before, 'return home restores the user\'s My room state');
+});

@@ -8,7 +8,7 @@ import { previewOpenUrl } from '../core/preview';
 import { SHOW_PREVIEW_BUTTON } from '../core/demo-flags';
 import { safeUrl } from '../core/content';
 import { Store } from '../core/store';
-import { ROOMS_PICKER_ORDER, displayRoomName, isDemoHomeAlias, openRoom, seedRoom } from '../core/rooms';
+import { ROOMS_PICKER_ORDER, displayRoomName, isDemoHomeAlias, isDemoSessionRoom, openRoom, seedRoom } from '../core/rooms';
 import { THEMES } from '../core/themes';
 import { CONTENT_TYPES, OBJECT_KINDS, OBJECT_LABELS, type ContentType, type ObjectKind } from '../core/types';
 import { buildKindInventory } from './kind-picker';
@@ -241,6 +241,14 @@ export class MenuView {
       return;
     }
     try {
+      if (isDemoSessionRoom(this.store.roomId) && id !== 'guest') {
+        // In the public demo, dedicated rooms are visits so My room content is never replaced.
+        this.store.visit(seedRoom(id, this.repo), id);
+        document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'switched' }));
+        this.flash(`Visiting ${label}. Choose My room to return.`);
+        this.closeSheets();
+        return;
+      }
       // openRoom() refreshes a stale showcase save (backing the old one up) before the store reads it.
       this.store.switchRoom(id, openRoom(id, this.repo));
       document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'switched' }));
