@@ -89,6 +89,18 @@ try {
     const p = edit.getWorldPosition(new THREE.Vector3());
     const normal = new THREE.Vector3(0,0,1).applyQuaternion(menu.group.quaternion);
     const hit = menu.hit(new THREE.Raycaster(p.clone().add(normal), normal.clone().negate()));
+    const toolbar = menu.group.getObjectByName('xr-object-toolbar');
+    const actionButtons = menu.group.children.filter(o => o.userData.actionId);
+    const gap = actionButtons[0].position.clone().add(actionButtons[1].position).multiplyScalar(.5);
+    const gapWorld = menu.group.localToWorld(gap.clone());
+    const gapRay = new THREE.Raycaster(gapWorld.clone().add(normal), normal.clone().negate());
+    const toolbarGapHit = menu.hit(gapRay)?.object.userData.actionId ?? null;
+    const toolbarSceneHits = gapRay.intersectObject(toolbar).length;
+    const toolbarCanvas = toolbar.material.map.image;
+    const toolbarAlpha = toolbarCanvas.getContext('2d').getImageData(toolbarCanvas.width / 2, toolbarCanvas.height / 2, 1, 1).data[3];
+    const pillCanvas = edit.material.map.image;
+    const pillCornerAlpha = pillCanvas.getContext('2d').getImageData(10, 10, 1, 1).data[3];
+    const pillShapes = actionButtons.every(b => b.geometry.type === 'ShapeGeometry');
     menu.hide();
     const hover = new XrHoverLabel(); room.scene.add(hover.group);
     hover.show(inspectPreview(store, id), origin.clone().add(new THREE.Vector3(0,.4,0)), room.xr.camera);
@@ -130,11 +142,45 @@ try {
       glassScene.background = new THREE.Color(color); fixtureRenderer.render(glassScene, eye);
       shots['hud-glass-'+name+'-background'] = fixtureRenderer.domElement.toDataURL();
     }
+    // Close-up of production meshes, not a CSS approximation of the toolbar.
+    const toolbarScene = new THREE.Scene();
+    toolbarScene.add(toolbar.clone(), ...actionButtons.map(button => button.clone()));
+    const toolbarEye = new THREE.OrthographicCamera(-.66, .66, .165, -.165, .01, 10);
+    toolbarEye.position.z = 2;
+    fixtureRenderer.setSize(1600, 400);
+    for (const [name, color] of [['light',0xf5eee3],['dark',0x13161d]]) {
+      toolbarScene.background = new THREE.Color(color);
+      fixtureRenderer.render(toolbarScene, toolbarEye);
+      shots['hud-pill-toolbar-'+name] = fixtureRenderer.domElement.toDataURL();
+    }
+    const linkId = store.addItem({ title: 'Reference link', sourceRef: 'https://example.com', type: 'auto', kind: 'notebook' });
+    store.select(linkId);
+    menu.follow(origin, room.xr.camera);
+    menu.group.updateMatrixWorld(true);
+    const linkButtons = menu.group.children.filter(o => o.userData.actionId);
+    const linkLabels = linkButtons.map(button => button.userData.label);
+    const open = linkButtons.find(button => button.userData.actionId === 'open:link');
+    const openPosition = open.getWorldPosition(new THREE.Vector3());
+    const openHit = menu.hit(new THREE.Raycaster(openPosition.clone().add(normal), normal.clone().negate()))?.object.userData.actionId;
+    toolbarScene.clear();
+    toolbarScene.add(menu.group.getObjectByName('xr-object-toolbar').clone(), ...linkButtons.map(button => button.clone()));
+    toolbarEye.left = -.8; toolbarEye.right = .8; toolbarEye.top = .2; toolbarEye.bottom = -.2;
+    toolbarEye.updateProjectionMatrix();
+    toolbarScene.background = new THREE.Color(0xf5eee3);
+    fixtureRenderer.render(toolbarScene, toolbarEye);
+    shots['hud-pill-toolbar-link-light'] = fixtureRenderer.domElement.toDataURL();
     fixtureRenderer.dispose();
     room.xr.onEnd(); room.renderer.dispose(); host.remove();
-    return { shots, pages, controls, labels, hoveredTextureVersion, clearedTextureVersion, whiteTint, hit: hit?.object.userData.actionId, contrasts, alpha, transmitted, glassMaterials };
+    return { shots, linkLabels, openHit, toolbarGapHit, toolbarSceneHits, toolbarAlpha, pillCornerAlpha, pillShapes, pages, controls, labels, hoveredTextureVersion, clearedTextureVersion, whiteTint, hit: hit?.object.userData.actionId, contrasts, alpha, transmitted, glassMaterials };
   });
   for (const [name, data] of Object.entries(result.shots)) writeFileSync(join(out, name+'.png'), Buffer.from(data.split(',')[1], 'base64'));
+  assert.deepEqual(result.linkLabels, ['Edit', 'Move', 'Put away', 'Open', 'Close'], 'link actions stay in one capsule');
+  assert.equal(result.openHit, 'open:link', 'Open keeps its ray target');
+  assert.equal(result.toolbarGapHit, null, 'shared capsule leaves button gaps non-interactive');
+  assert.equal(result.toolbarSceneHits, 0, 'decoration does not block recursive scene rays');
+  assert.ok(result.toolbarAlpha >= 94 && result.toolbarAlpha <= 100, 'shared capsule keeps neutral transparent glass');
+  assert.equal(result.pillCornerAlpha, 0, 'full-round button texture has clear corners');
+  assert.equal(result.pillShapes, true, 'button hit geometry is pill-shaped');
   assert.equal(result.labels.filter(id => id === 'page:object').length, 1, 'one unified Edit');
   assert.equal(result.hit, 'page:object', 'rounded buttons retain real ray targets');
   assert.equal(result.whiteTint, 0xffffff, 'hover must not multiply/darken text');

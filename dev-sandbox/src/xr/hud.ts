@@ -35,9 +35,9 @@ export function hudPanel(c: CanvasRenderingContext2D, w: number, h: number): voi
 }
 
 export function hudButton(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number,
-  state: { hover?: boolean; selected?: boolean; primary?: boolean; muted?: boolean; danger?: boolean; floating?: boolean } = {}): void {
+  state: { hover?: boolean; selected?: boolean; primary?: boolean; muted?: boolean; danger?: boolean; floating?: boolean; pill?: boolean } = {}): void {
   const accent = state.danger ? HUD.danger : state.selected ? HUD.warm : HUD.mint;
-  const radius = Math.min(14, h / 3);
+  const radius = state.pill ? h / 2 : Math.min(14, h / 3);
   hudRect(c, x, y, w, h, radius, state.hover ? HUD.hover : state.floating ? 'rgba(18, 20, 24, 0.70)' : HUD.surface);
   rim(c, x + 1, y + 1, w - 2, h - 2, radius, state.hover || state.selected ? 'rgba(255, 255, 255, 0.78)' : HUD.rim);
   if (state.primary || state.selected) hudRect(c, x + 7, y + 14, 3, h - 28, 1.5, accent);
