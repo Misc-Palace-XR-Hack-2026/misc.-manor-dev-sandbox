@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { hudButton } from './hud';
 import type { Store } from '../core/store';
 import { XrPreview } from './preview';
 import { objectActions, objectMenuAnchor, runPanelAction, type PanelActionResult } from './interaction';
@@ -40,9 +41,20 @@ export class XrObjectMenu {
 
   setHover(mesh: THREE.Mesh | null): void {
     if (this.hover === mesh) return;
-    if (this.hover) (this.hover.material as THREE.MeshBasicMaterial).color.set(0x3a3546);
+    if (this.hover) this.paintButton(this.hover, false);
     this.hover = mesh;
-    if (this.hover) (this.hover.material as THREE.MeshBasicMaterial).color.set(0xdba08f);
+    if (this.hover) this.paintButton(this.hover, true);
+  }
+
+  private paintButton(mesh: THREE.Mesh, hovered: boolean): void {
+    const texture = (mesh.material as THREE.MeshBasicMaterial).map as THREE.CanvasTexture;
+    const c = (texture.image as HTMLCanvasElement).getContext('2d')!;
+    c.clearRect?.(0, 0, 384, 160);
+    hudButton(c, 2, 2, 380, 156, { hover: hovered, primary: mesh.userData.actionId === 'page:object', danger: mesh.userData.actionId === 'delete' });
+    c.font = '600 44px system-ui, sans-serif';
+    c.textAlign = 'center';
+    c.fillText(mesh.userData.label, 192, 96, 336);
+    texture.needsUpdate = true;
   }
 
   activate(mesh: THREE.Object3D): void {
@@ -80,13 +92,7 @@ export class XrObjectMenu {
       const canvas = document.createElement('canvas');
       canvas.width = 384;
       canvas.height = 160;
-      const c = canvas.getContext('2d')!;
-      c.fillStyle = '#3a3546';
-      c.fillRect(0, 0, 384, 160);
-      c.fillStyle = '#ece7f5';
-      c.font = '700 48px system-ui, sans-serif';
-      c.textAlign = 'center';
-      c.fillText(action.label, 192, 94, 340);
+
       const texture = new THREE.CanvasTexture(canvas);
       texture.colorSpace = THREE.SRGBColorSpace;
       const mesh = new THREE.Mesh(
@@ -96,6 +102,8 @@ export class XrObjectMenu {
       mesh.position.set(i * 0.28 - span / 2, 0, 0);
       mesh.renderOrder = 21;
       mesh.userData.actionId = action.id;
+      mesh.userData.label = action.label;
+      this.paintButton(mesh, false);
       this.group.add(mesh);
       this.buttons.push(mesh);
     });

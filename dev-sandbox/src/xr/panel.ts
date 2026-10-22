@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { HUD, hudPanel, hudButton } from './hud';
 import type { Store } from '../core/store';
 import { guideActionMatches, inspectPreview, panelButtons, runPanelAction, type NeighborhoodRoom, type PanelActionResult, type PanelPage } from './interaction';
 import { XrCreation, creationActionButtons, creationDoneButtons, creationFormButtons, creationKindButtons, keyLabel, keyWidthUnits, keyboardRows } from './creation';
@@ -129,23 +130,17 @@ export class XrPanel {
   }
 
   setHover(uv: { x: number; y: number } | null, mesh?: THREE.Mesh): void {
-    if (!uv) {
-      this.hover = -1;
-      this.guideHover = -1;
-      return;
+    const nextHover = uv && mesh !== this.guideMesh && this.open ? this.hitIndex(uv) : -1;
+    const nextGuideHover = uv && mesh === this.guideMesh
+      ? this.guideShown.findIndex((b) => Math.abs(b.y - (1 - uv.y) * GH) < ROW / 2) : -1;
+    if (nextHover !== this.hover) {
+      this.hover = nextHover;
+      this.redraw();
     }
-    if (mesh === this.guideMesh) {
-      const y = (1 - uv.y) * GH;
-      this.guideHover = this.guideShown.findIndex((b) => Math.abs(b.y - y) < ROW / 2);
+    if (nextGuideHover !== this.guideHover) {
+      this.guideHover = nextGuideHover;
       this.redrawGuide();
-      return;
     }
-    if (!this.open) {
-      this.hover = -1;
-      return;
-    }
-    this.hover = this.hitIndex(uv);
-    this.redraw();
   }
 
   /** Index into `shown` of the rect the ray lands in, or -1. */
@@ -216,11 +211,10 @@ export class XrPanel {
   ): void {
     const matched = this.matchesGuide(id);
     const active = this.shown.length === this.hover;
-    c.fillStyle = active || matched ? '#99705f' : opts.muted ? '#2c2838' : '#3a3546';
-    c.fillRect(x, y, w, h);
-    c.fillStyle = '#ece7f5';
+    hudButton(c, x, y, w, h, { hover: active, selected: matched || label.startsWith('• ') || (id === 'key:caps' && this.draft.caps),
+      primary: ['create:submit', 'page:create', 'page:object'].includes(id), muted: opts.muted, danger: id === 'delete' });
     c.font = opts.font ?? '28px system-ui, sans-serif';
-    const text = this.clip(c, label, w - 20);
+    const text = this.clip(c, label, w - (opts.center ? 24 : 48));
     if (opts.center) {
       const width = this.textWidth(c, text);
       c.fillText(text, x + (w - width) / 2, y + h / 2 + 11);
@@ -252,25 +246,24 @@ export class XrPanel {
 
   private redraw(): void {
     const c = this.canvas.getContext('2d')!;
-    // The backdrop is 94% opaque, so without a clear the previous page bleeds through.
-    if (typeof c.clearRect === 'function') c.clearRect(0, 0, W, H);
-    c.fillStyle = 'rgba(28, 28, 32, 0.94)';
-    c.fillRect(0, 0, W, H);
-    c.fillStyle = '#ece7f5';
+    hudPanel(c, W, H);
+    c.fillStyle = HUD.text;
     c.font = '700 48px system-ui, sans-serif';
     c.fillText('Misc. Manor', 48, 72);
     c.font = '28px system-ui, sans-serif';
     const preview = this.store.selectedId ? inspectPreview(this.store, this.store.selectedId) : null;
-    c.fillStyle = '#a39cb5';
-    c.fillText(preview?.title || 'Squeeze to toggle this menu', 48, 122);
+    c.fillStyle = HUD.mint;
+    const section = this.page === 'home' ? 'ROOM CONTROL' : this.page === 'create' ? (this.draft.editing ? 'EDIT CONTENT' : 'CREATE OBJECT') : this.page.replaceAll('-', ' ').toUpperCase();
+    c.fillText(section, 48, 122);
     const detail = this.page === 'create' && this.draft.error
       ? this.draft.error
       : preview?.href || preview?.detail || 'Point at an object to see its name and link.';
-    if (this.page === 'create' && this.draft.error) c.fillStyle = '#ffb9a8';
-    c.fillText(detail, 48, 158);
+    c.fillStyle = this.page === 'create' && this.draft.error ? HUD.danger : HUD.muted;
+    const description = this.page === 'create' && this.draft.error ? detail : preview?.title ? preview.title + ' · ' + detail : detail;
+    c.fillText(this.clip(c, description, 928), 48, 158);
     if (this.store.saveError) {
-      c.fillStyle = '#ffb9a8';
-      c.fillText(this.store.saveError, 48, 194);
+      c.fillStyle = HUD.danger;
+      c.fillText(this.clip(c, this.store.saveError, 928), 48, 194);
     }
 
     this.shown = [];
@@ -287,12 +280,18 @@ export class XrPanel {
     const slice = all.slice(start, start + capacity);
     let y = TOP;
     const draw = (id: string, label: string) => {
-      this.button(c, id, label, 48, y - 36, 928, 76);
+      this.button(c, id, label, 48, y - 12, 928, 76);
       y += ROW;
     };
     slice.forEach((button) => draw(button.id, button.label));
     if (start > 0) draw('ui:prev', 'Previous');
     if (start + capacity < all.length) draw('ui:next', 'More');
+    c.fillStyle = HUD.muted;
+    c.font = '24px system-ui, sans-serif';
+    c.fillText('SQUEEZE  /  MENU', 48, 1360);
+    c.textAlign = 'right';
+    c.fillText(`${this.scroll + 1} / ${Math.max(1, Math.ceil(all.length / capacity))}`, 976, 1360);
+    c.textAlign = 'left';
     this.texture.needsUpdate = true;
   }
 
@@ -369,6 +368,7 @@ export class XrPanel {
     const c = this.guideCanvas.getContext('2d')!;
     if (typeof c.clearRect === 'function') c.clearRect(0, 0, GW, GH);
     else c.fillRect(0, 0, GW, GH);
+    const hoveredId = this.guideShown[this.guideHover]?.id;
     this.guideShown = [];
     if (!this.guide?.lesson) {
       this.guideTexture.needsUpdate = true;
@@ -376,21 +376,18 @@ export class XrPanel {
       return;
     }
     const buttons = panelButtons(this.store, 'guide', this.rooms, this.draft, this.guide);
-    c.fillStyle = 'rgba(28, 28, 32, 0.94)';
-    c.fillRect(0, 0, GW, GH);
-    c.fillStyle = '#ece7f5';
+    hudPanel(c, GW, GH);
+    c.fillStyle = HUD.text;
     c.font = '700 36px system-ui, sans-serif';
     c.fillText('Tutorial', 36, 52);
     c.font = '26px system-ui, sans-serif';
     let y = 120;
-    buttons.forEach((button, i) => {
-      const active = i === this.guideHover;
-      c.fillStyle = active ? '#dba08f' : '#3a3546';
+    buttons.forEach((button) => {
+      const active = hoveredId === button.id;
       const words=button.label.split(' '); const lines:string[]=[]; let line='';
       for(const word of words) { if((line+' '+word).length>44){lines.push(line);line=word;} else line+=(line?' ':'')+word; }
       if(line)lines.push(line);
-      c.fillRect(28,y-32,712,Math.max(72,lines.length*36+20));
-      c.fillStyle='#ece7f5';
+      hudButton(c, 28, y-32, 712, Math.max(72,lines.length*36+20), { hover: active, muted: ['guide:status','guide:copy'].includes(button.id) });
       lines.forEach((text,j)=>c.fillText(text,48,y+12+j*36));
       if (!['guide:status','guide:copy'].includes(button.id)) this.guideShown.push({id:button.id,y});
       y+=Math.max(88,lines.length*36+36);

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { HUD, hudPanel, hudRect } from './hud';
 import type { ContentItem } from '../core/types';
 import { buildPreview, youtubeId } from '../core/preview';
 import { mediaArt } from '../core/media-art';
@@ -19,7 +20,7 @@ export class XrPreview {
     this.texture = new THREE.CanvasTexture(this.canvas);
     this.texture.colorSpace = THREE.SRGBColorSpace;
     this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.12, 0.7875),
-      new THREE.MeshBasicMaterial({ map: this.texture, side: THREE.DoubleSide, depthTest: false, depthWrite: false }));
+      new THREE.MeshBasicMaterial({ map: this.texture, side: THREE.DoubleSide, depthTest: false, depthWrite: false, transparent: true }));
     this.mesh.name = 'xr-preview';
     this.mesh.position.y = 0.48;
     this.mesh.renderOrder = 20;
@@ -32,22 +33,22 @@ export class XrPreview {
     const draw = (image?: HTMLImageElement) => {
       if (this.disposed) return;
       const c = this.canvas.getContext('2d')!;
-      c.fillStyle = '#282430'; c.fillRect(0, 0, 1024, 720);
-      c.fillStyle = '#403847'; c.fillRect(24, 24, 976, 280);
+      hudPanel(c, 1024, 720);
+      hudRect(c, 24, 32, 976, 272, 20, HUD.inset);
       if (image) {
         const scale = Math.min(976 / image.naturalWidth, 280 / image.naturalHeight);
         const w = image.naturalWidth * scale, h = image.naturalHeight * scale;
         c.drawImage(image, (1024 - w) / 2, 24 + (280 - h) / 2, w, h);
       } else {
-        c.fillStyle = '#ece7f5'; c.font = '80px system-ui, sans-serif';
+        c.fillStyle = HUD.text; c.font = '80px system-ui, sans-serif';
         c.textAlign = 'center'; c.fillText(art.glyph, 512, 160);
         c.font = '28px system-ui, sans-serif'; c.fillText(art.label, 512, 240, 920);
       }
-      c.textAlign = 'left'; c.fillStyle = '#ece7f5'; c.font = '700 38px system-ui, sans-serif';
+      c.textAlign = 'left'; c.fillStyle = HUD.text; c.font = '700 38px system-ui, sans-serif';
       this.text(c, content.title, 350, 2, 46);
-      c.fillStyle = '#c9bfce'; c.font = '30px system-ui, sans-serif';
+      c.fillStyle = HUD.muted; c.font = '30px system-ui, sans-serif';
       this.text(c, detail, 462, 4, 38);
-      c.fillStyle = '#dba08f'; c.font = '26px system-ui, sans-serif';
+      c.fillStyle = HUD.warm; c.font = '26px system-ui, sans-serif';
       c.fillText(href ? 'Open leaves VR · continues in your browser' : content.sourceKind === 'file' ? 'File reference only · no file bytes stored' : 'Preview · select Close to dismiss', 32, 684, 960);
       this.texture.needsUpdate = true;
     };

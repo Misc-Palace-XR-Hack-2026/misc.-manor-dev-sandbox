@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { HUD, hudPanel } from './hud';
 import type { InspectPreview } from './interaction';
 
 export class XrHoverLabel {
@@ -38,18 +39,24 @@ export class XrHoverLabel {
     this.group.visible = false;
   }
 
+  private fit(c: CanvasRenderingContext2D, value: string): string {
+    if (c.measureText(value).width <= 712) return value;
+    let clipped = value;
+    while (clipped.length && c.measureText(clipped + '…').width > 712) clipped = clipped.slice(0, -1);
+    return clipped + '…';
+  }
+
   private paint(preview: InspectPreview): void {
     const c = this.canvas.getContext('2d')!;
     c.clearRect(0, 0, 768, 256);
-    c.fillStyle = 'rgba(28, 28, 32, 0.92)';
-    c.fillRect(0, 0, 768, 256);
-    c.fillStyle = '#ece7f5';
+    hudPanel(c, 768, 256);
+    c.fillStyle = HUD.text;
     c.font = '700 42px system-ui, sans-serif';
-    c.fillText(preview.title || 'Untitled', 28, 70, 712);
-    c.fillStyle = preview.href ? '#9be39b' : '#a39cb5';
+    c.fillText(this.fit(c, preview.title || 'Untitled'), 28, 70);
+    c.fillStyle = preview.href ? HUD.mint : HUD.muted;
     c.font = '28px system-ui, sans-serif';
-    c.fillText(preview.detail || 'No link', 28, 122, 712);
-    c.fillStyle = '#ece7f5';
+    c.fillText(this.fit(c, preview.detail || 'No link'), 28, 122);
+    c.fillStyle = HUD.text;
     c.font = '24px system-ui, sans-serif';
     c.fillText(preview.href ? 'Trigger to select, then Open link' : 'Trigger to select', 28, 178, 712);
     this.texture.needsUpdate = true;
