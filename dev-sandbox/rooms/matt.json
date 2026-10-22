@@ -77,7 +77,7 @@
       "title": "YouTube playlist",
       "sourceKind": "url",
       "sourceRef": "https://www.youtube.com/watch?v=XRu8zJWARoQ&list=PLEx-1H24sof6xUZGC_gfBDxU1JRbokv8T",
-      "notes": "Matt Davis playlist (watch URL with list=PLEx-1H24sof6xUZGC_gfBDxU1JRbokv8T). Playlist pages are not treated as playable video embeds.",
+      "notes": "WilmU Ani321 IntroTo3D",
       "tags": [
         "video",
         "matt"
@@ -90,7 +90,7 @@
       "title": "YouTube playlist 2",
       "sourceKind": "url",
       "sourceRef": "https://www.youtube.com/watch?v=nW5NKWreRR0&list=PLEx-1H24sof5Eu36zAFmasugh8DmJjzg2",
-      "notes": "Matt Davis playlist (watch URL with list=PLEx-1H24sof5Eu36zAFmasugh8DmJjzg2). Playlist pages are not treated as playable video embeds.",
+      "notes": "Wilmington University - Ani 201 - Reels",
       "tags": [
         "video",
         "matt"
@@ -103,7 +103,7 @@
       "title": "YouTube playlist 3",
       "sourceKind": "url",
       "sourceRef": "https://youtube.com/playlist?list=PL34ED3BB8F4E0FAAA&si=e55QoOxOmn6ACuQY",
-      "notes": "Matt Davis playlist (exact playlist URL including si token). Playlist pages are not treated as playable video embeds.",
+      "notes": "Patchy the Peg-Legged Penguin Pirate",
       "tags": [
         "video",
         "matt"
@@ -249,11 +249,11 @@
     },
     {
       "id": "matt-lamp",
-      "type": "note",
+      "type": "link",
       "title": "Neon lamp",
-      "sourceKind": "note",
-      "sourceRef": "A lamp beside the chair.",
-      "notes": "A lamp for the sit-spot. Does not replace any destination URL.",
+      "sourceKind": "url",
+      "sourceRef": "https://www.youtube.com/watch?v=Ld35lMnFQ10",
+      "notes": "I love lamp",
       "tags": ["matt", "cozy"],
       "createdAt": "2026-10-16T00:00:00.000Z"
     }
@@ -292,7 +292,7 @@
     {
       "id": "matt-object-apollo",
       "contentItemId": "matt-apollo",
-      "objectKind": "notebook"
+      "objectKind": "flyingSaucer"
     },
     {
       "id": "matt-object-arcade",
@@ -302,7 +302,7 @@
     {
       "id": "matt-object-solar-book",
       "contentItemId": "matt-solar-book",
-      "objectKind": "book"
+      "objectKind": "telescope"
     },
     {
       "id": "matt-object-refinery",
@@ -327,7 +327,7 @@
     {
       "id": "matt-object-os",
       "contentItemId": "matt-os",
-      "objectKind": "box"
+      "objectKind": "fireplace"
     },
     {
       "id": "matt-object-youtube-2",
@@ -337,7 +337,7 @@
     {
       "id": "matt-object-youtube-3",
       "contentItemId": "matt-youtube-3",
-      "objectKind": "headphones"
+      "objectKind": "lavaLamp"
     },
     {
       "id": "matt-object-chair",
@@ -356,7 +356,7 @@
     }
   ],
   "placements": [
-    { "representationId": "matt-object-cyber-funk", "slotId": "floor-front-loft-1" },
+    { "representationId": "matt-object-cyber-funk", "slotId": "floor-front-loft-2" },
     { "representationId": "matt-object-neon-arcade", "slotId": "block-1" },
     { "representationId": "matt-object-tree-bar", "slotId": "floor-6" },
     { "representationId": "matt-object-dvgpro", "slotId": "shelf-1" },
@@ -369,7 +369,7 @@
     { "representationId": "matt-object-tinker-lab", "slotId": "loft-4" },
     { "representationId": "matt-object-robot-game", "slotId": "shelf-2" },
     { "representationId": "matt-object-pluto", "slotId": "floor-8" },
-    { "representationId": "matt-object-os", "slotId": "floor-front-loft-2" },
+    { "representationId": "matt-object-os", "slotId": "floor-front-loft-1" },
     { "representationId": "matt-object-youtube-2", "slotId": "bench-3" },
     { "representationId": "matt-object-youtube-3", "slotId": "block-2" },
     { "representationId": "matt-object-chair", "slotId": "floor-3" },

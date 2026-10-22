@@ -6,13 +6,17 @@ import {
   type View,
 } from '../core/intro-timeline';
 import { RoomView, type DemoHooks, type DemoTap } from '../views/room';
+import { REPO_ROOMS } from '../core/repo-rooms';
 import { buildKindInventory } from '../views/kind-picker';
 import { buildObject } from '../views/objects';
 import { disposeGroup } from '../views/resources';
 import { buildJukebox } from './jukebox';
 import { buildCardboardBox } from './cardboard-box';
 import { mountWalkMode } from './walk-mode';
-import { DEMO_ROOM_ID, SHELF_SLOTS, TUTORIAL_SLOTS, inBox, migrateDemoRoom, seedDemoRoom, tutorialDone } from './demo-room';
+import {
+  DEMO_ROOM_ID, SHELF_SLOTS, TUTORIAL_SLOTS, inBox, migrateDemoRoom, normalizeDemoOwner, seedDemoRoom, tutorialDone,
+} from './demo-room';
+import { planIntro } from './intro-gate';
 import { EYE_HEIGHT, poseFromLookAt, type WalkPose } from '../core/walk';
 
 // The demo is one real room (the same RoomView the sandbox uses). Every visit, a scripted walk-in plays inside it and
@@ -113,11 +117,17 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     console.error('demo room', roomKeys(DEMO_ROOM_ID).main, error);
     return;
   }
+  if (normalizeDemoOwner(initial)) {
+    try { localStorage.setItem(roomKeys(DEMO_ROOM_ID).main, JSON.stringify(initial)); }
+    catch { /* storage may be blocked/full; the repaired label still appears for this session */ }
+  }
   const store = new Store(initial, DEMO_ROOM_ID);
-  // Every visit is the full demo: a finished room starts over with a full box.
-  if (tutorialDone(store.state)) store.replaceState(seedDemoRoom());
+  // `/` is always the demo: every visit is an explicit request for the walk-in, from a full box (planIntro reseeds).
+  const plan = planIntro({ explicit: true, introAllowed: true, tutorialDone: tutorialDone(store.state) });
+  if (plan.reseed) store.replaceState(seedDemoRoom());
 
-  const view = new RoomView(container, store, []);
+  // The in-VR room picker needs the committed rooms here too: a headset visitor has no desktop toolbar.
+  const view = new RoomView(container, store, REPO_ROOMS);
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 120);
 
   // ---- scenery outside the saved room -------------------------------------

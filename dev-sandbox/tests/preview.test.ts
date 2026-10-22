@@ -45,11 +45,16 @@ test('page previews preserve the exact HTTPS destination including www and hash'
   assert.equal(embedFor(new URL('https://www.dvgpro.com/a?q=1#part'))?.src, 'https://www.dvgpro.com/a?q=1#part');
 });
 if (!globalThis.document) {
+  globalThis.window = new EventTarget() as unknown as Window & typeof globalThis;
+  globalThis.location = new URL('https://palace.example') as unknown as Location;
+  globalThis.MutationObserver = class { observe() {} } as unknown as typeof MutationObserver;
   globalThis.document = {
     createElement: (tag: string) => {
       const attrs: Record<string, string> = {};
       const el = {
         tagName: tag.toUpperCase(),
+        addEventListener() {},
+        removeEventListener() {},
         className: '',
         src: '',
         title: '',
@@ -166,7 +171,10 @@ test('desktop and VR embed iframes share the same sandbox, src and player permis
   const frame = createEmbedFrame(preview);
   assert.equal(frame.tagName, 'IFRAME');
   assert.equal(frame.className, 'preview-iframe');
-  assert.equal(frame.src, preview.src);
+  const src = new URL(frame.src);
+  assert.equal(src.origin + src.pathname, preview.src);
+  assert.equal(src.searchParams.get('enablejsapi'), '1');
+  assert.equal(src.searchParams.get('origin'), location.origin);
   assert.equal(frame.getAttribute('sandbox'), 'allow-scripts allow-same-origin allow-presentation allow-popups');
   assert.equal(frame.allow, 'encrypted-media; picture-in-picture; fullscreen');
   assert.equal(frame.referrerPolicy, 'strict-origin-when-cross-origin');

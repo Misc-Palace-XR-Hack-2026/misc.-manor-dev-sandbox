@@ -47,8 +47,11 @@ test('practice move occupied swap, cancel, stash, restore and style preserve ass
  const content=s.state.contentItems[0], data=JSON.stringify(s.state.contentItems), a=s.slotOf(first)!, b=s.slotOf(second)!;
  s.pickUp(first);s.place(first,b);assert.equal(s.slotOf(second),a);
  s.pickUp(first);s.select(null);assert.equal(s.slotOf(first),b);
- s.stash(first);assert.deepEqual(s.content(content.id),content);s.bringOut(content.id);assert.ok(s.slotOf(s.repFor(content.id)!.id));
+ s.stash(first);assert.deepEqual(s.content(content.id),{...content,lastObjectKind:'notebook'});s.bringOut(content.id);assert.ok(s.slotOf(s.repFor(content.id)!.id));
  const placements=JSON.stringify(s.state.placements);
  s.setLighting('dawn');s.setSurface('wall',{preset:'plaster'});s.undo();s.undo();
- assert.equal(JSON.stringify(s.state.placements),placements);assert.equal(JSON.stringify(s.state.contentItems),data);
+ assert.equal(JSON.stringify(s.state.placements),placements);
+ // Stash adds representation preference metadata; all original media fields stay exact.
+ assert.equal(JSON.stringify(s.state.contentItems.map(({lastObjectKind: _, ...item})=>item)),data);
+ assert.equal(s.content(content.id)?.lastObjectKind,'notebook');
 });

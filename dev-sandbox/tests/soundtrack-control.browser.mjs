@@ -19,16 +19,19 @@ try {
       };
     });
     await page.goto(process.env.APP_URL || 'http://127.0.0.1:5173');
+    await page.getByRole('button', { name: 'Go to room', exact: true }).click();
+    assert.equal(await page.evaluate(() => window.audioAttempts.length), 0, 'onboarding gestures do not enable music');
     const button = page.getByRole('button', { name: 'Unmute room music', exact: true });
     await button.waitFor({ timeout: 10000 });
     assert.equal(await button.getAttribute('data-sound-state'), 'muted');
+    await page.evaluate(() => window.store.addItem({title:'Audio smoke fixture', sourceRef:'A local note', type:'note'}));
     const saved = await page.evaluate(() => window.store.exportJson());
     if (mobile) await button.tap(); else await button.click();
     const mute = page.getByRole('button', { name: 'Mute room music', exact: true });
     await mute.waitFor();
     await page.waitForFunction(() => window.roomAudio.currentTime > 0 && !window.roomAudio.paused);
-    assert.equal(await page.evaluate(() => window.audioAttempts.length), 2, 'one blocked autoplay plus one direct gesture');
-    assert.equal(await page.evaluate(() => window.audioAttempts[1]), true);
+    assert.equal(await page.evaluate(() => window.audioAttempts.length), 1, 'no autoplay; one direct gesture');
+    assert.equal(await page.evaluate(() => window.audioAttempts[0]), true);
     if (mobile) await mute.tap(); else { await mute.focus(); await page.keyboard.press('Space'); }
     await button.waitFor();
     assert.equal(await page.evaluate(() => window.roomAudio.paused), true);
@@ -48,7 +51,7 @@ try {
     assert.equal(await off.isDisabled(), true);
     assert.equal(await off.getAttribute('data-sound-state'), 'off');
     assert.deepEqual(errors, []);
-    console.log(`${mobile ? 'Mobile tap' : 'Desktop click/keyboard'}: blocked → playing → muted; saved choice, off state, target size and overlay bounds PASS`);
+    console.log(`${mobile ? 'Mobile tap' : 'Desktop click/keyboard'}: silent until gesture → playing → muted; saved choice, off state, target size and overlay bounds PASS`);
     await context.close();
   }
 } finally { await browser.close(); }

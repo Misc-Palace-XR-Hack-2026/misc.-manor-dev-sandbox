@@ -51,6 +51,8 @@ export const DEFAULT_OBJECT: Record<ContentType, ObjectKind> = {
 
 /** The media itself. Never changes when an object is moved or swapped. */
 export interface ContentItem {
+  /** Last representation kind when stashed; absent in legacy saves and never-represented inbox items. */
+  lastObjectKind?: ObjectKind;
   imageData?: string;
   /** Optional researched context; the outbound URL stays in sourceRef. */
   notes?: string;
@@ -84,6 +86,11 @@ export interface RoomState {
   surfaces?: import("./surfaces").SurfaceSettings;
   lighting?: import("./appearance").Lighting;
   schemaVersion: number;
+  /**
+   * Which committed rooms/*.json revision this room was seeded from (see core/seed-revision.ts).
+   * Optional and ignored by older builds: the schema version stays 1 in both directions.
+   */
+  seedRevision?: string;
   id: string;
   owner: string;
   layoutId: string;

@@ -1,4 +1,4 @@
-import { newRoom } from '../core/store';
+import { newRoom, roomKeys } from '../core/store';
 import { guessType } from '../core/content';
 import type { RoomState } from '../core/types';
 import { INTRO_OBJECTS } from './intro-objects';
@@ -9,6 +9,7 @@ import { INTRO_OBJECTS } from './intro-objects';
 
 /** The visitor's saved room. The 'demo-' prefix keeps it in the demo's own storage (see roomKeys). */
 export const DEMO_ROOM_ID = 'demo-visit';
+export const DEMO_OWNER = 'My room';
 
 /** Where the starter objects are meant to end up: the bench and wall shelf. */
 export const SHELF_SLOTS = ['shelf-1', 'shelf-2', 'shelf-3', 'bench-1', 'bench-2', 'bench-3'] as const;
@@ -21,7 +22,7 @@ export const repIdFor = (introId: string): string => `rep-${introId}`;
 const STARTER_REPS = INTRO_OBJECTS.map((o) => repIdFor(o.id));
 
 export function seedDemoRoom(): RoomState {
-  const room = newRoom('Visitor');
+  const room = newRoom(DEMO_OWNER);
   const createdAt = new Date().toISOString();
   for (const o of INTRO_OBJECTS) {
     room.contentItems.push({
@@ -30,6 +31,28 @@ export function seedDemoRoom(): RoomState {
     room.representations.push({ id: repIdFor(o.id), contentItemId: o.id, objectKind: o.kind });
   }
   return room;
+}
+
+/** Whether this browser holds a saved demo room at all. No save = a first visit, whatever the intro flag says. */
+export function hasSavedDemoRoom(): boolean {
+  try {
+    const keys = roomKeys(DEMO_ROOM_ID);
+    return localStorage.getItem(keys.main) !== null || localStorage.getItem(keys.backup) !== null;
+  } catch {
+    return false; // storage is blocked: nothing was kept, so treat it as a first visit
+  }
+}
+
+/**
+ * Old demo saves used owner 'Visitor'. Keep showing 'My room' without breaking the saved content.
+ * Returns true when the room was changed so callers can persist the repaired owner label.
+ */
+export function normalizeDemoOwner(room: RoomState): boolean {
+  if (/^visitor$/i.test((room.owner ?? '').trim())) {
+    room.owner = DEMO_OWNER;
+    return true;
+  }
+  return false;
 }
 
 /** The tutorial is done once every starter object stands on the bench or shelf. */

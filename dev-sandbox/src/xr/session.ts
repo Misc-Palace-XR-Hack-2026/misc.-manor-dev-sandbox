@@ -86,7 +86,16 @@ export class XrSession {
     this.overlayGranted = overlayIsGranted(session);
     this.objectMenu.useDomOverlay = this.overlayGranted;
     this.overlay.hidden = !this.overlayGranted;
-    await this.renderer.xr.setSession(session);
+    try {
+      await this.renderer.xr.setSession(session);
+    } catch (error) {
+      this.overlayGranted = false;
+      this.objectMenu.useDomOverlay = false;
+      this.overlayCard.show(null);
+      this.overlay.hidden = true;
+      try { await session.end(); } catch { /* session may already be ending */ }
+      throw error;
+    }
   }
 
   async exit(): Promise<void> {
@@ -298,6 +307,7 @@ export class XrSession {
         if (!gp) continue;
         const x = gp.axes[2] ?? gp.axes[0] ?? 0;
         const y = gp.axes[3] ?? gp.axes[1] ?? 0;
+        let walkedStairs = false;
         if (source.handedness === 'left' && !this.placing) {
           const onStairs = Math.abs(this.player.position.y - stairHeight(this.player.position.z)) <= .08
             && this.player.position.x >= .3 && this.player.position.x <= 1.1
@@ -305,13 +315,13 @@ export class XrSession {
           if (onStairs) {
             const p = walkStairs(this.player.position, y, dt);
             this.player.position.set(p.x,p.y,p.z);
-            continue;
+            walkedStairs = true;
           }
         }
         if (Math.abs(x) > 0.7 && Math.abs(x) >= Math.abs(y) && now - this.lastSnap > 280) {
           this.player.rotateY(-Math.sign(x) * SNAP);
           this.lastSnap = now;
-        } else {
+        } else if (!walkedStairs) {
           const landing = stickForwardTeleport(this.hoverPoint, this.placing, y);
           if (landing && now - this.lastSnap > 280) {
             this.teleport(new THREE.Vector3(landing.x, landing.y, landing.z));

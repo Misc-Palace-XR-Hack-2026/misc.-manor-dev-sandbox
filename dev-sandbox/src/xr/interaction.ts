@@ -3,7 +3,7 @@ import { OBJECT_KINDS, OBJECT_LABELS, type ObjectKind } from '../core/types';
 import { LIGHTING_PRESETS, type Lighting } from '../core/appearance';
 import { ROOM_TRACKS, TRACK_LABELS, type RoomTrack } from '../core/soundtrack';
 import { SURFACE_PRESETS, type SurfaceTarget } from '../core/surfaces';
-import { ROOM_DIRECTORY, seedRoom } from '../core/rooms';
+import { ROOMS_PICKER_ORDER, isDemoHomeAlias, isDemoSessionRoom, openRoom, seedRoom } from '../core/rooms';
 import { THEMES } from '../core/themes';
 import { safeUrl } from '../core/content';
 import { creationButtons, XrCreation } from './creation';
@@ -186,6 +186,7 @@ export type PanelPage =
   | 'object'
   | 'inbox'
   | 'rooms'
+  | 'repo-rooms'
   | 'themes'
   | 'howto'
   | 'howto-create'
@@ -231,7 +232,16 @@ export interface NeighborhoodRoom {
 }
 
 export function dedicatedRooms(): Array<{ id: string; label: string }> {
-  return ROOM_DIRECTORY.map((slot) => ({ id: slot.id, label: slot.defaultName }));
+  return ROOMS_PICKER_ORDER.map((slot) => ({ id: slot.id, label: slot.defaultName }));
+}
+
+/** rooms/*.json filenames are kebab-case; headset labels read as words. */
+export function repoRoomLabel(name: string): string {
+  return name
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 }
 
 export function objectMenuAnchor(origin: { x: number; y: number; z: number }, _ray?: { origin: { x: number; y: number; z: number }; direction: { x: number; y: number; z: number } }): { x: number; y: number; z: number } {
@@ -271,7 +281,7 @@ export function objectActions(store: Store): PanelButton[] {
   return actions;
 }
 
-export function panelButtons(store: Store, page: PanelPage, _rooms: NeighborhoodRoom[] = [], draft?: XrCreation, guide?: OnboardingState | null): PanelButton[] {
+export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodRoom[] = [], draft?: XrCreation, guide?: OnboardingState | null): PanelButton[] {
   const selected = store.selectedId
     ? store.state.representations.find((r) => r.id === store.selectedId)
     : undefined;
@@ -316,11 +326,26 @@ export function panelButtons(store: Store, page: PanelPage, _rooms: Neighborhood
   if (page === 'rooms') {
     return [
       { id: 'page:home', label: 'Back' },
-      ...ROOM_DIRECTORY.map((slot) => ({
+      ...ROOMS_PICKER_ORDER.map((slot) => ({
         id: 'room:' + slot.id,
         label: (store.roomId === slot.id ? '• ' : '') + slot.defaultName,
       })),
+      { id: 'page:repo-rooms', label: 'Example rooms (' + rooms.length + ')' },
     ];
+  }
+  if (page === 'repo-rooms') {
+    // The committed rooms/*.json collection, previously reachable only from the desktop
+    // toolbar's <select>. Visiting one loads its items without touching the personal save.
+    const buttons: PanelButton[] = [{ id: 'page:rooms', label: 'Back' }];
+    if (!rooms.length) buttons.push({ id: 'rooms:none', label: 'No example rooms available' });
+    for (const room of rooms) {
+      buttons.push({
+        id: 'visit-room:' + room.name,
+        label: (store.visiting === room.name ? '• ' : '') + repoRoomLabel(room.name),
+      });
+    }
+    if (store.visiting) buttons.push({ id: 'home:return', label: 'Return home' });
+    return buttons;
   }
   if (page === 'themes') {
     return [
@@ -404,6 +429,8 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   if (id === 'page:object') return { page: 'object' };
   if (id === 'page:inbox') return { page: 'inbox', tutorialEvent: 'inbox-open' };
   if (id === 'page:rooms') return { page: 'rooms', tutorialEvent:'open-rooms' };
+  if (id === 'page:repo-rooms') return { page: 'repo-rooms' };
+  if (id === 'rooms:none') return {};
   if (id === 'page:themes') return { page: 'themes' };
   if (id === 'page:create') return { page: 'create', tutorialEvent: 'open-add' };
   if (id === 'page:welcome') return { page: 'welcome' };
@@ -438,10 +465,33 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
     store.returnHome();
     return { page: 'home' };
   }
+  if (id.startsWith('visit-room:')) {
+    const name = id.slice(11);
+    const room = rooms.find((r) => r.name === name);
+    if (!room) return {};
+    try {
+      store.visit(room.data, room.name);
+    } catch {
+      // A malformed rooms/*.json must not leave the headset in a broken room.
+      return {};
+    }
+    return { page: 'home', tutorialEvent: 'switched' };
+  }
   if (id.startsWith('room:')) {
     const roomId = id.slice(5);
+    if (isDemoHomeAlias(store.roomId, roomId)) {
+      if (store.visiting) {
+        store.returnHome();
+        return { page: 'home', tutorialEvent: 'returned' };
+      }
+      return { page: 'home', tutorialEvent: 'switched' };
+    }
     const repo = Object.fromEntries(rooms.map((room) => [room.name, room.data]));
-    store.switchRoom(roomId, seedRoom(roomId, repo));
+    if (isDemoSessionRoom(store.roomId) && roomId !== 'guest') {
+      store.visit(seedRoom(roomId, repo), roomId);
+      return { page: 'home', tutorialEvent: 'switched' };
+    }
+    store.switchRoom(roomId, openRoom(roomId, repo));
     return { page: 'home', tutorialEvent: 'switched' };
   }
   if (id.startsWith('theme:')) {

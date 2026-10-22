@@ -39,6 +39,7 @@ export function validateRoom(input: unknown): string | null {
   if (!input || typeof input !== 'object') return 'Not a room file.';
   const s = input as Partial<RoomState>;
   if (s.schemaVersion !== SCHEMA_VERSION) return `Unsupported schemaVersion: ${String(s.schemaVersion)}.`;
+  if (s.seedRevision !== undefined && typeof s.seedRevision !== 'string') return 'Invalid seed revision.';
   if (!Array.isArray(s.contentItems) || !Array.isArray(s.representations) || !Array.isArray(s.placements)) {
     return 'Missing contentItems, representations or placements.';
   }
@@ -55,6 +56,7 @@ export function validateRoom(input: unknown): string | null {
     if (!c || typeof c.id !== 'string' || typeof c.title !== 'string' || typeof c.sourceRef !== 'string') {
       return 'A saved item is missing its id, title or sourceRef.';
     }
+    if (c.lastObjectKind !== undefined && !(OBJECT_KINDS as readonly unknown[]).includes(c.lastObjectKind)) return 'Invalid last object kind.';
     if (c.notes !== undefined && (typeof c.notes !== 'string' || c.notes.length > 4000)) return 'Invalid item notes (text, max 4000 characters).';
     if (c.imageData !== undefined && (c.type !== 'image' || !validPhotoData(c.imageData))) return 'Invalid photo image data (PNG/JPEG, max 1024px and 1.5 MB encoded).';
     if (!(CONTENT_TYPES as readonly string[]).includes(c.type)) return `Unknown content type: ${String(c.type)}.`;
@@ -102,6 +104,19 @@ export function normalizeRoom(input: unknown): RoomState {
 
 export class Store {
   state: RoomState;
+  private interactionMode: 'edit' | 'preview' = 'edit';
+  /** Session UI state, never part of a room save or export. */
+  get mode(): 'edit' | 'preview' { return this.interactionMode; }
+  get canEdit(): boolean { return this.interactionMode === 'edit'; }
+
+  setMode(mode: 'edit' | 'preview'): void {
+    if (mode === this.interactionMode) return;
+    // Restore a lifted object before locking mutations; keep the inspected item.
+    this.cancelPickup(null);
+    this.interactionMode = mode;
+    this.epoch++;
+    this.emit();
+  }
   selectedId: string | null = null; // representation id; never saved
   saveError: string | null = null;
   visiting: string | null = null;
@@ -123,9 +138,10 @@ export class Store {
   /** Capture before any asynchronous read/decode; invalid across room and practice transitions. */
   sessionGuard(): () => boolean {
     const epoch = this.epoch;
-    return () => epoch === this.epoch;
+    return () => this.canEdit && epoch === this.epoch;
   }
   beginPractice(): void {
+    if (!this.canEdit) return;
     this.endPractice();
     this.personal = { state: this.state, roomId: this.roomId, history: this.history, selectedId: this.selectedId,
       pickup: this.pickup, visiting: this.visiting, homeSnapshot: this.homeSnapshot, saveError: this.saveError };
@@ -248,6 +264,7 @@ export class Store {
    * something else) the object goes back where it was instead of being lost.
    */
   pickUp(repId: string): void {
+    if (!this.canEdit) return;
     this.lastCommand = 'pickUp';
     const slotId = this.slotOf(repId);
     if (!slotId) {
@@ -432,6 +449,9 @@ export class Store {
   stash(repId: string): void {
     this.lastCommand = 'stash';
     this.commit((s) => {
+      const rep = s.representations.find(r => r.id === repId);
+      const content = rep && s.contentItems.find(c => c.id === rep.contentItemId);
+      if (content) content.lastObjectKind = rep.objectKind;
       s.placements = s.placements.filter((p) => p.representationId !== repId);
       s.representations = s.representations.filter((r) => r.id !== repId);
     });
@@ -555,6 +575,7 @@ export class Store {
   }
 
   undo(): void {
+    if (!this.canEdit) return;
     this.lastCommand = 'undo';
     this.pickup = null;
     const prev = this.history.pop();
@@ -571,6 +592,7 @@ export class Store {
 
   /** Replace the whole room. Throws a readable Error if the data is bad; nothing changes in that case. */
   replaceState(data: unknown): void {
+    if (!this.canEdit) return;
     const error = validateRoom(data);
     if (error) throw new Error(error);
     this.pickup = null;
@@ -582,10 +604,13 @@ export class Store {
 
   /** Visit an example/neighborhood room without writing it over the personal save. */
   visit(data: unknown, name?: string): void {
+    if (!this.canEdit) return;
     const error = validateRoom(data);
     if (error) throw new Error(error);
     if (!this.visiting) this.homeSnapshot = JSON.stringify(this.state);
     this.pushHistory();
+    // A room transition invalidates in-flight imports/uploads, as sessionGuard() promises.
+    this.epoch++;
     this.state = normalizeRoom(data);
     this.visiting = name ?? this.state.owner;
     this.selectedId = null;
@@ -593,8 +618,10 @@ export class Store {
   }
 
   returnHome(): void {
+    if (!this.canEdit) return;
     if (!this.homeSnapshot) return;
     this.pushHistory();
+    this.epoch++;
     this.state = JSON.parse(this.homeSnapshot) as RoomState;
     this.homeSnapshot = null;
     this.visiting = null;
@@ -624,7 +651,7 @@ export class Store {
   }
 
   private createRep(s: RoomState, c: ContentItem, kind?: ObjectKind): Representation {
-    const rep: Representation = { id: uid('rp'), contentItemId: c.id, objectKind: kind ?? DEFAULT_OBJECT[c.type] };
+    const rep: Representation = { id: uid('rp'), contentItemId: c.id, objectKind: kind ?? c.lastObjectKind ?? DEFAULT_OBJECT[c.type] };
     s.representations.push(rep);
     return rep;
   }
@@ -647,6 +674,7 @@ export class Store {
   }
 
   private commit(fn: (s: RoomState) => void): void {
+    if (!this.canEdit) return;
     this.pickup = null;
     this.pushHistory();
     fn(this.state);

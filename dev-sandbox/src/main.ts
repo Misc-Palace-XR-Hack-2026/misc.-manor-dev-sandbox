@@ -1,7 +1,8 @@
 import './style.css';
 import { Store, roomKeys } from './core/store';
 import type { RoomState } from './core/types';
-import { GUEST_ROOM_ID, isRoomId, seedRoom } from './core/rooms';
+import { GUEST_ROOM_ID, isRoomId, openRoom } from './core/rooms';
+import { REPO_ROOMS, REPO_ROOM_MAP } from './core/repo-rooms';
 import { MenuView, type RepoRoom } from './views/menu';
 import { RoomView } from './views/room';
 import { SoundtrackPlayer } from './views/soundtrack';
@@ -10,21 +11,19 @@ import { createSoundtrackControl } from './views/soundtrack-control';
 import { createDebugPanel } from './views/debug';
 import { TutorialView } from './views/tutorial';
 
-// Every rooms/*.json committed to the repo is a starter source: dev rooms seed from them, and the
-// toolbar can still load any of them into the current room.
-const modules = import.meta.glob('../rooms/*.json', { eager: true, import: 'default' });
-const repoRooms: RepoRoom[] = Object.entries(modules).map(([path, data]) => ({
-  name: path.split('/').pop()!.replace(/\.json$/, ''),
-  data,
-}));
-const repo = Object.fromEntries(repoRooms.map((r) => [r.name, r.data]));
+// Every rooms/*.json committed to the repo is a starter source: dev rooms seed from them, the
+// toolbar can load any of them into the current room, and the in-VR picker visits them.
+const repoRooms: RepoRoom[] = REPO_ROOMS;
+const repo = REPO_ROOM_MAP;
 
-// Last room you were in, else the empty Guest room.
+// Last room you were in, else the empty 'My room'.
 const active = Store.activeRoomId();
 const roomId = active && isRoomId(active) ? active : GUEST_ROOM_ID;
 let initial: RoomState | undefined;
 try {
-  initial = Store.loadSaved(roomId) ?? seedRoom(roomId, repo);
+  // openRoom() is the save-or-seed decision in one place: it also refreshes a showcase room whose save
+  // came from an older committed rooms/*.json (the old save is kept under that room's backup key).
+  initial = openRoom(roomId, repo);
 } catch (error) {
   // Do not create a fresh Store that could overwrite an unreadable personal save.
   const menu = document.getElementById('menu')!;

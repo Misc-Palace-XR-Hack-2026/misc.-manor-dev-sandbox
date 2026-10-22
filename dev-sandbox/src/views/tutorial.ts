@@ -1,5 +1,6 @@
 import { Store } from '../core/store';
 import { EMPTY_BOOKMARKS, tutorialBookmarks, type BookmarkEntry } from '../core/bookmarks';
+import { INTRO_PATH } from '../core/demo-flags';
 import { advance, beginLesson, currentStep, finish, LESSONS, loadOnboarding, persistOnboarding, progressLabel, skip, visibleTarget, type LessonId, type OnboardingState } from '../core/onboarding';
 
 /** Shared lesson runner: UI events for controls, state transitions for successful mutations. */
@@ -24,6 +25,7 @@ export class TutorialView {
     this.card.setAttribute('aria-label','Practice tutorial');
     this.overlay.append(this.highlight, this.card); document.body.append(this.overlay);
     document.addEventListener('palace-tutorial', event => {
+      if (!this.store.canEdit) return;
       const detail = (event as CustomEvent<string>).detail;
       if (detail === 'replay') this.picker();
       else if (detail === 'start') this.start('bookmarks');
@@ -32,7 +34,7 @@ export class TutorialView {
       else this.notice(detail);
     });
     document.addEventListener('palace-import', event => {
-      if (this.state.lesson !== 'bookmarks') return;
+      if (!this.store.canEdit || this.state.lesson !== 'bookmarks') return;
       const {entries,added,placed} = (event as CustomEvent<{entries:BookmarkEntry[];added:number;placed:number}>).detail;
       this.result = `${added} added · ${placed} placed · ${added-placed} to Inbox. Folder tags: ${[...new Set(entries.map(e=>e.folder).filter(Boolean))].join(', ') || 'none'}.`;
       if (!entries.length && !added) this.accept('import-empty');
@@ -51,6 +53,7 @@ export class TutorialView {
   replay(lesson?: LessonId): void { if (lesson) this.start(lesson); else this.picker(); }
   /** Only non-mutating control events are trusted here. Successful mutations are observed below. */
   notice(event: string): void {
+    if (!this.store.canEdit) return;
     if (!this.state.lesson) return;
     if (event==='theme-applied' && this.store.lastCommand!=='applyLook') return;
     if (['open-add','open-rooms','open-style','typed-title','typed-content','kind-chosen','create-invalid','create-cancel','inbox-open','theme-applied'].includes(event)) this.accept(event);
@@ -78,13 +81,19 @@ export class TutorialView {
     this.onVr?.('welcome');
   }
   private picker(): void {
+    if (!this.store.canEdit) return;
     this.goToRoom(); this.overlay.hidden = false; this.card.replaceChildren();
     Object.assign(this.card.style,{top:'72px',bottom:'auto',maxHeight:'60vh'});
     const title = document.createElement('h2'); title.textContent = 'Practice lessons'; this.card.append(title);
+    // The walk-in intro is the first thing offered under Help, ahead of the practice lessons.
+    const intro = button('Watch the intro', () => { window.location.assign(INTRO_PATH); });
+    intro.dataset.tutorial = 'watch-intro';
+    this.card.append(intro);
     for (const [id,label] of Object.entries({bookmarks:'Import bookmarks',create:'Create content',move:'Move, stash and restore',rooms:'Visit local rooms',style:'Themes, lighting and surfaces'})) this.card.append(button(label,()=>this.start(id as LessonId)));
     this.card.append(button('Go to room',()=>this.goToRoom()));
   }
   private start(lesson: LessonId): void {
+    if (!this.store.canEdit) return;
     const status = this.state.status === 'fresh' ? 'fresh' : this.state.status;
     this.busy = true; this.state = skip(this.state); this.store.beginPractice();
     this.practiceId = null; this.contentId = null; this.result = ''; this.overflow.clear();
@@ -157,6 +166,8 @@ export class TutorialView {
     else { this.card.style.bottom='100px'; this.card.style.maxHeight=`${Math.min(innerHeight*.45,Math.max(100,below))}px`; }
   }
   private observeStore(): void {
+    if (!this.store.canEdit) { this.overlay.hidden = true; this.highlight.hidden = true; this.capture(); return; }
+    if (this.state.lesson && this.overlay.hidden) { this.capture(); this.render(); }
     if (this.busy || !this.state.lesson || !this.store.practicing || !this.previous) return;
     const old=JSON.parse(this.previous) as Store['state'], now=this.store.state;
     const event=currentStep(this.state)?.event;
