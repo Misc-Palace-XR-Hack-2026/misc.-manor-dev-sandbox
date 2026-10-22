@@ -37,7 +37,7 @@ const EXTENSIONS: ReadonlyArray<[RegExp, string, string]> = [
 /** Well-known hosts to a specific picture + name, for links that have no embed or thumbnail. */
 const HOSTS: ReadonlyArray<[RegExp, string, string]> = [
   [/(^|\.)(youtube\.com|youtu\.be|vimeo\.com|twitch\.tv)$/, '🎬', 'Video'],
-  [/(^|\.)(spotify\.com|soundcloud\.com|bandcamp\.com|music\.apple\.com)$/, '🎵', 'Music'],
+  [/(^|\.)(spotify\.com|soundcloud\.com|deezer\.com|bandcamp\.com|music\.apple\.com)$/, '🎵', 'Music'],
   [/(^|\.)wikipedia\.org$/, '📚', 'Encyclopedia'],
   [/(^|\.)(github\.com|gitlab\.com|codeberg\.org)$/, '💻', 'Code repository'],
   [/(^|\.)(medium\.com|substack\.com)$/, '📰', 'Article'],

@@ -1,0 +1,278 @@
+{
+  "schemaVersion": 1,
+  "id": "german",
+  "owner": "German's room",
+  "layoutId": "cozy-loft",
+  "lighting": "sunset",
+  "surfaces": {
+    "floor": {
+      "preset": "wood"
+    },
+    "background": {
+      "preset": "fireside-night"
+    },
+    "wall": {
+      "preset": "hearth-brick"
+    }
+  },
+  "contentItems": [
+    {
+      "id": "c1",
+      "type": "article",
+      "title": "gungo - mari go round",
+      "sourceKind": "url",
+      "sourceRef": "https://on.soundcloud.com/EyA080bVDil2aVDPJx",
+      "tags": [
+        "memory"
+      ],
+      "createdAt": "2026-10-06T00:00:00.000Z",
+      "notes": ""
+    },
+    {
+      "id": "c2",
+      "type": "video",
+      "title": "GMTK - Psychonauts",
+      "sourceKind": "url",
+      "sourceRef": "https://youtu.be/5I4vD2S01d0?is=opmFmCVqmUIuu2nX",
+      "tags": [],
+      "createdAt": "2026-10-06T00:00:00.000Z",
+      "notes": ""
+    },
+    {
+      "id": "c3",
+      "type": "music",
+      "title": "gungo - cowboy bebop sample",
+      "sourceKind": "url",
+      "sourceRef": "https://on.soundcloud.com/OU32U6GaxbWrdzRZKc",
+      "tags": [],
+      "createdAt": "2026-10-06T00:00:00.000Z",
+      "notes": ""
+    },
+    {
+      "id": "c4",
+      "type": "image",
+      "title": "gungo - wrong again",
+      "sourceKind": "url",
+      "sourceRef": "https://on.soundcloud.com/GTLcLKtbhSCri9BgbE",
+      "tags": [],
+      "createdAt": "2026-10-06T00:00:00.000Z",
+      "notes": ""
+    },
+    {
+      "id": "c5",
+      "type": "tool",
+      "title": "pan book (to read)",
+      "sourceKind": "url",
+      "sourceRef": "https://www.goodreads.com/book/show/220687903-pan",
+      "tags": [
+        "dev"
+      ],
+      "createdAt": "2026-10-06T00:00:00.000Z",
+      "notes": ""
+    },
+    {
+      "id": "c6",
+      "type": "link",
+      "title": "vedur.is <3",
+      "sourceKind": "url",
+      "sourceRef": "https://www.vedur.is/",
+      "tags": [],
+      "createdAt": "2026-10-06T00:00:00.000Z",
+      "notes": ""
+    },
+    {
+      "id": "c7",
+      "type": "file",
+      "title": "notes.md",
+      "sourceKind": "file",
+      "sourceRef": "notes.md",
+      "tags": [],
+      "createdAt": "2026-10-06T00:00:00.000Z"
+    },
+    {
+      "id": "c8",
+      "type": "link",
+      "title": "Saved for later (in the inbox)",
+      "sourceKind": "url",
+      "sourceRef": "https://example.org",
+      "tags": [],
+      "createdAt": "2026-10-06T00:00:00.000Z"
+    },
+    {
+      "id": "c9",
+      "type": "note",
+      "title": "Hearth",
+      "sourceKind": "note",
+      "sourceRef": "A fireplace for the sample room.",
+      "tags": [],
+      "createdAt": "2026-10-06T00:00:00.000Z",
+      "lastObjectKind": "fireplace"
+    },
+    {
+      "id": "ci_mvj54sxmsl25",
+      "type": "link",
+      "title": "mg wedding website 2027",
+      "sourceKind": "url",
+      "sourceRef": "https://mg-wedding-website.vercel.app/",
+      "tags": [],
+      "createdAt": "2026-10-22T06:09:02.075Z"
+    },
+    {
+      "id": "ci_mvj56k166ann",
+      "type": "link",
+      "title": "orbitals (to play)",
+      "sourceKind": "url",
+      "sourceRef": "https://www.orbitalsgame.com/?utm_source=ig&utm_medium=social&utm_content=link_in_bio",
+      "tags": [],
+      "createdAt": "2026-10-22T06:10:23.850Z"
+    },
+    {
+      "id": "ci_mvj6gxs8xckq",
+      "type": "link",
+      "title": "Cinejoy",
+      "sourceKind": "url",
+      "sourceRef": "https://cinejoy.pk/",
+      "tags": [
+        "Bookmarks"
+      ],
+      "createdAt": "2026-10-22T06:46:27.848Z"
+    },
+    {
+      "id": "ci_mvj6gxspll0p",
+      "type": "link",
+      "title": "One Piece Chapter 1191 | TCB Scans",
+      "sourceKind": "url",
+      "sourceRef": "https://tcbonepiecechapters.com/chapters/7998/one-piece-chapter-1191",
+      "tags": [
+        "Bookmarks"
+      ],
+      "createdAt": "2026-10-22T06:46:27.865Z"
+    },
+    {
+      "id": "ci_mvj6gxsrmd9t",
+      "type": "link",
+      "title": "infinite jest at DuckDuckGo",
+      "sourceKind": "url",
+      "sourceRef": "https://duckduckgo.com/?q=infinite+jest&atb=v507-1&ia=web",
+      "tags": [
+        "Bookmarks"
+      ],
+      "createdAt": "2026-10-22T06:46:27.867Z"
+    }
+  ],
+  "representations": [
+    {
+      "id": "r1",
+      "contentItemId": "c1",
+      "objectKind": "notebook"
+    },
+    {
+      "id": "r2",
+      "contentItemId": "c2",
+      "objectKind": "tv"
+    },
+    {
+      "id": "r3",
+      "contentItemId": "c3",
+      "objectKind": "record"
+    },
+    {
+      "id": "r4",
+      "contentItemId": "c4",
+      "objectKind": "photoFrame"
+    },
+    {
+      "id": "r5",
+      "contentItemId": "c5",
+      "objectKind": "mug"
+    },
+    {
+      "id": "r6",
+      "contentItemId": "c6",
+      "objectKind": "plant"
+    },
+    {
+      "id": "r7",
+      "contentItemId": "c7",
+      "objectKind": "box"
+    },
+    {
+      "id": "rp_mvj54sxn4aiv",
+      "contentItemId": "ci_mvj54sxmsl25",
+      "objectKind": "cat"
+    },
+    {
+      "id": "rp_mvj56k16sjjt",
+      "contentItemId": "ci_mvj56k166ann",
+      "objectKind": "soccerBall"
+    },
+    {
+      "id": "rp_mvj6gxsbcjnf",
+      "contentItemId": "ci_mvj6gxs8xckq",
+      "objectKind": "flyingSaucer"
+    },
+    {
+      "id": "rp_mvj6gxsp5rb4",
+      "contentItemId": "ci_mvj6gxspll0p",
+      "objectKind": "lavaLamp"
+    },
+    {
+      "id": "rp_mvj6gxsrqy3u",
+      "contentItemId": "ci_mvj6gxsrmd9t",
+      "objectKind": "drum"
+    }
+  ],
+  "placements": [
+    {
+      "representationId": "r1",
+      "slotId": "bench-1"
+    },
+    {
+      "representationId": "r3",
+      "slotId": "floor-2"
+    },
+    {
+      "representationId": "r4",
+      "slotId": "block-1"
+    },
+    {
+      "representationId": "r5",
+      "slotId": "shelf-1"
+    },
+    {
+      "representationId": "r6",
+      "slotId": "floor-5"
+    },
+    {
+      "representationId": "r7",
+      "slotId": "floor-6"
+    },
+    {
+      "representationId": "r2",
+      "slotId": "bench-3"
+    },
+    {
+      "representationId": "rp_mvj54sxn4aiv",
+      "slotId": "bench-2"
+    },
+    {
+      "representationId": "rp_mvj56k16sjjt",
+      "slotId": "loft-3"
+    },
+    {
+      "representationId": "rp_mvj6gxsbcjnf",
+      "slotId": "floor-3"
+    },
+    {
+      "representationId": "rp_mvj6gxsp5rb4",
+      "slotId": "shelf-2"
+    },
+    {
+      "representationId": "rp_mvj6gxsrqy3u",
+      "slotId": "floor-1"
+    }
+  ],
+  "soundtrack": {
+    "mode": "off"
+  }
+}

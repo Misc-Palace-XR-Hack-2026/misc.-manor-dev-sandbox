@@ -7,7 +7,7 @@ import { validPhotoData } from './photos';
 // Eligibility is permission to TRY, never proof of frameability. Browser protections remain authoritative.
 // See docs/public-preview-policy.md for ownership, privacy tradeoffs and DNS/redirect limitations.
 
-export type EmbedProvider = 'youtube' | 'vimeo' | 'spotify' | 'soundcloud' | 'wikipedia' | 'page';
+export type EmbedProvider = 'youtube' | 'vimeo' | 'spotify' | 'soundcloud' | 'deezer' | 'wikipedia' | 'page';
 
 /** Exact host + dot-boundary subdomains. Official provider routes below take precedence. */
 const PAGE_BLOCKLIST = [
@@ -17,7 +17,8 @@ const PAGE_BLOCKLIST = [
   'linkedin.com', 'discord.com',
   // Provider landing/channel/profile pages are not generic players.
   'youtube.com', 'youtube-nocookie.com', 'youtu.be', 'vimeo.com',
-  'spotify.com', 'soundcloud.com', 'wikipedia.org', 'twitch.tv',
+  'spotify.com', 'soundcloud.com', 'on.soundcloud.com', 'wikipedia.org', 'twitch.tv',
+  'deezer.com', 'widget.deezer.com', 'link.deezer.com',
   // Previously verified unsuitable supplied destinations (see web-previews.md).
   'distrokid.com', 'hyperfollow.com', 'amazon.com', 'amzn.to', 'a.co',
 ] as const;
@@ -110,10 +111,11 @@ export function embedFor(url: URL): { src: string; provider: EmbedProvider; heig
     if (m) return { provider: 'spotify', src: `https://open.spotify.com/embed/${m[1]}/${m[2]}`, height: 152 };
   }
 
-  if (host === 'soundcloud.com' && /^\/[^/]+\/[^/]+/.test(url.pathname)) {
-    const page = `https://soundcloud.com${url.pathname}`;
-    return { provider: 'soundcloud', src: `https://w.soundcloud.com/player/?url=${encodeURIComponent(page)}&visual=false`, height: 166 };
-  }
+  const soundcloud = soundcloudEmbed(url, host);
+  if (soundcloud) return soundcloud;
+
+  const deezer = deezerEmbed(url, host);
+  if (deezer) return deezer;
 
   if (/^[a-z-]+\.wikipedia\.org$/.test(url.hostname) && url.pathname.startsWith('/wiki/')) {
     return { provider: 'wikipedia', src: `https://${url.hostname}${url.pathname}`, height: 220 };
@@ -122,6 +124,60 @@ export function embedFor(url: URL): { src: string; provider: EmbedProvider; heig
   if (PAGE_BLOCKLIST.some(rule => hostMatches(canonicalHost(url.hostname), rule))) return null;
   // Preserve the original destination; never proxy, prefetch or rewrite its headers.
   return { provider: 'page', src: url.href, height: 220 };
+}
+
+function soundcloudPlayer(page: string): { src: string; provider: 'soundcloud'; height: number } {
+  const src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(page)}&visual=true`;
+  return { provider: 'soundcloud', src, height: 300 };
+}
+
+/** Official oEmbed lookup. Needed because `on.soundcloud.com` short links are not widget URLs. */
+export function soundcloudOembedRequest(page: string): string | null {
+  let url: URL;
+  try { url = new URL(page); } catch { return null; }
+  if (!publicPreviewUrl(url)) return null;
+  const host = url.hostname.replace(/^www\./, '');
+  if (host !== 'on.soundcloud.com' && host !== 'soundcloud.com') return null;
+  return `https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(page)}`;
+}
+
+export function soundcloudShortLink(page: string): boolean {
+  try { return new URL(page).hostname.replace(/^www\./, '') === 'on.soundcloud.com'; }
+  catch { return false; }
+}
+
+/** Take only the official widget iframe from SoundCloud oEmbed HTML. */
+export function playerSrcFromSoundCloudOembedHtml(html: string): string | null {
+  const m = /src="(https:\/\/w\.soundcloud\.com\/player\/\?[^"]+)"/.exec(html);
+  if (!m) return null;
+  let src: URL;
+  try { src = new URL(m[1].replace(/&amp;/g, '&')); } catch { return null; }
+  if (src.origin !== 'https://w.soundcloud.com' || src.pathname !== '/player/') return null;
+  src.searchParams.set('visual', 'true');
+  return src.href;
+}
+
+/** Track, set/playlist, or SoundCloud short link. User profiles stay cards. */
+function soundcloudEmbed(url: URL, host: string): { src: string; provider: 'soundcloud'; height: number } | null {
+  if (host === 'on.soundcloud.com') {
+    const id = url.pathname.split('/').filter(Boolean)[0];
+    if (id && /^[A-Za-z0-9_-]{8,}$/.test(id)) return soundcloudPlayer(`https://on.soundcloud.com/${id}`);
+    return null;
+  }
+  if (host !== 'soundcloud.com') return null;
+  const parts = url.pathname.replace(/\/+$/, '').split('/').filter(Boolean);
+  if (parts.length < 2) return null;
+  if (['you', 'discover', 'stream', 'search', 'pages', 'signin', 'settings'].includes(parts[0])) return null;
+  return soundcloudPlayer(`https://soundcloud.com/${parts.join('/')}`);
+}
+
+function deezerEmbed(url: URL, host: string): { src: string; provider: 'deezer'; height: number } | null {
+  if (host !== 'deezer.com') return null;
+  const m = /^\/(?:[a-z]{2}\/)?(track|album|playlist|artist|episode|show|podcast|radio)\/(\d+)\/?$/.exec(url.pathname);
+  if (!m) return null;
+  const kind = m[1] === 'podcast' ? 'show' : m[1];
+  const height = kind === 'track' || kind === 'episode' ? 152 : 300;
+  return { provider: 'deezer', src: `https://widget.deezer.com/widget/dark/${kind}/${m[2]}`, height };
 }
 
 export function buildPreview(c: ContentItem): Preview {

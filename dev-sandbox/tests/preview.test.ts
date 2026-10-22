@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPreview, embedFor, youtubeId, youtubePlaylistId } from '../src/core/preview';
+import {
+  buildPreview, embedFor, playerSrcFromSoundCloudOembedHtml, youtubeId, youtubePlaylistId,
+} from '../src/core/preview';
 import * as previewPolicy from '../src/core/preview';
 import { createEmbedFrame } from '../src/views/preview-card';
 import type { ContentItem } from '../src/core/types';
@@ -64,6 +66,7 @@ if (!globalThis.document) {
         referrerPolicy: '',
         setAttribute: (name: string, value: string) => { attrs[name] = value; },
         getAttribute: (name: string) => attrs[name] ?? null,
+        removeAttribute: (name: string) => { delete attrs[name]; },
       };
       return el;
     },
@@ -118,8 +121,26 @@ test('Vimeo, Spotify, SoundCloud and Wikipedia get embeds', () => {
   assert.equal(embedFor(new URL('https://open.spotify.com/track/short')), null);
 
   const sc = embedFor(new URL('https://soundcloud.com/forss/flickermood?utm=x'));
-  assert.equal(sc?.src, 'https://w.soundcloud.com/player/?url=https%3A%2F%2Fsoundcloud.com%2Fforss%2Fflickermood&visual=false');
+  assert.equal(sc?.src, 'https://w.soundcloud.com/player/?url=https%3A%2F%2Fsoundcloud.com%2Fforss%2Fflickermood&visual=true');
+  assert.equal(sc?.height, 300);
   assert.equal(embedFor(new URL('https://soundcloud.com/forss')), null, 'profile page, not a track');
+  const set = embedFor(new URL('https://soundcloud.com/forss/sets/album-one'));
+  assert.match(set?.src ?? '', /soundcloud\.com%2Fforss%2Fsets%2Falbum-one/);
+  const short = embedFor(new URL('https://on.soundcloud.com/EyA080bVDil2aVDPJx'));
+  assert.equal(short?.provider, 'soundcloud');
+  assert.match(short?.src ?? '', /on\.soundcloud\.com%2FEyA080bVDil2aVDPJx/);
+  const fromOembed = playerSrcFromSoundCloudOembedHtml(
+    '<iframe src="https://w.soundcloud.com/player/?url=http%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F293&amp;show_artwork=true"></iframe>',
+  );
+  assert.equal(fromOembed && new URL(fromOembed).origin, 'https://w.soundcloud.com');
+  assert.equal(fromOembed && new URL(fromOembed).searchParams.get('visual'), 'true');
+  assert.equal(playerSrcFromSoundCloudOembedHtml('<iframe src="https://evil.example/player"></iframe>'), null);
+
+  assert.equal(embedFor(new URL('https://www.deezer.com/us/album/302127'))?.src,
+    'https://widget.deezer.com/widget/dark/album/302127');
+  assert.equal(embedFor(new URL('https://deezer.com/track/3135556'))?.provider, 'deezer');
+  assert.equal(embedFor(new URL('https://www.deezer.com/en/playlist/908622995'))?.height, 300);
+  assert.equal(embedFor(new URL('https://link.deezer.com/s/abc')), null, 'short links are not followed');
 
   assert.equal(embedFor(new URL('https://en.wikipedia.org/wiki/Cat#History'))?.src, 'https://en.wikipedia.org/wiki/Cat', 'drops hash');
   assert.equal(embedFor(new URL('https://en.wikipedia.org/w/index.php?title=Cat')), null);
@@ -147,10 +168,10 @@ test('lookalike hosts do not match an embed provider', () => {
 });
 
 test('embeds only ever point at https on the provider hosts', () => {
-  const allowed = /^https:\/\/(www\.youtube-nocookie\.com|player\.vimeo\.com|open\.spotify\.com|w\.soundcloud\.com|[a-z-]+\.wikipedia\.org)\//;
+  const allowed = /^https:\/\/(www\.youtube-nocookie\.com|player\.vimeo\.com|open\.spotify\.com|w\.soundcloud\.com|widget\.deezer\.com|[a-z-]+\.wikipedia\.org)\//;
   for (const ref of [
     'https://youtu.be/dQw4w9WgXcQ', 'https://vimeo.com/76979871', 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC',
-    'https://soundcloud.com/a/b', 'https://de.wikipedia.org/wiki/Katze',
+    'https://soundcloud.com/a/b', 'https://www.deezer.com/album/302127', 'https://de.wikipedia.org/wiki/Katze',
   ]) assert.match(embedFor(new URL(ref))!.src, allowed, ref);
 });
 
@@ -208,7 +229,7 @@ test('public preview eligibility rejects nonpublic and ambiguous authorities bef
 });
 
 test('blocklist uses canonical exact/subdomain boundaries; provider profiles stay cards', () => {
-  for (const host of ['github.com', 'www.github.com', 'a.github.com', 'GITHUB.COM.', 'youtube.com', 'youtube-nocookie.com', 'vimeo.com', 'player.vimeo.com', 'open.spotify.com', 'soundcloud.com', 'w.soundcloud.com', 'en.wikipedia.org', 'hyperfollow.com', 'distrokid.com', 'amazon.com']) {
+  for (const host of ['github.com', 'www.github.com', 'a.github.com', 'GITHUB.COM.', 'youtube.com', 'youtube-nocookie.com', 'vimeo.com', 'player.vimeo.com', 'open.spotify.com', 'soundcloud.com', 'w.soundcloud.com', 'on.soundcloud.com', 'deezer.com', 'widget.deezer.com', 'link.deezer.com', 'en.wikipedia.org', 'hyperfollow.com', 'distrokid.com', 'amazon.com']) {
     assert.equal(embedFor(new URL(`https://${host}/profile`)), null, host);
   }
   for (const host of ['notgithub.com', 'github.com.example.com', 'other-user.github.io']) {
@@ -241,6 +262,15 @@ test('same-origin sources cannot become frames or automatic image/favicon reques
     assert.equal(p.kind, 'card');
     assert.equal(p.kind === 'card' && p.faviconSrc, undefined);
   } finally { Object.defineProperty(globalThis, 'location', { configurable: true, value: original }); }
+});
+
+test('SoundCloud short links wait for oEmbed instead of claiming no preview', () => {
+  const preview = buildPreview(urlItem('https://on.soundcloud.com/EyA080bVDil2aVDPJx'));
+  assert.equal(preview.kind, 'embed');
+  if (preview.kind !== 'embed') return;
+  const frame = createEmbedFrame(preview);
+  assert.equal(frame.getAttribute('src'), null);
+  assert.equal(frame.getAttribute('data-pending'), 'soundcloud');
 });
 
 test('frame builder rechecks URL eligibility even for directly supplied previews', () => {

@@ -5,7 +5,7 @@ export function guessType(ref: string): ContentType {
   const r = normalizeRef(ref).toLowerCase();
   if (/\.(png|jpe?g|gif|webp|svg|avif)(\?|#|$)/.test(r)) return 'image';
   if (/(youtube\.com|youtu\.be|vimeo\.com|twitch\.tv)/.test(r)) return 'video';
-  if (/(spotify\.com|soundcloud\.com|bandcamp\.com|music\.apple\.com)/.test(r)) return 'music';
+  if (/(spotify\.com|soundcloud\.com|deezer\.com|bandcamp\.com|music\.apple\.com)/.test(r)) return 'music';
   if (/\.(mp3|wav|flac|m4a|ogg|aac)(\?|#|$)/.test(r)) return 'music';
   if (/\.(mp4|mov|webm|mkv|avi)(\?|#|$)/.test(r)) return 'video';
   if (/\.(md|pdf|docx?|txt)(\?|#|$)/.test(r)) return 'doc';

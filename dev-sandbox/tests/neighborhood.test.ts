@@ -21,6 +21,7 @@ const EXPECTED = [
   'matt',
   'levi',
   'omari',
+  'german',
 ];
 
 test('neighborhood example rooms are valid JSON configs with themed furnishings', () => {
