@@ -51,7 +51,7 @@ export class XrPanel {
     this.texture.colorSpace = THREE.SRGBColorSpace;
     this.mesh = new THREE.Mesh(
       new THREE.PlaneGeometry(0.84, 1.16),
-      new THREE.MeshBasicMaterial({ map: this.texture, transparent: true, side: THREE.DoubleSide }),
+      new THREE.MeshBasicMaterial({ map: this.texture, transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }),
     );
     this.mesh.position.set(0, 1.28, -1.15);
     this.mesh.name = 'xr-menu';
@@ -61,7 +61,7 @@ export class XrPanel {
     this.guideTexture.colorSpace = THREE.SRGBColorSpace;
     this.guideMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(0.62, 0.52),
-      new THREE.MeshBasicMaterial({ map: this.guideTexture, transparent: true, side: THREE.DoubleSide }),
+      new THREE.MeshBasicMaterial({ map: this.guideTexture, transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }),
     );
     this.guideMesh.position.set(0.78, 1.42, -1.05);
     this.guideMesh.name = 'xr-tutorial';

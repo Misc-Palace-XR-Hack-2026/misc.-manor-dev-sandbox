@@ -50,7 +50,7 @@ export class XrObjectMenu {
     const texture = (mesh.material as THREE.MeshBasicMaterial).map as THREE.CanvasTexture;
     const c = (texture.image as HTMLCanvasElement).getContext('2d')!;
     c.clearRect?.(0, 0, 384, 160);
-    hudButton(c, 2, 2, 380, 156, { hover: hovered, primary: mesh.userData.actionId === 'page:object', danger: mesh.userData.actionId === 'delete' });
+    hudButton(c, 2, 2, 380, 156, { hover: hovered, floating: true, primary: mesh.userData.actionId === 'page:object', danger: mesh.userData.actionId === 'delete' });
     c.font = '600 44px system-ui, sans-serif';
     c.textAlign = 'center';
     c.fillText(mesh.userData.label, 192, 96, 336);
@@ -97,7 +97,7 @@ export class XrObjectMenu {
       texture.colorSpace = THREE.SRGBColorSpace;
       const mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(0.26, 0.11),
-        new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthTest: false, side: THREE.DoubleSide }),
+        new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }),
       );
       mesh.position.set(i * 0.28 - span / 2, 0, 0);
       mesh.renderOrder = 21;

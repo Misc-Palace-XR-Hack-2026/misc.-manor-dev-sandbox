@@ -20,7 +20,7 @@ export class XrPreview {
     this.texture = new THREE.CanvasTexture(this.canvas);
     this.texture.colorSpace = THREE.SRGBColorSpace;
     this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.12, 0.7875),
-      new THREE.MeshBasicMaterial({ map: this.texture, side: THREE.DoubleSide, depthTest: false, depthWrite: false, transparent: true }));
+      new THREE.MeshBasicMaterial({ map: this.texture, side: THREE.DoubleSide, depthTest: false, depthWrite: false, transparent: true, toneMapped: false }));
     this.mesh.name = 'xr-preview';
     this.mesh.position.y = 0.48;
     this.mesh.renderOrder = 20;
@@ -44,6 +44,7 @@ export class XrPreview {
         c.textAlign = 'center'; c.fillText(art.glyph, 512, 160);
         c.font = '28px system-ui, sans-serif'; c.fillText(art.label, 512, 240, 920);
       }
+      c.shadowColor = 'rgba(0, 0, 0, 0.95)'; c.shadowBlur = 4; c.shadowOffsetY = 2;
       c.textAlign = 'left'; c.fillStyle = HUD.text; c.font = '700 38px system-ui, sans-serif';
       this.text(c, content.title, 350, 2, 46);
       c.fillStyle = HUD.muted; c.font = '30px system-ui, sans-serif';
