@@ -238,9 +238,12 @@ class XrTeleportPillar {
   }
 }
 
+/** Indoors the whole room is 11 m across, so a tight far plane keeps depth precision high. */
+export const ROOM_CLIP = { near: 0.05, far: 40 } as const;
+
 export class XrSession {
   readonly player = new THREE.Group();
-  readonly camera = new THREE.PerspectiveCamera(70, 1, 0.05, 40);
+  readonly camera = new THREE.PerspectiveCamera(70, 1, ROOM_CLIP.near, ROOM_CLIP.far);
   private raycaster = new THREE.Raycaster();
   private temp = new THREE.Matrix4();
   private controllers: THREE.Group[] = [];
@@ -267,8 +270,26 @@ export class XrSession {
   private cleanAt = 0;
   private hiddenScenery: THREE.Object3D[] = [];
   neighborhood: NeighborhoodWorld | null = null;
+
+  /**
+   * Match the headset's clip range to what is being looked at. The neighborhood is ~210 m across, so
+   * the room's 40 m far plane would cut away the far cul-de-sacs, distant rooms and the ground under
+   * them. Take the world's own camera range rather than a second magic number, so the headset sees
+   * exactly as far as the desktop street view does.
+   */
+  private syncCameraRange(): void {
+    const near = this.neighborhood ? this.neighborhood.street.near : ROOM_CLIP.near;
+    const far = this.neighborhood ? this.neighborhood.street.far : ROOM_CLIP.far;
+    if (this.camera.near === near && this.camera.far === far) return;
+    this.camera.near = near;
+    this.camera.far = far;
+    // three copies these onto the XR eye cameras and into the session's depth range each frame.
+    this.camera.updateProjectionMatrix();
+  }
+
   setNeighborhood(world: NeighborhoodWorld | null): void {
     this.neighborhood = world;
+    this.syncCameraRange();
     if (this.presenting) {
       if (world) { this.amenities.end(); this.player.position.copy(world.street.position).setY(0); this.player.rotation.set(0,world.street.rotation.y,0); this.panel.hide(); }
       else this.amenities.start();
@@ -277,6 +298,7 @@ export class XrSession {
   }
   desktopVisibility(object: THREE.Object3D): boolean { return this.hiddenScenery.includes(object) || object.visible; }
   neighborhoodEnteredRoom(): void {
+    this.syncCameraRange();
     if (!this.presenting) return;
     const spawn = spawnPosition(); this.player.position.set(spawn.x, spawn.y, spawn.z); this.player.rotation.set(0,0,0);
     this.panel.hide(); this.syncGuides();
@@ -371,6 +393,7 @@ export class XrSession {
 
   private onStart(): void {
     this.presenting = true;
+    this.syncCameraRange();
     document.body.classList.add('palace-immersive');
     this.roomFiles?.close();
     this.lastWalk = 0;
@@ -395,6 +418,7 @@ export class XrSession {
 
   private onEnd(): void {
     this.presenting = false;
+    this.syncCameraRange();
     document.body.classList.remove('palace-immersive');
     this.roomFiles?.close();
     this.stopClean();
