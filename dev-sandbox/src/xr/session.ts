@@ -262,7 +262,7 @@ export class XrSession {
       a.click();
       a.remove();
     }
-    if (result.page && result.page !== 'guide') this.panel.show(result.page);
+    if (result.page && result.page !== 'guide') this.panel.show(result.page, Boolean(result.preserveDraft));
     if (result.tutorialEvent) this.onTutorial?.(result.tutorialEvent);
     const tutorial = (globalThis as unknown as { tutorial?: { state: OnboardingState | null } }).tutorial;
     if (tutorial) this.panel.setGuide(tutorial.state);

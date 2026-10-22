@@ -29,6 +29,7 @@ import {
 import { OBJECT_KINDS } from '../src/core/types';
 import { LIGHTING_PRESETS } from '../src/core/appearance';
 import { ROOM_TRACKS } from '../src/core/soundtrack';
+import { XrCreation } from '../src/xr/creation';
 
 globalThis.localStorage = { getItem: () => null, setItem: () => {} } as unknown as Storage;
 
@@ -228,16 +229,40 @@ test('Open link in VR uses embed overlay for Spotify and standard websites', () 
   assert.equal(pg.openEmbed?.src, 'https://www.unpackinggame.com/');
 });
 
+test('VR exposes content editing for selected links and saves title+URL changes', () => {
+  const store = new Store(newRoom());
+  const repId = store.addItem({ title: 'Old title', sourceRef: 'https://example.com/old', type: 'link', kind: 'book' });
+  const contentId = store.state.representations.find((r) => r.id === repId)!.contentItemId;
+  store.select(repId);
+
+  const actions = objectActions(store).map((b) => b.id);
+  assert.ok(actions.includes('page:edit-content'));
+
+  const draft = new XrCreation();
+  const opened = runPanelAction(store, 'page:edit-content', [], draft);
+  assert.equal(opened.page, 'create');
+  assert.equal(draft.title, 'Old title');
+  assert.equal(draft.text, 'https://example.com/old');
+
+  draft.title = 'New title';
+  draft.text = 'example.org/new';
+  const saved = runPanelAction(store, 'create:submit', [], draft);
+  assert.equal(saved.tutorialEvent, 'edited');
+  assert.equal(store.content(contentId)?.title, 'New title');
+  assert.equal(store.content(contentId)?.sourceRef, 'https://example.org/new');
+  assert.equal(store.state.representations.find((r) => r.id === repId)?.contentItemId, contentId);
+});
+
 test('selected objects grow Edit, Move, Put away, and Open buttons', () => {
   const store = new Store(newRoom());
   assert.deepEqual(objectActions(store), []);
   const noteId = store.addItem({ title: 'Note', sourceRef: 'just a note', type: 'note', kind: 'notebook' });
   store.select(noteId);
-  assert.deepEqual(objectActions(store).map((b) => b.id), ['page:object', 'move', 'stash:' + noteId]);
-  assert.deepEqual(objectActions(store).map((b) => b.label), ['Edit', 'Move', 'Put away']);
+  assert.deepEqual(objectActions(store).map((b) => b.id), ['page:edit-content', 'page:object', 'move', 'stash:' + noteId]);
+  assert.deepEqual(objectActions(store).map((b) => b.label), ['Edit text/link', 'Edit', 'Move', 'Put away']);
   const linkId = store.addItem({ title: 'Docs', sourceRef: 'https://example.com/docs', type: 'link', kind: 'book' });
   store.select(linkId);
-  assert.deepEqual(objectActions(store).map((b) => b.id), ['page:object', 'move', 'stash:' + linkId, 'open:link']);
+  assert.deepEqual(objectActions(store).map((b) => b.id), ['page:edit-content', 'page:object', 'move', 'stash:' + linkId, 'open:link']);
   const from = store.slotOf(noteId);
   store.select(noteId);
   const moved = runPanelAction(store, 'move');

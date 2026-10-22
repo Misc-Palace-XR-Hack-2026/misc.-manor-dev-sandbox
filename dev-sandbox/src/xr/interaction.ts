@@ -210,6 +210,7 @@ export interface PanelActionResult {
   stairs?: boolean;
   openUrl?: string;
   openEmbed?: { src: string; fallbackUrl: string };
+  preserveDraft?: boolean;
   tutorialEvent?: string;
 }
 
@@ -232,6 +233,14 @@ export function inspectPreview(store: Store, repId: string): InspectPreview {
     href,
     embedSrc: preview.kind === 'embed' ? preview.src : null,
   };
+}
+
+function editableContentId(store: Store): string | null {
+  const selected = store.selectedId ? store.state.representations.find((r) => r.id === store.selectedId) : null;
+  if (!selected) return null;
+  const content = store.content(selected.contentItemId);
+  if (!content || content.locked) return null;
+  return (content.type === 'note' || content.sourceKind === 'url' || content.sourceKind === 'note') ? content.id : null;
 }
 
 export interface NeighborhoodRoom {
@@ -281,11 +290,13 @@ export function objectActions(store: Store): PanelButton[] {
     ? store.state.representations.find((r) => r.id === store.selectedId)
     : undefined;
   if (!selected) return [];
-  const actions: PanelButton[] = [
+  const actions: PanelButton[] = [];
+  if (editableContentId(store)) actions.push({ id: 'page:edit-content', label: 'Edit text/link' });
+  actions.push(
     { id: 'page:object', label: 'Edit' },
     { id: 'move', label: 'Move' },
     { id: 'stash:' + selected.id, label: 'Put away' },
-  ];
+  );
   if (inspectPreview(store, selected.id).href) actions.push({ id: 'open:link', label: 'Open' });
   return actions;
 }
@@ -411,6 +422,7 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
     { id: 'go:loft', label: 'Go to loft' },
     { id: 'go:floor', label: 'Go to floor' },
   ];
+  if (editableContentId(store)) home.push({ id: 'page:edit-content', label: 'Edit text/link' });
   if (selected && inspectPreview(store, selected.id).href) home.push({ id: 'open:link', label: 'Open link' });
   home.push(
     { id: 'page:lighting', label: 'Lighting' },
@@ -442,6 +454,17 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   if (id === 'rooms:none') return {};
   if (id === 'page:themes') return { page: 'themes' };
   if (id === 'page:create') return { page: 'create', tutorialEvent: 'open-add' };
+  if (id === 'page:edit-content') {
+    if (!draft || !store.selectedId) return {};
+    const selected = store.state.representations.find((r) => r.id === store.selectedId);
+    const content = selected ? store.content(selected.contentItemId) : null;
+    if (!content || content.locked) return {};
+    const isNote = content.type === 'note' || content.sourceKind === 'note';
+    if (!isNote && content.sourceKind !== 'url') return {};
+    draft.beginEdit(content.id, content.title, content.sourceRef, isNote ? 'note' : 'link');
+    return { page: 'create', preserveDraft: true };
+  }
+
   if (id === 'page:welcome') return { page: 'welcome' };
   if (id === 'guide:room') return { page: 'home', tutorialEvent: 'skip' };
   if (id === 'guide:start') return { page: 'home', tutorialEvent: 'start' };
@@ -466,7 +489,9 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   if (draft && id === 'create:mode') { draft.mode = draft.mode === 'link' ? 'note' : 'link'; return {}; }
   if (draft && id.startsWith('create-kind:')) { draft.kind = (id.slice(12) || '') as ObjectKind | ''; return {tutorialEvent:'kind-chosen'}; }
   if (draft && id === 'create:submit') {
+    const edited = draft.editing;
     const created = draft.create(store);
+    if (edited && draft.created) return { tutorialEvent: 'edited' };
     return created ? { tutorialEvent: 'created' } : {tutorialEvent:'create-invalid'};
   }
   if (id === 'exit') return { exit: true };
