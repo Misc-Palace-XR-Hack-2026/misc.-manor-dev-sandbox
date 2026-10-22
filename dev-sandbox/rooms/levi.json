@@ -22,51 +22,59 @@
   "contentItems": [
     {
       "id": "levi-listening-station",
-      "type": "note",
-      "title": "Listening station",
-      "sourceKind": "note",
-      "sourceRef": "Add an album or playlist to make this your listening station.",
+      "type": "link",
+      "title": "Rick Astley — Never Gonna Give You Up",
+      "sourceKind": "url",
+      "sourceRef": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
       "tags": [
         "levi",
-        "music"
+        "music",
+        "video"
       ],
-      "createdAt": "2026-10-19T00:00:00.000Z"
+      "createdAt": "2026-10-19T00:00:00.000Z",
+      "notes": "Rick Astley’s official music video. The listening station has a sense of humor."
     },
     {
       "id": "levi-mixtape-shelf",
-      "type": "note",
-      "title": "Mixtape shelf",
-      "sourceKind": "note",
-      "sourceRef": "Keep a favorite mix or an album to return to here.",
+      "type": "link",
+      "title": "Pure Moods CD Commercial",
+      "sourceKind": "url",
+      "sourceRef": "https://www.youtube.com/watch?v=AZJSjrox_2s",
       "tags": [
         "levi",
-        "music"
+        "music",
+        "video"
       ],
-      "createdAt": "2026-10-19T00:00:00.000Z"
+      "createdAt": "2026-10-19T00:00:00.000Z",
+      "notes": "The Pure Moods compilation commercial, uploaded by hereinmylifetime."
     },
     {
       "id": "levi-live-sessions",
-      "type": "note",
-      "title": "Live sessions",
-      "sourceKind": "note",
-      "sourceRef": "Save a concert, jam, or recording that inspires you.",
+      "type": "link",
+      "title": "Bon Iver — Perth",
+      "sourceKind": "url",
+      "sourceRef": "https://www.youtube.com/watch?v=MFuJpPwy6Zg",
       "tags": [
         "levi",
-        "music"
+        "music",
+        "video"
       ],
-      "createdAt": "2026-10-19T00:00:00.000Z"
+      "createdAt": "2026-10-19T00:00:00.000Z",
+      "notes": "Perth, from the Bon Iver - Topic channel."
     },
     {
       "id": "levi-project-01",
-      "type": "note",
-      "title": "Project 01",
-      "sourceKind": "note",
-      "sourceRef": "Placeholder for your first project. Add its name, link, and notes when ready.",
+      "type": "link",
+      "title": "Build Your Own X",
+      "sourceKind": "url",
+      "sourceRef": "https://github.com/codecrafters-io/build-your-own-x",
       "tags": [
         "levi",
+        "engineering",
         "projects"
       ],
-      "createdAt": "2026-10-19T00:00:00.000Z"
+      "createdAt": "2026-10-19T00:00:00.000Z",
+      "notes": "Tutorials for recreating technologies from scratch: interpreters, databases, operating systems, and more. A public learning collection, not a personal project."
     },
     {
       "id": "levi-screening-corner",
@@ -94,15 +102,17 @@
     },
     {
       "id": "levi-project-02",
-      "type": "note",
-      "title": "Project 02",
-      "sourceKind": "note",
-      "sourceRef": "Placeholder for a build journal or work in progress.",
+      "type": "link",
+      "title": "MIT — The Missing Semester",
+      "sourceKind": "url",
+      "sourceRef": "https://missing.csail.mit.edu/",
       "tags": [
         "levi",
-        "projects"
+        "engineering",
+        "learning"
       ],
-      "createdAt": "2026-10-19T00:00:00.000Z"
+      "createdAt": "2026-10-19T00:00:00.000Z",
+      "notes": "Practical development tools: the shell, debugging, Git, packaging, and code quality."
     },
     {
       "id": "levi-coffee-break",
@@ -142,27 +152,31 @@
     },
     {
       "id": "levi-project-03",
-      "type": "note",
-      "title": "Project 03",
-      "sourceKind": "note",
-      "sourceRef": "Placeholder for a prototype or maker project.",
+      "type": "link",
+      "title": "Nand to Tetris",
+      "sourceKind": "url",
+      "sourceRef": "https://www.nand2tetris.org/",
       "tags": [
         "levi",
-        "maker"
+        "engineering",
+        "systems"
       ],
-      "createdAt": "2026-10-19T00:00:00.000Z"
+      "createdAt": "2026-10-19T00:00:00.000Z",
+      "notes": "Build a computer system and software hierarchy from first principles, with lectures, tools, and hands-on projects."
     },
     {
       "id": "levi-project-04",
-      "type": "note",
-      "title": "Project 04",
-      "sourceKind": "note",
-      "sourceRef": "Placeholder for a game, experiment, or interactive project.",
+      "type": "link",
+      "title": "Red Blob Games — A* Pathfinding",
+      "sourceKind": "url",
+      "sourceRef": "https://www.redblobgames.com/pathfinding/a-star/introduction.html",
       "tags": [
         "levi",
-        "maker"
+        "engineering",
+        "gamedev"
       ],
-      "createdAt": "2026-10-19T00:00:00.000Z"
+      "createdAt": "2026-10-19T00:00:00.000Z",
+      "notes": "Interactive explanations of breadth-first search, Dijkstra, and A* using maps you can experiment with."
     },
     {
       "id": "levi-studio-greenery",
@@ -202,15 +216,17 @@
     },
     {
       "id": "levi-headphone-sessions",
-      "type": "note",
-      "title": "Headphone sessions",
-      "sourceKind": "note",
-      "sourceRef": "Keep something for focused listening here.",
+      "type": "link",
+      "title": "Sequelitis — Mega Man Classic vs. Mega Man X",
+      "sourceKind": "url",
+      "sourceRef": "https://www.youtube.com/watch?v=8FpigqfcvlM",
       "tags": [
         "levi",
-        "music"
+        "gamedev",
+        "video"
       ],
-      "createdAt": "2026-10-19T00:00:00.000Z"
+      "createdAt": "2026-10-19T00:00:00.000Z",
+      "notes": "Egoraptor’s game-design comparison of Mega Man and Mega Man X."
     },
     {
       "id": "levi-listening-chair",
@@ -310,15 +326,17 @@
     },
     {
       "id": "levi-tea-table",
-      "type": "note",
-      "title": "Tea table",
-      "sourceKind": "note",
-      "sourceRef": "A side table for slow afternoons in the studio.",
+      "type": "link",
+      "title": "Salad Fingers 1: Spoons",
+      "sourceKind": "url",
+      "sourceRef": "https://www.youtube.com/watch?v=fMmlyLdpBXM",
       "tags": [
         "levi",
-        "decor"
+        "animation",
+        "video"
       ],
-      "createdAt": "2026-10-19T00:00:00.000Z"
+      "createdAt": "2026-10-19T00:00:00.000Z",
+      "notes": "David Firth’s Salad Fingers episode about spoons, beside the tea table."
     },
     {
       "id": "levi-reading-rug",
@@ -334,15 +352,16 @@
     },
     {
       "id": "levi-studio-cat",
-      "type": "note",
-      "title": "Studio cat",
-      "sourceKind": "note",
-      "sourceRef": "A sleeping studio companion.",
+      "type": "link",
+      "title": "Kittens Game",
+      "sourceKind": "url",
+      "sourceRef": "https://kittensgame.com/web/#",
       "tags": [
         "levi",
-        "decor"
+        "games"
       ],
-      "createdAt": "2026-10-19T00:00:00.000Z"
+      "createdAt": "2026-10-19T00:00:00.000Z",
+      "notes": "The browser-based incremental game, attached to the sleeping studio cat."
     },
     {
       "id": "levi-corner-fern",
@@ -358,15 +377,17 @@
     },
     {
       "id": "levi-rhythm-corner",
-      "type": "note",
-      "title": "Rhythm corner",
-      "sourceKind": "note",
-      "sourceRef": "A drum for a creative break.",
+      "type": "link",
+      "title": "araabMUZIK — Live in Warsaw",
+      "sourceKind": "url",
+      "sourceRef": "https://www.youtube.com/watch?v=lmEhCDRvQKA",
       "tags": [
         "levi",
-        "decor"
+        "music",
+        "video"
       ],
-      "createdAt": "2026-10-19T00:00:00.000Z"
+      "createdAt": "2026-10-19T00:00:00.000Z",
+      "notes": "araabMUZIK dubstep live at 1500M2 in Warsaw, uploaded by djsteez."
     },
     {
       "id": "levi-studio-boombox",
@@ -382,15 +403,16 @@
     },
     {
       "id": "levi-play-station",
-      "type": "note",
-      "title": "Play station",
-      "sourceKind": "note",
-      "sourceRef": "A retro console for a break between builds.",
+      "type": "link",
+      "title": "The Binding of Isaac: Rebirth",
+      "sourceKind": "url",
+      "sourceRef": "https://store.steampowered.com/app/250900/The_Binding_of_Isaac_Rebirth/",
       "tags": [
         "levi",
-        "decor"
+        "games"
       ],
-      "createdAt": "2026-10-19T00:00:00.000Z"
+      "createdAt": "2026-10-19T00:00:00.000Z",
+      "notes": "The game’s Steam store page, attached to the retro console."
     }
   ],
   "representations": [
