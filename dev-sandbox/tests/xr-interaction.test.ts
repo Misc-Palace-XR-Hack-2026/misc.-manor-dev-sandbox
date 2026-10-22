@@ -29,6 +29,7 @@ import {
 import { OBJECT_KINDS } from '../src/core/types';
 import { LIGHTING_PRESETS } from '../src/core/appearance';
 import { ROOM_TRACKS } from '../src/core/soundtrack';
+import { XrCreation } from '../src/xr/creation';
 
 globalThis.localStorage = { getItem: () => null, setItem: () => {} } as unknown as Storage;
 
@@ -190,14 +191,71 @@ test('Open link is offered for URLs and hands off after exiting VR', () => {
   const noteId = store.addItem({ title: 'Note', sourceRef: 'just a note', type: 'note', kind: 'notebook' });
   store.select(noteId);
   assert.ok(!panelButtons(store, 'home').some((b) => b.id === 'open:link'));
-  const linkId = store.addItem({ title: 'Docs', sourceRef: 'https://example.com/docs', type: 'link', kind: 'book' });
+  const linkId = store.addItem({ title: 'Docs', sourceRef: 'https://github.com/example/docs', type: 'link', kind: 'book' });
   store.select(linkId);
   assert.ok(panelButtons(store, 'home').some((b) => b.id === 'open:link'));
   const opened = runPanelAction(store, 'open:link');
-  assert.equal(opened.openUrl, 'https://example.com/docs');
+  assert.equal(opened.openUrl, 'https://github.com/example/docs');
   assert.equal(opened.exit, true);
   store.select(noteId);
   assert.equal(runPanelAction(store, 'open:link').openUrl, undefined);
+});
+
+test('Open link in VR uses embed overlay for iframe-safe URLs', () => {
+  const store = new Store(newRoom());
+  const ytId = store.addItem({ title: 'Video', sourceRef: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1234567890abcdEF', type: 'link', kind: 'book' });
+  store.select(ytId);
+  const opened = runPanelAction(store, 'open:link');
+  assert.equal(opened.openUrl, undefined);
+  assert.equal(opened.exit, undefined);
+  assert.equal(opened.openEmbed?.fallbackUrl, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1234567890abcdEF');
+  assert.match(opened.openEmbed?.src ?? '', /^https:\/\/www\.youtube-nocookie\.com\/embed\//);
+});
+
+test('Open link in VR uses embed overlay for Spotify and standard websites', () => {
+  const store = new Store(newRoom());
+  const spotify = store.addItem({ title: 'Playlist', sourceRef: 'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M', type: 'link', kind: 'book' });
+  store.select(spotify);
+  const sp = runPanelAction(store, 'open:link');
+  assert.equal(sp.openUrl, undefined);
+  assert.equal(sp.exit, undefined);
+  assert.match(sp.openEmbed?.src ?? '', /^https:\/\/open\.spotify\.com\/embed\/playlist\//);
+
+  const page = store.addItem({ title: 'Site', sourceRef: 'https://www.unpackinggame.com/', type: 'link', kind: 'book' });
+  store.select(page);
+  const pg = runPanelAction(store, 'open:link');
+  assert.equal(pg.openUrl, undefined);
+  assert.equal(pg.exit, undefined);
+  assert.equal(pg.openEmbed?.src, 'https://www.unpackinggame.com/');
+});
+
+test('VR exposes content editing for selected links and saves title+URL changes', () => {
+  const store = new Store(newRoom());
+  const repId = store.addItem({ title: 'Old title', sourceRef: 'https://example.com/old', type: 'link', kind: 'book' });
+  const contentId = store.state.representations.find((r) => r.id === repId)!.contentItemId;
+  store.select(repId);
+
+  const actions = objectActions(store).map((b) => b.id);
+  assert.ok(actions.includes('page:object'));
+  assert.ok(!actions.includes('page:edit-content'));
+
+  const draft = new XrCreation();
+  assert.equal(runPanelAction(store, 'page:object', [], draft).page, 'object');
+  const editOptions = panelButtons(store, 'object', [], draft).map((b) => b.id);
+  assert.ok(editOptions.includes('page:edit-content'));
+
+  const opened = runPanelAction(store, 'page:edit-content', [], draft);
+  assert.equal(opened.page, 'create');
+  assert.equal(draft.title, 'Old title');
+  assert.equal(draft.text, 'https://example.com/old');
+
+  draft.title = 'New title';
+  draft.text = 'example.org/new';
+  const saved = runPanelAction(store, 'create:submit', [], draft);
+  assert.equal(saved.tutorialEvent, 'edited');
+  assert.equal(store.content(contentId)?.title, 'New title');
+  assert.equal(store.content(contentId)?.sourceRef, 'https://example.org/new');
+  assert.equal(store.state.representations.find((r) => r.id === repId)?.contentItemId, contentId);
 });
 
 test('selected objects grow Edit, Move, Put away, and Open buttons', () => {

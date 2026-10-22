@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPreview, embedFor, youtubeId } from '../src/core/preview';
+import { buildPreview, embedFor, youtubeId, youtubePlaylistId } from '../src/core/preview';
 import * as previewPolicy from '../src/core/preview';
 import { createEmbedFrame } from '../src/views/preview-card';
 import type { ContentItem } from '../src/core/types';
@@ -94,6 +94,14 @@ test('YouTube URLs embed the privacy-enhanced player', () => {
     const p = buildPreview(urlItem(ref, 'video'));
     assert.deepEqual(p, { kind: 'embed', title: 'Title', provider: 'youtube', height: 169, src: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ' }, ref);
   }
+  const withList = buildPreview(urlItem('https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1234567890abcdEF', 'video'));
+  assert.equal(withList.kind, 'embed');
+  assert.equal(withList.kind === 'embed' && withList.src, 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?list=PL1234567890abcdEF');
+  const playlistOnly = buildPreview(urlItem('https://www.youtube.com/playlist?list=PL1234567890abcdEF', 'video'));
+  assert.equal(playlistOnly.kind, 'embed');
+  assert.equal(playlistOnly.kind === 'embed' && playlistOnly.src, 'https://www.youtube-nocookie.com/embed/videoseries?list=PL1234567890abcdEF');
+  assert.equal(youtubePlaylistId(new URL('https://www.youtube.com/playlist?list=PL1234567890abcdEF')), 'PL1234567890abcdEF');
+  assert.equal(youtubePlaylistId(new URL('https://www.youtube.com/watch?v=dQw4w9WgXcQ')), null);
   assert.equal(youtubeId(new URL('https://www.youtube.com/watch?v=../../x')), null);
   assert.equal(youtubeId(new URL('https://example.com/watch?v=dQw4w9WgXcQ')), null);
   assert.equal(buildPreview(urlItem('https://www.youtube.com/@somechannel', 'video')).kind, 'card', 'channel pages are not videos');

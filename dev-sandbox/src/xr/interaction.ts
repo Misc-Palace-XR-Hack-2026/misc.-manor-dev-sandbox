@@ -6,6 +6,7 @@ import { SURFACE_PRESETS, type SurfaceTarget } from '../core/surfaces';
 import { ROOMS_PICKER_ORDER, isDemoHomeAlias, isDemoSessionRoom, openRoom, seedRoom } from '../core/rooms';
 import { THEMES } from '../core/themes';
 import { safeUrl } from '../core/content';
+import { buildPreview } from '../core/preview';
 import { creationButtons, XrCreation } from './creation';
 import { currentStep, progressLabel, type OnboardingState } from '../core/onboarding';
 
@@ -208,6 +209,8 @@ export interface PanelActionResult {
   exit?: boolean;
   stairs?: boolean;
   openUrl?: string;
+  openEmbed?: { src: string; fallbackUrl: string };
+  preserveDraft?: boolean;
   tutorialEvent?: string;
 }
 
@@ -215,14 +218,29 @@ export interface InspectPreview {
   title: string;
   detail: string;
   href: string | null;
+  embedSrc: string | null;
 }
 
 export function inspectPreview(store: Store, repId: string): InspectPreview {
   const rep = store.state.representations.find((r) => r.id === repId);
   const content = rep ? store.content(rep.contentItemId) : undefined;
-  if (!content) return { title: '', detail: '', href: null };
+  if (!content) return { title: '', detail: '', href: null, embedSrc: null };
   const href = content.sourceKind === 'url' ? safeUrl(content.sourceRef) : null;
-  return { title: content.title, detail: href ?? content.sourceRef, href };
+  const preview = buildPreview(content);
+  return {
+    title: content.title,
+    detail: href ?? content.sourceRef,
+    href,
+    embedSrc: preview.kind === 'embed' ? preview.src : null,
+  };
+}
+
+function editableContentId(store: Store): string | null {
+  const selected = store.selectedId ? store.state.representations.find((r) => r.id === store.selectedId) : null;
+  if (!selected) return null;
+  const content = store.content(selected.contentItemId);
+  if (!content || content.locked) return null;
+  return (content.type === 'note' || content.sourceKind === 'url' || content.sourceKind === 'note') ? content.id : null;
 }
 
 export interface NeighborhoodRoom {
@@ -313,6 +331,7 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
   if (page === 'object') {
     return [
       { id: 'page:home', label: 'Back' },
+      ...(editableContentId(store) ? [{ id: 'page:edit-content', label: 'Edit text/link' }] : []),
       ...OBJECT_KINDS.map((kind) => ({ id: 'kind:' + kind, label: OBJECT_LABELS[kind] })),
     ];
   }
@@ -433,6 +452,17 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   if (id === 'rooms:none') return {};
   if (id === 'page:themes') return { page: 'themes' };
   if (id === 'page:create') return { page: 'create', tutorialEvent: 'open-add' };
+  if (id === 'page:edit-content') {
+    if (!draft || !store.selectedId) return {};
+    const selected = store.state.representations.find((r) => r.id === store.selectedId);
+    const content = selected ? store.content(selected.contentItemId) : null;
+    if (!content || content.locked) return {};
+    const isNote = content.type === 'note' || content.sourceKind === 'note';
+    if (!isNote && content.sourceKind !== 'url') return {};
+    draft.beginEdit(content.id, content.title, content.sourceRef, isNote ? 'note' : 'link');
+    return { page: 'create', preserveDraft: true };
+  }
+
   if (id === 'page:welcome') return { page: 'welcome' };
   if (id === 'guide:room') return { page: 'home', tutorialEvent: 'skip' };
   if (id === 'guide:start') return { page: 'home', tutorialEvent: 'start' };
@@ -457,7 +487,9 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   if (draft && id === 'create:mode') { draft.mode = draft.mode === 'link' ? 'note' : 'link'; return {}; }
   if (draft && id.startsWith('create-kind:')) { draft.kind = (id.slice(12) || '') as ObjectKind | ''; return {tutorialEvent:'kind-chosen'}; }
   if (draft && id === 'create:submit') {
+    const edited = draft.editing;
     const created = draft.create(store);
+    if (edited && draft.created) return { tutorialEvent: 'edited' };
     return created ? { tutorialEvent: 'created' } : {tutorialEvent:'create-invalid'};
   }
   if (id === 'exit') return { exit: true };
@@ -500,8 +532,10 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
     return {};
   }
   if (id === 'open:link') {
-    const href = store.selectedId ? inspectPreview(store, store.selectedId).href : null;
-    return href ? { openUrl: href, exit: true } : {};
+    const preview = store.selectedId ? inspectPreview(store, store.selectedId) : null;
+    if (!preview?.href) return {};
+    if (preview.embedSrc) return { openEmbed: { src: preview.embedSrc, fallbackUrl: preview.href } };
+    return { openUrl: preview.href, exit: true };
   }
   if (id === 'move' && store.selectedId) {
     store.pickUp(store.selectedId);
