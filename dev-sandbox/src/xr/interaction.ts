@@ -290,13 +290,11 @@ export function objectActions(store: Store): PanelButton[] {
     ? store.state.representations.find((r) => r.id === store.selectedId)
     : undefined;
   if (!selected) return [];
-  const actions: PanelButton[] = [];
-  if (editableContentId(store)) actions.push({ id: 'page:edit-content', label: 'Edit text/link' });
-  actions.push(
+  const actions: PanelButton[] = [
     { id: 'page:object', label: 'Edit' },
     { id: 'move', label: 'Move' },
     { id: 'stash:' + selected.id, label: 'Put away' },
-  );
+  ];
   if (inspectPreview(store, selected.id).href) actions.push({ id: 'open:link', label: 'Open' });
   return actions;
 }
@@ -333,6 +331,7 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
   if (page === 'object') {
     return [
       { id: 'page:home', label: 'Back' },
+      ...(editableContentId(store) ? [{ id: 'page:edit-content', label: 'Edit text/link' }] : []),
       ...OBJECT_KINDS.map((kind) => ({ id: 'kind:' + kind, label: OBJECT_LABELS[kind] })),
     ];
   }
@@ -422,7 +421,6 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
     { id: 'go:loft', label: 'Go to loft' },
     { id: 'go:floor', label: 'Go to floor' },
   ];
-  if (editableContentId(store)) home.push({ id: 'page:edit-content', label: 'Edit text/link' });
   if (selected && inspectPreview(store, selected.id).href) home.push({ id: 'open:link', label: 'Open link' });
   home.push(
     { id: 'page:lighting', label: 'Lighting' },

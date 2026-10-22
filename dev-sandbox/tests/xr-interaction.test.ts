@@ -236,9 +236,14 @@ test('VR exposes content editing for selected links and saves title+URL changes'
   store.select(repId);
 
   const actions = objectActions(store).map((b) => b.id);
-  assert.ok(actions.includes('page:edit-content'));
+  assert.ok(actions.includes('page:object'));
+  assert.ok(!actions.includes('page:edit-content'));
 
   const draft = new XrCreation();
+  assert.equal(runPanelAction(store, 'page:object', [], draft).page, 'object');
+  const editOptions = panelButtons(store, 'object', [], draft).map((b) => b.id);
+  assert.ok(editOptions.includes('page:edit-content'));
+
   const opened = runPanelAction(store, 'page:edit-content', [], draft);
   assert.equal(opened.page, 'create');
   assert.equal(draft.title, 'Old title');
@@ -258,11 +263,11 @@ test('selected objects grow Edit, Move, Put away, and Open buttons', () => {
   assert.deepEqual(objectActions(store), []);
   const noteId = store.addItem({ title: 'Note', sourceRef: 'just a note', type: 'note', kind: 'notebook' });
   store.select(noteId);
-  assert.deepEqual(objectActions(store).map((b) => b.id), ['page:edit-content', 'page:object', 'move', 'stash:' + noteId]);
-  assert.deepEqual(objectActions(store).map((b) => b.label), ['Edit text/link', 'Edit', 'Move', 'Put away']);
+  assert.deepEqual(objectActions(store).map((b) => b.id), ['page:object', 'move', 'stash:' + noteId]);
+  assert.deepEqual(objectActions(store).map((b) => b.label), ['Edit', 'Move', 'Put away']);
   const linkId = store.addItem({ title: 'Docs', sourceRef: 'https://example.com/docs', type: 'link', kind: 'book' });
   store.select(linkId);
-  assert.deepEqual(objectActions(store).map((b) => b.id), ['page:edit-content', 'page:object', 'move', 'stash:' + linkId, 'open:link']);
+  assert.deepEqual(objectActions(store).map((b) => b.id), ['page:object', 'move', 'stash:' + linkId, 'open:link']);
   const from = store.slotOf(noteId);
   store.select(noteId);
   const moved = runPanelAction(store, 'move');
