@@ -58,6 +58,7 @@ export function validateRoom(input: unknown): string | null {
     }
     if (c.lastObjectKind !== undefined && !(OBJECT_KINDS as readonly unknown[]).includes(c.lastObjectKind)) return 'Invalid last object kind.';
     if (c.notes !== undefined && (typeof c.notes !== 'string' || c.notes.length > 4000)) return 'Invalid item notes (text, max 4000 characters).';
+    if (c.fromRoom !== undefined && typeof c.fromRoom !== 'string') return 'Invalid item origin.';
     if (c.imageData !== undefined && (c.type !== 'image' || !validPhotoData(c.imageData))) return 'Invalid photo image data (PNG/JPEG, max 1024px and 1.5 MB encoded).';
     if (!(CONTENT_TYPES as readonly string[]).includes(c.type)) return `Unknown content type: ${String(c.type)}.`;
     if (!Array.isArray(c.tags) || c.tags.some((t) => typeof t !== 'string')) return `Item ${c.id} has bad tags.`;
@@ -314,15 +315,16 @@ export class Store {
    * Copies of objects from elsewhere (Random drop), each set down on a random free slot, as one undo step. Stops when
    * the room is full. Returns the new representation ids, in order.
    */
-  dropIn(items: readonly { content: ContentItem; kind: ObjectKind }[], random: () => number = Math.random): string[] {
+  dropIn(items: readonly { content: ContentItem; kind: ObjectKind; room?: string }[], random: () => number = Math.random): string[] {
     this.lastCommand = 'dropIn';
     const placed: string[] = [];
     this.commit((s) => {
       const layout = getLayout(s.layoutId) ?? this.layout;
-      for (const { content, kind } of items) {
+      for (const { content, kind, room } of items) {
         const slotId = randomSlot(kind, layout, new Set(s.placements.map((p) => p.slotId)), random);
         if (!slotId) break;
         const c: ContentItem = { ...content, id: uid('ci'), tags: [...content.tags], createdAt: new Date().toISOString() };
+        if (room) c.fromRoom = room;
         s.contentItems.push(c);
         const rep = this.createRep(s, c, kind);
         s.placements.push({ representationId: rep.id, slotId });

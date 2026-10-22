@@ -161,6 +161,7 @@ test('scene anchors line up with the real room layout', () => {
   assert.ok(JUKEBOX_POS[0] < ROOM_EAST + 2, 'jukebox sits right beside the end of the wall');
   assert.equal(JUKEBOX_POS[1], 0, 'jukebox stands at ground level');
   assert.ok(JUKEBOX_POS[2] < 3, 'jukebox is by the back-right wall, not out front');
+  assert.ok(JUKEBOX_POS[0] - (ROOM_EAST + 0.3 - BOUNDS_INSET) < SAVE_POINT_REACH, 'tappable from the east edge of the floor');
 });
 
 test('the save point stands just off the room past the front edge, on the stairs half, within reach of the floor', () => {

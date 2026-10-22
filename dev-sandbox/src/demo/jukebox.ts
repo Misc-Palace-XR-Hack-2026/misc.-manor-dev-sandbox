@@ -16,6 +16,8 @@ export interface Jukebox {
   setGlow(amount: number): void;
   /** 0..1 body opacity (1 = solid). The glass, glare and halo keep their own transparency. */
   setOpacity(amount: number): void;
+  /** Distance along the ray to the jukebox itself (the halo doesn't count), or null for a miss. */
+  hit(raycaster: THREE.Raycaster): number | null;
   dispose(): void;
 }
 
@@ -203,7 +205,8 @@ export function buildJukebox(): Jukebox {
   const halo = haloTexture();
   textures.push(halo);
   const haloMat = mat(new THREE.MeshBasicMaterial({ color: 0xffb46b, map: halo, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false }));
-  mesh(group, new THREE.PlaneGeometry(4.6, 4.8), haloMat, 0, 2.0, -0.4, false);
+  const haloMesh = mesh(group, new THREE.PlaneGeometry(4.6, 4.8), haloMat, 0, 2.0, -0.4, false);
+  haloMesh.raycast = () => {};
 
   // ---- state ----
   const solids = materials.filter((m) => !m.transparent);
@@ -237,6 +240,10 @@ export function buildJukebox(): Jukebox {
     },
     setMouthOpen(amount) { mouthTarget = clamp01(amount); },
     setGlow(amount) { glowAmount = clamp01(amount); },
+    hit(raycaster) {
+      if (!group.visible) return null;
+      return raycaster.intersectObject(group, true)[0]?.distance ?? null;
+    },
     setOpacity(amount) {
       const a = clamp01(amount);
       for (const m of solids) { m.transparent = a < 1; m.opacity = a; m.needsUpdate = true; }

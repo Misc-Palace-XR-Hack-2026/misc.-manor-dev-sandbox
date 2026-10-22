@@ -1,4 +1,5 @@
 import type { Store } from '../core/store';
+import { ROOM_TRACKS, TRACK_LABELS, validTrack, type Soundtrack } from '../core/soundtrack';
 import { buildAddForm, buildImport, type FormHost } from '../views/add-forms';
 
 // The demo's HUD after the starter tutorial (still the tutorial: the edit tools wait for Exit tutorial).
@@ -15,6 +16,7 @@ export const HELP_LINES = [
   'Pinch or scroll to step back.',
   'Camera: Tactile walks the room, Dollhouse shows all of it.',
   'Tap the glowing portal to add your stuff.',
+  'Tap an object, then tap it again to pick it up. Tap a glowing spot to put it down.',
 ];
 
 export const GOAL_LINE = 'Choose your camera / motion to get to the portal';
@@ -42,7 +44,10 @@ export interface DemoHud {
   goalMet(): void;
   /** Hide the goal line now (another line is about to show in its place). */
   hideGoal(): void;
-  /** Take the HUD away (Exit tutorial). */
+  /** Show Edit room, left of Help (once the portal has been used). */
+  showEditRoom(onClick: () => void): void;
+  /** Free mode: the tutorial is over, so Exit tutorial goes. */
+  free(): void;
   dispose(): void;
 }
 
@@ -124,6 +129,13 @@ export function mountDemoHud(opts: {
       window.clearTimeout(goalTimer);
       goal.classList.remove('demo-goal-on');
     },
+    showEditRoom(onClick) {
+      if (hud.querySelector('.demo-edit-room')) return;
+      helpBtn.before(button('demo-hud-btn demo-edit-room', 'Edit room', onClick));
+    },
+    free() {
+      exit.remove();
+    },
     dispose() {
       window.clearTimeout(goalTimer);
       window.clearTimeout(pulseTimer);
@@ -145,10 +157,11 @@ export interface SavePointPanel {
 
 /**
  * What the save point offers: the sandbox's own Add object and Import forms (shared with its + menu), and Random drop
- * (`onRandomDrop`). Element ids are prefixed so they never clash with the sandbox menu once it mounts.
+ * (`onRandomDrop`). `onUsed` runs whenever one of the forms finishes. Element ids are prefixed so they never clash
+ * with the sandbox menu once it mounts.
  */
 export function mountSavePointPanel(
-  store: Store, say: (text: string, ms?: number) => void, onRandomDrop: () => void,
+  store: Store, say: (text: string, ms?: number) => void, onRandomDrop: () => void, onUsed: () => void,
 ): SavePointPanel {
   let version = 0;
   const backdrop = el('button', 'sheet-backdrop');
@@ -180,6 +193,7 @@ export function mountSavePointPanel(
       return () => session() && v === version;
     },
     idPrefix: 'sp-',
+    done: onUsed,
   };
   const addSheet = sheet('Add link or file', buildAddForm(host));
   const importSheet = sheet('Import', buildImport(host));
@@ -209,6 +223,64 @@ export function mountSavePointPanel(
 
   return {
     open: () => { if (store.canEdit) show(menu); },
+    close,
+    get isOpen() { return !backdrop.hidden; },
+  };
+}
+
+const MUSIC_OFF = 'off';
+const MUSIC_FOLLOW = 'follow';
+
+/**
+ * The jukebox's panel: pick the room's music (the same choice as Room music in the room editor). Feeding it your own
+ * music comes later.
+ */
+export function mountJukeboxPanel(store: Store, onClose: () => void): SavePointPanel {
+  const backdrop = el('button', 'sheet-backdrop');
+  backdrop.type = 'button';
+  backdrop.setAttribute('aria-label', 'Close');
+  backdrop.hidden = true;
+  const panel = el('section', 'demo-panel demo-jukebox');
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-label', 'Jukebox');
+  panel.hidden = true;
+  const head = el('header', 'demo-panel-head');
+  head.append(el('h2', '', 'Jukebox'), button('demo-panel-close', 'Close', () => close()));
+  const select = el('select', 'demo-jukebox-select');
+  select.id = 'demo-jukebox-music';
+  const option = (value: string, label: string) => {
+    const o = el('option', '', label);
+    o.value = value;
+    select.append(o);
+  };
+  option(MUSIC_FOLLOW, 'Follow lighting');
+  option(MUSIC_OFF, 'No music');
+  for (const track of ROOM_TRACKS) option(track, TRACK_LABELS[track]);
+  select.addEventListener('change', () => {
+    const v = select.value;
+    const soundtrack: Soundtrack = v === MUSIC_OFF ? { mode: 'off' } : validTrack(v) ? { mode: 'track', track: v } : { mode: 'follow' };
+    store.setSoundtrack(soundtrack);
+  });
+  const label = el('label', 'demo-jukebox-label', 'Room music');
+  label.htmlFor = select.id;
+  panel.append(head, label, select, el('p', 'demo-jukebox-note', 'Feeding it your own music comes later.'));
+
+  function close(): void {
+    if (backdrop.hidden) return;
+    panel.hidden = backdrop.hidden = true;
+    onClose();
+  }
+  backdrop.addEventListener('click', close);
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !backdrop.hidden) close(); });
+  document.body.append(backdrop, panel);
+
+  return {
+    open() {
+      if (!store.canEdit) return;
+      const s = store.state.soundtrack;
+      select.value = !s || s.mode === 'follow' ? MUSIC_FOLLOW : s.mode === 'off' ? MUSIC_OFF : s.track;
+      panel.hidden = backdrop.hidden = false;
+    },
     close,
     get isOpen() { return !backdrop.hidden; },
   };

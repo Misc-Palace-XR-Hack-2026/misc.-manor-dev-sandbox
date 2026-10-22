@@ -16,6 +16,7 @@ import {
   GLIDE_MOVE_S,
   glidePose,
   horizontalYaw,
+  shortestYawDelta,
   overviewEntryStart,
   overviewExitEnd,
   poseFromLookAt,
@@ -70,6 +71,8 @@ export interface WalkOptions {
   start?: { from: WalkPose; to: WalkPose; fov?: number };
   /** Show a short line of text to the visitor. */
   say?: (text: string, ms?: number) => void;
+  /** Runs at the end of every frame, once the walking eye has its pose for the frame. */
+  afterFrame?: (t: number) => void;
 }
 
 /** Keep zooming out under a slab this long (seconds) and the visitor pops up through it. */
@@ -90,6 +93,8 @@ export interface WalkHandle {
   toOverview(): void;
   /** Glide back down to where the visitor stood before the overview. */
   toWalk(): void;
+  /** While walking, ease the view part of the way (0..1, shortest turn) toward facing a point on the floor plan. */
+  lookToward(x: number, z: number, amount: number): void;
   dispose(): void;
 }
 
@@ -473,6 +478,7 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
 
     if (mode === 'walk' && !glide) stepZoom(dt);
     place();
+    options.afterFrame?.(t);
   }
 
   const pinchSpan = () => {
@@ -590,6 +596,12 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
     },
     toWalk() {
       if (mode === 'overview' || leaving) walkBack(frameTime);
+    },
+    lookToward(x, z, amount) {
+      if (mode !== 'walk' || leaving || glide || dragging) return;
+      const yaw = horizontalYaw([pose.x, pose.y, pose.z], [x, pose.y, z]);
+      lookTargetYaw = lookYaw + shortestYawDelta(lookYaw, yaw) * amount;
+      lookTargetPitch = Math.min(lookTargetPitch, ENTRY_PITCH);
     },
     dispose() {
       canvas.removeEventListener('pointerdown', onPointerDown);

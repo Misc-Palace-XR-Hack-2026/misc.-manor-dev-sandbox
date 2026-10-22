@@ -69,6 +69,7 @@ export class PreviewCardView {
   private compact = false;
   /** Rebuild on the next show() even if the preview is the same (the layout changed). */
   private stale = false;
+  private byline: string | null = null;
 
   constructor(container: HTMLElement) {
     this.root.hidden = true;
@@ -89,6 +90,13 @@ export class PreviewCardView {
     this.compact = on;
     this.stale = true;
     this.root.classList.toggle('preview-compact', on);
+  }
+
+  /** A small italic credit in the card's top corner (e.g. "from Matt"), or null for none. */
+  setByline(text: string | null): void {
+    if (text === this.byline) return;
+    this.byline = text;
+    this.stale = true;
   }
 
   /**
@@ -116,6 +124,7 @@ export class PreviewCardView {
     // Decorative cards are described by the item sheet; a focusable iframe or link must stay in the tree.
     if (actionable) this.root.removeAttribute('aria-hidden'); else this.root.setAttribute('aria-hidden', 'true');
     if (preview) this.root.append(this.render(preview, art));
+    if (preview && this.byline) this.root.append(make('div', 'preview-byline', this.byline));
   }
 
   /**

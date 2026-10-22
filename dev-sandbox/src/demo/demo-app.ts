@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Store, roomKeys } from '../core/store';
 import type { ObjectKind, RoomState } from '../core/types';
 import {
-  BOX_POS, DOOR_POS, INTRO_DURATION, JUKEBOX_POS, SAVE_POINT_POS, SAVE_POINT_REACH, clampLook, introFrame, lookAround,
+  BOX_POS, DOOR_POS, INTRO_DURATION, JUKEBOX_POS, ROOM_EAST, SAVE_POINT_POS, SAVE_POINT_REACH, clampLook, introFrame, lookAround,
   markIntroSeen, tutorialView, type View,
 } from '../core/intro-timeline';
 import { RoomView, type DemoHooks, type DemoTap } from '../views/room';
@@ -14,7 +14,8 @@ import { disposeGroup } from '../views/resources';
 import { buildJukebox } from './jukebox';
 import { buildCardboardBox } from './cardboard-box';
 import { buildSavePoint } from './save-point';
-import { mountDemoHud, mountSavePointPanel, type DemoHud, type SavePointPanel } from './demo-hud';
+import { mountDemoHud, mountJukeboxPanel, mountSavePointPanel, type DemoHud, type SavePointPanel } from './demo-hud';
+import type { DemoEditor } from './room-app';
 import { mountWalkMode, type WalkHandle } from './walk-mode';
 import {
   DEMO_ROOM_ID, SHELF_SLOTS, TUTORIAL_SLOTS, inBox, migrateDemoRoom, normalizeDemoOwner, prepareIntroReplayRoom,
@@ -26,8 +27,10 @@ import { EYE_HEIGHT, poseFromLookAt, type WalkPose } from '../core/walk';
 // ends on a locked tutorial view of the shelf: the visitor unpacks the starter objects from a cardboard box, looks at
 // them and sets them on the shelf. Finishing (or skipping) lifts the lock: the camera drops to standing height and
 // they walk the room in first person ("tactile"). Their goal now is the save point across the room: they get there by
-// walking or by switching the Camera to "dollhouse" (the isometric room). The save point adds links, files and
-// bookmarks. Only Exit tutorial brings in the sandbox edit tools.
+// walking or by switching the Camera to "dollhouse" (the isometric room). The save point (the "portal") adds links,
+// files, bookmarks or a random drop from the devs' rooms. Objects can be picked up and moved anywhere. Using the portal
+// once brings in Edit room; twice ends sequence 2: the jukebox appears and the demo is in free mode (Rooms, photo, room
+// music). Exit tutorial jumps straight to free mode.
 
 type Mode = 'intro' | 'tutorial' | 'walk';
 
@@ -44,6 +47,12 @@ const POP_S = 0.45;
 const STAND: WalkPose = { x: 8.3, y: EYE_HEIGHT, z: 4.8, yaw: 0, pitch: -0.12 };
 /** The goal line shows this long after the tutorial ends even if the visitor never looks toward the save point. */
 const GOAL_AFTER_MS = 6000;
+/** The middle of the room's floor plan (x, z): a random drop turns the visitor toward it. */
+const ROOM_MIDDLE = [ROOM_EAST / 2, 3.6] as const;
+/** After the second use of the portal, free mode starts this long later (ms), once a drop has landed. */
+const FREE_AFTER_MS = 1500;
+const JUKEBOX_SCALE = 0.6;
+const JUKEBOX_POP_S = 0.7;
 
 const DOOR_W = 2.2, DOOR_H = 3.3, POST = 0.2, DEPTH = 0.3;
 
@@ -145,9 +154,8 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   const jukebox = buildJukebox();
   jukebox.group.position.set(...JUKEBOX_POS);
   jukebox.group.rotation.y = -Math.PI / 2; // outside the room, its face toward the room (west)
-  jukebox.group.scale.setScalar(0.6);
-  jukebox.setGlow(0.4);
-  jukebox.setOpacity(0.55); // a little see-through so it does not pull the eye
+  jukebox.group.scale.setScalar(JUKEBOX_SCALE);
+  jukebox.group.visible = false; // it appears when sequence 2 is done (free mode)
   const box = buildCardboardBox(inBox(seedDemoRoom()).length);
   box.group.position.set(...BOX_POS);
   box.setFill(inBox(store.state).length);
@@ -231,26 +239,33 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     held = null;
   }
 
+  /** Where an object picked up while walking was lifted from (it pops from there into the visitor's hands). */
+  let liftedFrom: THREE.Vector3 | null = null;
+
   function syncHeld(t: number): void {
-    const id = mode === 'tutorial' ? holding() : null;
+    // In the dollhouse nothing is in hand: the glowing spots show where the picked-up object can go.
+    const eye = mode === 'tutorial' ? camera : mode === 'walk' && walk?.mode === 'walk' ? walk.camera : null;
+    const id = eye ? holding() : null;
     const rep = id ? store.state.representations.find((r) => r.id === id) : undefined;
-    if (!id || !rep) { dropHeld(); return; }
+    if (!eye || !id || !rep) { dropHeld(); return; }
     if (!held || held.repId !== id || held.kind !== rep.objectKind) {
       const popping = !held || held.repId !== id;
       dropHeld();
       const group = buildObject(rep.objectKind, store.content(rep.contentItemId));
       view.addToScene(group);
-      held = { repId: id, kind: rep.objectKind, group, from: boxTop.clone(), at: popping && !reduced ? t : -Infinity };
+      const from = mode === 'tutorial' ? boxTop : liftedFrom;
+      liftedFrom = null;
+      held = { repId: id, kind: rep.objectKind, group, from: (from ?? handsPos).clone(), at: popping && from && !reduced ? t : -Infinity };
     }
-    camera.updateMatrixWorld();
-    handsPos.copy(HANDS).applyMatrix4(camera.matrixWorld);
+    eye.updateMatrixWorld();
+    handsPos.copy(HANDS).applyMatrix4(eye.matrixWorld);
     const k = Math.min(1, (t - held.at) / POP_S);
     const e = k * k * (3 - 2 * k);
     const g = held.group;
     g.position.lerpVectors(held.from, handsPos, e);
     g.position.y += Math.sin(Math.PI * e) * 0.5 + (reduced ? 0 : Math.sin(t * 2.2) * 0.012);
     g.scale.setScalar(1.6 * HELD_SCALE * (0.35 + 0.65 * e));
-    g.quaternion.copy(camera.quaternion);
+    g.quaternion.copy(eye.quaternion);
     if (!reduced) g.rotateY(Math.sin(t * 0.9) * 0.35);
   }
 
@@ -295,6 +310,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
       jukebox.update(t, dt);
+      popJukebox(t);
       box.update(t, dt);
       savePoint.update(t, dt);
       if (mode === 'walk') { watchForSavePoint(); return; }
@@ -367,15 +383,20 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     }
   }
 
-  // ---- after the tutorial: the save point, the camera choice, Exit tutorial --------------------------------------
+  // ---- after the tutorial (sequence 2): the portal, moving things, the camera choice; then free mode ---------------
   let walk: WalkHandle | null = null;
   let hud: DemoHud | null = null;
-  let exited = false;
+  let free = false;
   let goalShown = false;
-  const savePanel: SavePointPanel = mountSavePointPanel(store, (text, ms) => showHint(text, ms), randomDrop);
+  let portalUses = 0;
+  const savePanel: SavePointPanel = mountSavePointPanel(store, (text, ms) => showHint(text, ms), randomDrop, portalUsed);
+  const jukeboxPanel: SavePointPanel = mountJukeboxPanel(store, () => jukebox.setMouthOpen(0));
   const portalMouth = new THREE.Vector3();
 
-  /** A handful of the devs' objects sprout out of the save point and fly to random free spots. */
+  /**
+   * A handful of the devs' objects sprout out of the save point and fly to random free spots. The visitor turns most
+   * of the way toward the middle of the room so they see them land.
+   */
   function randomDrop(): void {
     const picked = pickDrop(devRoomObjects(REPO_ROOM_MAP), store.state);
     const placed = store.dropIn(picked);
@@ -383,8 +404,57 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       showHint(picked.length ? 'No free spots left in the room' : 'Nothing new to drop in', 2200);
       return;
     }
-    view.flyIn(placed, portalMouth.copy(savePoint.center).setY(savePoint.center.y + 1.1));
+    walk?.lookToward(ROOM_MIDDLE[0], ROOM_MIDDLE[1], 0.75);
+    view.flyIn(placed, portalMouth.copy(savePoint.center).setY(savePoint.center.y + 1.1), { delay: 0.35 });
+    portalUsed();
   }
+
+  // ---- progression: Edit room after the first use of the portal, free mode after the second ----
+  let editor: Promise<DemoEditor> | null = null;
+  const loadEditor = (): Promise<DemoEditor> => {
+    document.body.classList.add('demo-edit-tools');
+    return (editor ??= import('./room-app').then(({ mountEditor }) => mountEditor(store)));
+  };
+
+  function portalUsed(): void {
+    portalUses++;
+    unlockEditRoom();
+    if (portalUses === 2) window.setTimeout(goFree, FREE_AFTER_MS);
+  }
+
+  function unlockEditRoom(): void {
+    void loadEditor();
+    hud?.showEditRoom(() => { void loadEditor().then((e) => e.openEditor()); });
+  }
+
+  /** Sequence 2 is done (or skipped with Exit tutorial): the jukebox appears; Rooms, photo and room music come in. */
+  function goFree(): void {
+    if (free) return;
+    free = true;
+    unlockEditRoom();
+    hud?.free();
+    document.body.classList.add('demo-free');
+    showJukebox();
+    void import('./room-app').then(({ mountRoomExtras }) => mountRoomExtras(store, view));
+  }
+
+  let jukeboxPopAt = -1;
+  function showJukebox(): void {
+    if (jukebox.group.visible) return;
+    jukebox.group.visible = true;
+    jukebox.setGlow(0.6);
+    jukebox.group.scale.setScalar(reduced ? JUKEBOX_SCALE : 0.001);
+    jukeboxPopAt = reduced ? -1 : NaN; // NaN: starts on the next frame
+  }
+  function popJukebox(t: number): void {
+    if (Number.isNaN(jukeboxPopAt)) jukeboxPopAt = t;
+    if (jukeboxPopAt < 0) return;
+    const k = Math.min(1, (t - jukeboxPopAt) / JUKEBOX_POP_S);
+    const back = 1 + 2.2 * (k - 1) ** 3 + 1.2 * (k - 1) ** 2; // ease out with a little overshoot
+    jukebox.group.scale.setScalar(JUKEBOX_SCALE * Math.max(0.001, back));
+    if (k >= 1) jukeboxPopAt = -1;
+  }
+
   const seen = new THREE.Vector3();
 
   /** The goal shows the first time the save point comes into view while walking, or after GOAL_AFTER_MS anyway. */
@@ -401,49 +471,74 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   }
 
   /**
-   * How far the walking visitor stands from the save point, across the floor only: height never counts, and neither
-   * does the step back (and up) that zooming out adds.
+   * How far the walking visitor stands from a point, across the floor only: height never counts, and neither does the
+   * step back (and up) that zooming out adds.
    */
-  const savePointDistance = (): number => {
+  const reachTo = (pos: readonly number[]): number => {
     const eye = walk!.camera.position;
-    return Math.max(0, Math.hypot(eye.x - SAVE_POINT_POS[0], eye.z - SAVE_POINT_POS[2]) - walk!.steppedBack);
+    return Math.max(0, Math.hypot(eye.x - pos[0], eye.z - pos[2]) - walk!.steppedBack);
   };
 
-  /** Did this tap land on the save point (and not on something in front of it)? */
-  function onSavePoint(tap: DemoTap): boolean {
+  /** Did this tap land on the thing (and not on something in front of it)? */
+  function tapped(tap: DemoTap, hit: (raycaster: THREE.Raycaster) => number | null): boolean {
     if (tap.repId) return false;
-    const d = savePoint.hit(tap.raycaster);
+    const d = hit(tap.raycaster);
     return d !== null && (!tap.room || tap.room.distance >= d);
   }
 
   /**
-   * A tap on the save point never walks the visitor there. Walking, it opens from within reach; from farther it says
-   * to come closer (that is how walking gets learned). From the dollhouse it opens from anywhere.
+   * Taps on the portal or the jukebox never walk the visitor there. Walking, they open from within reach; from farther
+   * a line says to come closer (that is how walking gets learned). From the dollhouse they open from anywhere.
    */
-  function onWalkTap(tap: DemoTap): boolean {
-    if (!walk || !onSavePoint(tap)) return false;
-    if (walk.mode === 'walk' && savePointDistance() > SAVE_POINT_REACH) {
-      showHint(exited ? 'Too far. Move closer to get to the portal.' : 'Too far. Move closer, or switch camera, to get to the portal.', 2400);
+  function openFromAfar(name: string, pos: readonly number[], open: () => void): true {
+    if (walk!.mode === 'walk' && reachTo(pos) > SAVE_POINT_REACH) {
+      showHint(free ? `Too far. Move closer to get to the ${name}.` : `Too far. Move closer, or switch camera, to get to the ${name}.`, 2400);
       return true;
     }
-    hud?.goalMet();
     store.select(null);
-    savePanel.open();
+    open();
     return true;
   }
 
-  /** Leave the tutorial: the sandbox edit tools and Rooms picker come in, still walking in first person. */
-  function exitTutorial(): void {
-    if (exited) return;
-    exited = true;
-    hud?.dispose();
-    hud = null;
-    if (walk?.mode === 'overview') walk.toWalk();
-    // The edit tools carry the Rooms picker: visiting a built room and choosing My room again keeps this room as is.
-    void import('./room-app').then(({ mountEditTools }) => {
-      mountEditTools(store, view);
-      dev.classList.add('demo-dev-raised');
-    });
+  let pickTips = 0;
+  /**
+   * Moving things: tap an object (its card shows), tap it again to pick it up (it pops into the visitor's hands), then
+   * tap a glowing spot, or another object to swap with it. A tap anywhere else puts it back where it was.
+   */
+  function onObjectTap(tap: DemoTap): boolean {
+    const heldId = store.holding;
+    if (heldId) {
+      const slotId = tap.repId ? store.slotOf(tap.repId) : tap.slotId;
+      if (!slotId) return false;
+      store.place(heldId, slotId);
+      store.select(null);
+      return true;
+    }
+    if (!tap.repId) return false;
+    const slotId = store.slotOf(tap.repId);
+    if (tap.repId === store.selectedId && slotId) {
+      const pos = store.layout.slots.find((sl) => sl.id === slotId)?.pos;
+      liftedFrom = pos ? new THREE.Vector3(pos[0], pos[1] + 0.3, pos[2]) : null;
+      store.pickUp(tap.repId);
+      showHint('Tap a glowing spot to put it down', 2400);
+      return true;
+    }
+    if (pickTips < 2) {
+      pickTips++;
+      showHint('Tap it again to pick it up', 1800);
+    }
+    return false; // RoomView selects it
+  }
+
+  function onWalkTap(tap: DemoTap): boolean {
+    if (!walk) return false;
+    if (!store.holding && tapped(tap, savePoint.hit)) {
+      return openFromAfar('portal', SAVE_POINT_POS, () => { hud?.goalMet(); savePanel.open(); });
+    }
+    if (!store.holding && tapped(tap, jukebox.hit)) {
+      return openFromAfar('jukebox', JUKEBOX_POS, () => { jukebox.setMouthOpen(0.5); jukeboxPanel.open(); });
+    }
+    return onObjectTap(tap);
   }
 
   /** Walk the room from wherever the tutorial camera is: it glides down to standing height, then the visitor is free. */
@@ -458,17 +553,18 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       start: { from, to: STAND, fov: camera.fov },
       hooks: { frame: hooks.frame, yaw: 0, keepSelectionOnPlace: true, liftSelected: false, compactPreview: true, tap: onWalkTap },
       say: (text, ms) => showHint(text, ms),
+      afterFrame: syncHeld,
     });
     hud = mountDemoHud({
       dev,
       camera: 'tactile',
       onCamera: (choice) => (choice === 'dollhouse' ? walk?.toOverview() : walk?.toWalk()),
-      onExit: exitTutorial,
+      onExit: goFree,
     });
     window.setTimeout(showGoal, GOAL_AFTER_MS);
   }
 
-  /** Lift the lock and walk in first person (tactile). The edit tools wait for Exit tutorial. */
+  /** Lift the lock and walk in first person (tactile): sequence 2. */
   function release(): void {
     if (mode !== 'tutorial') return;
     window.clearTimeout(doneTimer);

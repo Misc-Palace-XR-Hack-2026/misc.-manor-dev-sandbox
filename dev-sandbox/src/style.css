@@ -99,6 +99,12 @@ button:disabled { opacity: 0.4; cursor: default; }
   will-change: transform;
 }
 .preview-card[hidden] { display: none; }
+/* "from Matt": who an object was copied from (ContentItem.fromRoom). */
+.preview-byline {
+  position: absolute; top: 6px; right: 10px; z-index: 1; padding: 1px 7px; border-radius: 999px;
+  background: rgba(20, 16, 28, 0.6); color: rgba(241, 233, 220, 0.85); font: italic 11px/1.4 ui-sans-serif, system-ui, sans-serif;
+  pointer-events: none;
+}
 .preview-card.preview-interactive { width: min(300px, calc(100vw - 24px)); pointer-events: auto; }
 .preview-card.preview-openable { pointer-events: auto; cursor: pointer; }
 .preview-hero { display: grid; place-content: center; justify-items: center; gap: 4px; background: linear-gradient(135deg, #3a3546, #2a2733); }

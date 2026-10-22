@@ -12,6 +12,7 @@ import { LIGHTING_PRESETS } from '../core/appearance';
 import { buildPreview, previewOpenUrl, type Preview } from '../core/preview';
 import { PreviewCardView } from './preview-card';
 import { mediaArt, type MediaArt } from '../core/media-art';
+import { roomOwnerName } from '../core/rooms';
 import { canEnterVr, enterReason, type NeighborhoodRoom } from '../xr/interaction';
 import { XrSession } from '../xr/session';
 
@@ -226,10 +227,10 @@ export class RoomView {
    * Fly freshly placed objects in from a point (the demo's Random drop): each arcs out to its slot, one after another,
    * then rests as usual. Instant under reduced motion.
    */
-  flyIn(repIds: readonly string[], from: THREE.Vector3, stagger = 0.18, duration = 0.95): void {
+  flyIn(repIds: readonly string[], from: THREE.Vector3, { delay = 0, stagger = 0.18, duration = 0.95 } = {}): void {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     for (const id of this.flights.keys()) if (!this.objects.has(id)) this.flights.delete(id);
-    const start = performance.now() / 1000;
+    const start = performance.now() / 1000 + delay;
     repIds.forEach((id, i) => this.flights.set(id, { from: from.clone(), start: start + i * stagger, duration }));
   }
 
@@ -616,6 +617,8 @@ export class RoomView {
       this.cardPreview = buildPreview(content);
       this.cardArt = mediaArt(content);
     }
+    const owner = content.fromRoom ? roomOwnerName(content.fromRoom) : undefined;
+    this.card.setByline(owner ? `from ${owner}` : null);
     this.card.show(this.cardPreview, this.cardArt, content.sourceKind === 'url' ? previewOpenUrl(content.sourceRef) : null);
     if (sheet) {
       // Position the card with its bottom-right corner 10px above and aligned with the sheet's top-right.
