@@ -511,7 +511,13 @@ export class XrSession {
       if (result.musicAction === 'play') player.startFromGesture();
       else if (result.musicAction === 'pause') player.pauseFromGesture();
       else player.muteFromGesture();
-      this.panel.setStatus(`Music: ${player.soundState}. Play retries browser-blocked audio.`);
+      // 'muted' right after Play means the headset browser refused playback, not that the user muted it.
+      const refused = result.musicAction === 'play' && player.soundState !== 'playing';
+      this.panel.setStatus(refused
+        ? (player.audioUnlocked
+          ? 'The headset browser refused playback. Try Play once more.'
+          : 'The headset browser blocked audio. Leave VR, press the speaker once, then re-enter.')
+        : `Music: ${player.soundState}.`);
     }
     if (result.page) this.panel.setStatus('');
     if (result.page === 'jukebox') ensureJukeboxTrack(this.store);

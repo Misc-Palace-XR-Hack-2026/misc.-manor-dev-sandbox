@@ -15,6 +15,7 @@ import { mediaArt, type MediaArt } from '../core/media-art';
 import { roomOwnerName } from '../core/rooms';
 import { canEnterVr, enterReason, type NeighborhoodRoom } from '../xr/interaction';
 import { XrSession } from '../xr/session';
+import { roomSoundtrack } from './soundtrack';
 
 // Thin 3D adapter: draws store.state and sends clicks back as store commands. Holds no truth of its own.
 // Replaceable later (IWSDK, Babylon) as long as the store contract stays the same.
@@ -794,6 +795,9 @@ export class RoomView {
 
   private async enterVr(): Promise<void> {
     if (!this.store.canEdit) return;
+    // Unlock audio here, on the click itself: controller selects inside the session do not grant
+    // user activation, so the jukebox's Play would otherwise always come back browser-blocked.
+    roomSoundtrack(this.store).primeFromGesture();
     try {
       await this.xr?.enter();
     } catch (error) {
