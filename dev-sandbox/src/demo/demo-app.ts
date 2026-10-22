@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { Store, roomKeys } from '../core/store';
 import type { RoomState } from '../core/types';
-import { DOOR_POS, INTRO_DURATION, JUKEBOX_POS, TRAY_POS, TUTORIAL_VIEW, introFrame, markIntroSeen } from '../core/intro-timeline';
+import { DOOR_POS, INTRO_DURATION, JUKEBOX_POS, TRAY_POS, TUTORIAL_VIEW, introFrame, introRequested, markIntroSeen } from '../core/intro-timeline';
 import { RoomView } from '../views/room';
 import { buildKindInventory } from '../views/kind-picker';
 import { buildJukebox } from './jukebox';
-import { DEMO_ROOM_ID, TUTORIAL_SLOTS, seedDemoRoom, tutorialDone } from './demo-room';
+import { DEMO_ROOM_ID, TUTORIAL_SLOTS, normalizeDemoOwner, seedDemoRoom, tutorialDone } from './demo-room';
+import { planIntro } from './intro-gate';
 import { REPO_ROOMS } from '../core/repo-rooms';
 
 // The demo is one real room (the same RoomView the sandbox uses). A visitor's first time, a scripted walk-in plays
@@ -119,10 +120,19 @@ export function startDemo(container: HTMLElement, wantIntro: boolean, storage: S
     console.error('demo room', roomKeys(DEMO_ROOM_ID).main, error);
     return;
   }
+  if (normalizeDemoOwner(initial)) {
+    try { localStorage.setItem(roomKeys(DEMO_ROOM_ID).main, JSON.stringify(initial)); }
+    catch { /* storage may be blocked/full; the repaired label still appears for this session */ }
+  }
   const store = new Store(initial, DEMO_ROOM_ID);
-  // ?intro is an explicit replay: start the starter objects over in their box.
-  const replay = wantIntro && new URLSearchParams(search).has('intro') && tutorialDone(store.state);
-  if (replay) store.replaceState(seedDemoRoom());
+  // One decision for both the re-seed and the start condition, so they cannot disagree: an explicit
+  // ?intro always walks in, and only a finished room needs its starter objects put back in the box.
+  const plan = planIntro({
+    explicit: introRequested(search),
+    introAllowed: wantIntro,
+    tutorialDone: tutorialDone(store.state),
+  });
+  if (plan.reseed) store.replaceState(seedDemoRoom());
 
   // The in-VR room picker needs the committed rooms here too: a headset visitor has no desktop toolbar.
   const view = new RoomView(container, store, REPO_ROOMS);
@@ -247,7 +257,7 @@ export function startDemo(container: HTMLElement, wantIntro: boolean, storage: S
   skip.addEventListener('click', release);
 
   // ---- start ----------------------------------------------------------------
-  if (wantIntro && !tutorialDone(store.state)) {
+  if (plan.playIntro) {
     mode = 'intro';
     view.setDemo(hooks);
     const f = introFrame(0);

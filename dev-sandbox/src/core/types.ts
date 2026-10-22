@@ -86,6 +86,11 @@ export interface RoomState {
   surfaces?: import("./surfaces").SurfaceSettings;
   lighting?: import("./appearance").Lighting;
   schemaVersion: number;
+  /**
+   * Which committed rooms/*.json revision this room was seeded from (see core/seed-revision.ts).
+   * Optional and ignored by older builds: the schema version stays 1 in both directions.
+   */
+  seedRevision?: string;
   id: string;
   owner: string;
   layoutId: string;
