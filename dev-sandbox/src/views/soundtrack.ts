@@ -54,6 +54,8 @@ export class SoundtrackPlayer {
   private get away(): boolean { return this.pauseReasons.size > 0; }
   private blocked = false;
   private muted = false;
+  /** Set once the browser has allowed this element to play at least once. */
+  private primed = false;
   /**
    * Music never starts on its own. It stays silent until the user presses the speaker once; after that it follows
    * room/lighting changes, and an explicit mute stays muted across room switches.
@@ -97,6 +99,37 @@ export class SoundtrackPlayer {
   }
 
   pauseFromGesture(): void { this.leave('user'); }
+
+  /**
+   * Unlock the audio element while a trusted gesture is still on the stack (the Enter VR click).
+   * An immersive session's controller selects do not count as user activation, so without this the
+   * first in-VR Play is rejected and reported as browser-blocked. Silent: volume 0, and paused again
+   * as soon as it unlocks unless the user had already asked for music.
+   */
+  primeFromGesture(): void {
+    if (this.primed || this.soundState === 'playing') return;
+    const track = currentTrack(this.store.state);
+    if (!track) return;
+    if (this.last !== track) {
+      this.audio.src = trackUrl(track);
+      this.last = track;
+    }
+    const version = ++this.gestureVersion;
+    this.audio.volume = 0;
+    void this.audio.play().then(() => {
+      if (version !== this.gestureVersion) return;
+      this.primed = true;
+      const wantsMusic = this.enabled && !this.muted && !this.away && !this.embedPlaying;
+      if (!wantsMusic) this.audio.pause();
+      else { this.wanted = track; this.blocked = false; this.audio.volume = 1; }
+      this.notify();
+    }, () => {
+      // Still locked: the in-VR Play button is the next trusted-ish attempt and reports the block.
+    });
+  }
+
+  /** True once the browser has let this element play, so later in-VR Play calls are allowed. */
+  get audioUnlocked(): boolean { return this.primed; }
 
   muteFromGesture(): void {
     this.gestureVersion++;
