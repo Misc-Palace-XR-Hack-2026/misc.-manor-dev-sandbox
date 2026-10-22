@@ -84,6 +84,8 @@ export interface WalkHandle {
   readonly camera: THREE.PerspectiveCamera;
   /** Where the visitor is headed: 'overview' as soon as a glide up starts, 'walk' as soon as one down starts. */
   readonly mode: Mode;
+  /** How far zooming out has slid the eye back (metres, along the floor) from where the visitor stands. */
+  readonly steppedBack: number;
   /** Glide up to the isometric overview, remembering where the visitor stood. */
   toOverview(): void;
   /** Glide back down to where the visitor stood before the overview. */
@@ -582,6 +584,7 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
   return {
     camera,
     get mode() { return leaving ? 'overview' : mode; },
+    get steppedBack() { return mode === 'walk' ? backed : 0; },
     toOverview() {
       if (mode === 'walk' && !leaving) returnToOverview(frameTime);
     },

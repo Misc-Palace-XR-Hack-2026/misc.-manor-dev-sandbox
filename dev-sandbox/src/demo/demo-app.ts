@@ -400,10 +400,13 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     hud.showGoal();
   }
 
-  /** How far the walking visitor stands from the save point, on the floor plan. */
+  /**
+   * How far the walking visitor stands from the save point, across the floor only: height never counts, and neither
+   * does the step back (and up) that zooming out adds.
+   */
   const savePointDistance = (): number => {
     const eye = walk!.camera.position;
-    return Math.hypot(eye.x - SAVE_POINT_POS[0], eye.z - SAVE_POINT_POS[2]);
+    return Math.max(0, Math.hypot(eye.x - SAVE_POINT_POS[0], eye.z - SAVE_POINT_POS[2]) - walk!.steppedBack);
   };
 
   /** Did this tap land on the save point (and not on something in front of it)? */
