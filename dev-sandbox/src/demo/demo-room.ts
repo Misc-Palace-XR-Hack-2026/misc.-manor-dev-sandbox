@@ -32,6 +32,59 @@ export function seedDemoRoom(): RoomState {
   return room;
 }
 
+/**
+ * Replaying ?intro should not wipe My room customizations.
+ * It only restores the starter intro objects and re-boxes them into free tray slots.
+ */
+export function prepareIntroReplayRoom(current: RoomState): RoomState {
+  const room: RoomState = JSON.parse(JSON.stringify(current));
+  const createdAt = new Date().toISOString();
+  const introRepIds: string[] = [];
+
+  INTRO_OBJECTS.forEach((o) => {
+    const expectedRepId = repIdFor(o.id);
+    let item = room.contentItems.find((c) => c.id === o.id);
+    if (!item) {
+      item = {
+        id: o.id,
+        type: guessType(o.url),
+        title: o.title,
+        sourceKind: 'url',
+        sourceRef: o.url,
+        tags: ['intro'],
+        createdAt,
+        locked: o.locked,
+      };
+      room.contentItems.push(item);
+    } else {
+      item.locked = o.locked;
+    }
+
+    const rep = room.representations.find((r) => r.contentItemId === o.id) ?? room.representations.find((r) => r.id === expectedRepId);
+    if (!rep) {
+      room.representations.push({ id: expectedRepId, contentItemId: o.id, objectKind: o.kind });
+      introRepIds.push(expectedRepId);
+    } else {
+      rep.contentItemId = o.id;
+      introRepIds.push(rep.id);
+    }
+  });
+
+  // Remove existing starter placements, then put them back only where tray slots are free.
+  room.placements = room.placements.filter((p) => !introRepIds.includes(p.representationId));
+  const occupied = new Set(room.placements.map((p) => p.slotId));
+
+  introRepIds.forEach((repId, i) => {
+    const traySlot = TRAY_SLOTS[i];
+    if (!occupied.has(traySlot)) {
+      room.placements.push({ representationId: repId, slotId: traySlot });
+      occupied.add(traySlot);
+    }
+  });
+
+  return room;
+}
+
 /** Whether this browser holds a saved demo room at all. No save = a first visit, whatever the intro flag says. */
 export function hasSavedDemoRoom(): boolean {
   try {

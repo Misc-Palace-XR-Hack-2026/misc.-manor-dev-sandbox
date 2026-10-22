@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEMO_ROOM_ID, SHELF_SLOTS, TRAY_SLOTS, TUTORIAL_SLOTS, repIdFor, seedDemoRoom, tutorialDone } from '../src/demo/demo-room';
+import { DEMO_ROOM_ID, SHELF_SLOTS, TRAY_SLOTS, TUTORIAL_SLOTS, prepareIntroReplayRoom, repIdFor, seedDemoRoom, tutorialDone } from '../src/demo/demo-room';
 import { INTRO_OBJECTS } from '../src/demo/intro-objects';
 import { Store, normalizeRoom, roomKeys } from '../src/core/store';
 import { getLayout } from '../src/core/layout';
@@ -58,4 +58,34 @@ test('a starter object can change kind and be stashed, but its link, text and ex
   assert.ok(store.content('intro-rocket'));
   store.stash(rep);
   assert.ok(store.content('intro-rocket'));
+});
+
+
+test('explicit intro replay preserves My room customizations and only reboxes starters into free tray slots', () => {
+  const room = seedDemoRoom();
+  // Occupy the middle tray slot with a custom object.
+  room.contentItems.push({
+    id: 'custom-keep', type: 'note', title: 'Keep this', sourceKind: 'text', sourceRef: 'local note',
+    tags: ['custom'], createdAt: new Date().toISOString(),
+  } as never);
+  room.representations.push({ id: 'rep-custom-keep', contentItemId: 'custom-keep', objectKind: 'book' } as never);
+  room.placements.push({ representationId: 'rep-custom-keep', slotId: 'floor-8' } as never);
+
+  // Move one starter away from the tray, as a user would.
+  room.placements = room.placements.filter((p) => p.representationId !== repIdFor('intro-rocket'));
+  room.placements.push({ representationId: repIdFor('intro-rocket'), slotId: 'shelf-1' } as never);
+
+  const replay = prepareIntroReplayRoom(room);
+
+  // User customization survives.
+  assert.ok(replay.contentItems.some((c) => c.id === 'custom-keep'));
+  assert.ok(replay.placements.some((p) => p.representationId === 'rep-custom-keep' && p.slotId === 'floor-8'));
+
+  // Starters rebox into free tray slots only.
+  const introSlots = new Map(replay.placements
+    .filter((p) => p.representationId.startsWith('rep-intro-'))
+    .map((p) => [p.representationId, p.slotId]));
+  assert.equal(introSlots.get(repIdFor('intro-rocket')), 'floor-7');
+  assert.equal(introSlots.get(repIdFor('intro-cassette')), 'floor-9');
+  assert.equal(introSlots.get(repIdFor('intro-drum')), undefined, 'occupied tray slot stays with user content');
 });
