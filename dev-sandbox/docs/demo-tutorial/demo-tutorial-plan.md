@@ -13,8 +13,8 @@ One Vite multi-page app, one codebase.
 
 ## Modes
 
-- **Demo** (`/`): intro walk-in -> locked tutorial at the shelf -> first-person walk around the room. Never leaves first person. Only UI after the tutorial: `+` add objects (bottom right, placeholder) and a small `dev` link to `/dev/` (bottom left, visible the whole time).
-- **Free demo mode**: the open room with the isometric overview and edit tools (`src/demo/room-app.ts`, `mountEditTools`), what `/` used to land on after release. **Not reachable for now**; the visitor earns it through more interactions, to be designed next.
+- **Demo** (`/`): intro walk-in -> locked tutorial at the shelf -> first-person walk around the room. Never leaves first person. After the tutorial the edit tools (`src/demo/room-app.ts`, `mountEditTools`) mount around the walking view: their `+` adds objects, and the Rooms picker visits built rooms while My room stays as the visitor left it (Matt's "one space" fixes). A small `dev` link to `/dev/` sits bottom left the whole time (raised above the edit tools' bar once they show).
+- **Free demo mode**: the isometric overview on top of that. **Not reachable for now**; the visitor earns it through more interactions, to be designed next. The edit tools themselves still need curating for the demo.
 - **Dev sandbox** (`/dev/`): the team's tool, five named rooms, orbit camera.
 
 ## How the demo works
@@ -99,7 +99,7 @@ Principle: **lead from mobile.** One framing for every screen; desktop just sees
 - [x] Cardboard box (`src/demo/cardboard-box.ts`, at `BOX_POS` [8.3, 0, 2.2]), hands, hint, vanish, old-save migration
 - [x] Drag to look in the tutorial (±25° turn, ±12° tilt, eases back)
 - [x] Walk mode (`src/demo/walk-mode.ts`, `src/core/walk.ts`: 65° FOV, eye 1.6m, WASD/arrows on desktop)
-- [x] Demo always starts with the intro; after the tutorial it stays first person (no overview, no edit tools); `+` placeholder bottom right, `dev` link bottom left
+- [x] Demo always starts with the intro; after the tutorial it stays first person (no overview) with the edit tools and Rooms picker; `dev` link bottom left
 - [x] Fixes: held object no longer covers the bench spots; a placed object no longer lifts away (`liftSelected: false`)
 - [x] Grab-the-world drag (tutorial and walking); zoom as step back and up with wall and loft clamping
 - [x] tsc clean, 289 tests pass, `vite build` green

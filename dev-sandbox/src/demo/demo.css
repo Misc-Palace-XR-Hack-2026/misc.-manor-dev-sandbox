@@ -33,13 +33,6 @@ html, body { margin: 0; height: 100dvh; overflow: hidden; background: #000; font
   font: 11px/1.4 ui-monospace, monospace; text-decoration: none;
 }
 .demo-dev:hover, .demo-dev:focus-visible { color: #f1e9dc; outline: none; }
-
-.demo-add {
-  position: fixed; z-index: 21; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom));
-  width: 52px; height: 52px; border-radius: 50%; border: 1px solid rgba(241, 233, 220, 0.35); padding: 0;
-  background: rgba(30, 26, 38, 0.85); color: #f1e9dc; font: 300 30px/1 system-ui, sans-serif; cursor: pointer;
-  backdrop-filter: blur(6px);
-}
-.demo-add:hover, .demo-add:focus-visible { background: rgba(60, 52, 74, 0.95); outline: none; }
-.demo-add[hidden] { display: none; }
+/* Clear of the edit tools' bottom bar. */
+.demo-dev-raised { bottom: calc(92px + env(safe-area-inset-bottom)); }
 .demo-dock-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

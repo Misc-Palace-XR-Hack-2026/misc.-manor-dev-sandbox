@@ -159,12 +159,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   const dev = el('a', 'demo-dev', 'dev');
   dev.href = `${import.meta.env.BASE_URL}dev/`;
   dev.title = 'Dev sandbox';
-  // Placeholder: what adding objects does is not decided yet.
-  const add = el('button', 'demo-add', '+');
-  add.type = 'button';
-  add.setAttribute('aria-label', 'Add objects');
-  add.hidden = true;
-  document.body.append(black, skip, dock, hint, dev, add);
+  document.body.append(black, skip, dock, hint, dev);
   document.body.classList.add('demo-locked');
 
   let mode: Mode = 'intro';
@@ -353,10 +348,14 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       hooks: { frame: hooks.frame, yaw: 0, keepSelectionOnPlace: true, liftSelected: false },
       say: (text, ms) => showHint(text, ms),
     });
-    add.hidden = false;
+    // The edit tools carry the Rooms picker: visiting a built room and choosing My room again keeps this room as is.
+    void import('./room-app').then(({ mountEditTools }) => {
+      mountEditTools(store, view);
+      dev.classList.add('demo-dev-raised');
+    });
   }
 
-  /** Lift the lock and stay in first person. Free demo mode (overview, edit tools in `room-app.ts`) comes later. */
+  /** Lift the lock, stay in first person and bring in the edit tools. The iso overview is not in the demo yet. */
   function release(): void {
     if (mode === 'walk') return;
     const fromIntro = mode === 'intro';
