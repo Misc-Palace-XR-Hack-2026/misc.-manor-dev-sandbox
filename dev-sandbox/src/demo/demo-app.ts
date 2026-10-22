@@ -30,7 +30,7 @@ import { EYE_HEIGHT, poseFromLookAt, type WalkPose } from '../core/walk';
 // they walk the room in first person ("tactile"). Their goal now is the save point across the room: they get there by
 // walking or by switching the Camera to "dollhouse" (the isometric room). The save point (the "portal") adds links,
 // files, bookmarks or a random drop from the devs' rooms. Objects can be picked up and moved anywhere. Using the portal
-// once brings in Edit room and the jukebox; twice ends sequence 2: free mode (Rooms, photo, mute while music plays).
+// once ends sequence 2: Edit room, the jukebox, and free mode (Rooms, photo, mute while music plays).
 // Exit tutorial jumps straight to free mode. A later visit still walks through the door, then lands in free mode.
 
 type Mode = 'intro' | 'tutorial' | 'walk';
@@ -50,8 +50,11 @@ const STAND: WalkPose = { x: 8.3, y: EYE_HEIGHT, z: 4.8, yaw: 0, pitch: -0.12 };
 const GOAL_AFTER_MS = 6000;
 /** The middle of the room's floor plan (x, z): a random drop turns the visitor toward it. */
 const ROOM_MIDDLE = [ROOM_EAST / 2, 3.6] as const;
-/** After the second use of the portal, free mode starts this long later (ms), once a drop has landed. */
-const FREE_AFTER_MS = 1500;
+/** Same stand as after the tutorial, looking into the room (west) instead of at the shelf. */
+const RETURN_STAND: WalkPose = {
+  ...STAND,
+  yaw: poseFromLookAt([STAND.x, STAND.y, STAND.z], [ROOM_MIDDLE[0], STAND.y, ROOM_MIDDLE[1]]).yaw,
+};
 const JUKEBOX_SCALE = 0.6;
 const JUKEBOX_POP_S = 0.7;
 
@@ -397,7 +400,6 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   let hud: DemoHud | null = null;
   let free = false;
   let goalShown = false;
-  let portalUses = 0;
   const savePanel: SavePointPanel = mountSavePointPanel(store, (text, ms) => showHint(text, ms), randomDrop, portalUsed);
   const jukeboxPanel: SavePointPanel = mountJukeboxPanel(store, () => jukebox.setMouthOpen(0), () => music?.startFromGesture());
   let music: SoundtrackPlayer | null = null;
@@ -427,9 +429,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   };
 
   function portalUsed(): void {
-    portalUses++;
-    unlockEditRoom();
-    if (portalUses === 2) window.setTimeout(goFree, FREE_AFTER_MS);
+    goFree();
   }
 
   function unlockEditRoom(): void {
@@ -439,7 +439,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     void import('./room-app').then(({ mountMusic }) => { music ??= mountMusic(store); });
   }
 
-  /** Sequence 2 is done (or skipped with Exit tutorial): Rooms, photo and mute come in. */
+  /** Sequence 2 is done (first portal use, or Exit tutorial): Rooms, photo and mute come in. */
   function goFree(): void {
     if (free) return;
     free = true;
@@ -566,7 +566,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     walk = mountWalkMode(view, store, {
       overview: false, // the Camera choice switches to the dollhouse; no Overview button or Esc
       overviewTapWalks: false,
-      start: { from, to: STAND, fov: camera.fov },
+      start: { from, to: returningFree ? RETURN_STAND : STAND, fov: camera.fov },
       hooks: { frame: hooks.frame, yaw: 0, keepSelectionOnPlace: true, liftSelected: false, compactPreview: true, tap: onWalkTap },
       say: (text, ms) => showHint(text, ms),
       afterFrame: syncHeld,

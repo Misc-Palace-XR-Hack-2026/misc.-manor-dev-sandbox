@@ -15,8 +15,8 @@ One Vite multi-page app, one codebase.
 
 - **Demo** (`/`): intro walk-in -> locked tutorial at the shelf (sequence 1) -> still the tutorial, now free to move: the goal is the save point, the "portal" (sequence 2) -> **free mode** once the portal has been used twice (or on **Exit tutorial**). One concise demo experience throughout: no old sandbox state is left over.
   - **Camera / motion choice** (bottom HUD select): **Tactile** (first-person walk, the default) or **Dollhouse** (the isometric room with orbit, walk mode's overview). Switching glides between them; Tactile returns to where the visitor stood.
-  - **Sequence 2 progression**: the first use of the portal (Add link or file, Import, Random drop: any of them finishing) brings **Edit room** into the HUD (left of Help, no indicator) and the **jukebox** appears (no text pointing at it). The second use ends sequence 2: free mode starts.
-  - **Free mode** (`goFree` in `demo-app.ts`): the same HUD (Edit room, Help, Camera) stays at the bottom; Exit tutorial goes; the sandbox's bar shrinks to a **Rooms** pill beside `dev` (plus Cancel move while something is held); Take photo comes in, and the mute button only while music is playing. The jukebox picks the room music. The sandbox `+` never shows in the demo (the portal replaces it). A later visit still walks through the door, then lands in free mode with the room as they left it (`mp-demo:seq2-done`).
+  - **Sequence 2 progression**: the first use of the portal (Add link or file, Import, Random drop: any of them finishing) ends sequence 2: **Edit room** in the HUD (left of Help, no indicator), the **jukebox** appears (no text pointing at it), and free mode starts.
+  - **Free mode** (`goFree` in `demo-app.ts`): the same HUD (Edit room, Help, Camera) stays at the bottom; Exit tutorial goes; the sandbox's bar shrinks to a **Rooms** pill beside `dev` (plus Cancel move while something is held); Take photo comes in, and the mute button only while music is playing. The jukebox picks the room music. The sandbox `+` never shows in the demo (the portal replaces it). A later visit still walks through the door, then lands at `STAND` looking into the room (not at the shelf), with the room as they left it (`mp-demo:seq2-done`). Skip intro on that visit lands in free mode too.
   - **Exit tutorial** (bottom left, beside `dev`): jumps straight to free mode.
   - The editor comes from `src/demo/room-app.ts` (`mountEditor`: the sandbox `MenuView`; its own Edit room button and `+` are hidden by demo CSS, `body.demo-edit-tools` / `body.demo-free`). The Rooms picker visits built rooms while My room stays as the visitor left it.
   - A small `dev` link to `/dev/` sits bottom left the whole time.
@@ -132,7 +132,7 @@ Principle: **lead from mobile.** One framing for every screen; desktop just sees
 - [x] Save point object and idle animation at `SAVE_POINT_POS`
 - [x] HUD after the tutorial: Help, Camera (Tactile / Dollhouse), Exit tutorial; no edit tools until Exit tutorial; goal line on first sight of the save point
 - [x] Save point panel: Add link or file, Import from bookmarks (file), Random drop; forms shared with `/dev/` via `src/views/add-forms.ts`
-- [x] tsc clean, 374 tests pass, `vite build` green
+- [x] tsc clean, 375 tests pass, `vite build` green
 - [ ] Owner visual check on phone and desktop: tutorial with the compact card, save point look and spot, goal line, Help, Camera switching, save point panel and forms, Exit tutorial, `/dev/` + sheets unchanged
 - [x] Random drop: 4-8 unique objects from the devs' rooms fly out of the portal to random free spots
 - [x] skip seq 1 dev shortcut; goal line after 6s regardless; Camera pulse stops after 8s; portal at floor level, closer to the edge
