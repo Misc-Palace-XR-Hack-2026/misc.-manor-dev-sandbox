@@ -116,6 +116,7 @@ export class RoomView {
   private lamp = new THREE.PointLight(0xffd8a8, 0, 6, 2);
   private roomGroup = new THREE.Group();
   private isoOffset = new THREE.Vector3(14, 14, 14);
+  private overviewPadding = 0;
   private viewHeight = 11; // orthographic frustum height, world units; set per layout
   private ground!: THREE.Mesh;
   private hoverTimer: number | undefined;
@@ -215,7 +216,7 @@ export class RoomView {
     this.vrButton.hidden = true;
     this.vrButton.disabled = true;
     container.appendChild(this.vrButton);
-    this.vrButton.addEventListener('click', () => void this.enterVr());
+    this.vrButton.addEventListener('click', () => { void this.enterVr().catch(() => {}); });
     let mode = this.store.mode;
     this.store.subscribe(() => {
       if (mode === this.store.mode) return;
@@ -319,6 +320,13 @@ export class RoomView {
     this.sync();
   }
 
+  /** Include production amenities beyond the open front edge in the overview framing. */
+  setOverviewPadding(padding: number): void {
+    this.overviewPadding = padding;
+    this.viewHeight = this.store.layout.viewHeight + padding;
+    this.resize();
+  }
+
   /** Extra scenery that is not part of the saved room (the demo's crate and jukebox). */
   addToScene(...objects: THREE.Object3D[]): void {
     this.scene.add(...objects);
@@ -369,7 +377,7 @@ export class RoomView {
   private frameLayout(layout: RoomLayout): void {
     const [fx, fy, fz] = layout.focus;
     const focus = new THREE.Vector3(fx, fy, fz);
-    this.viewHeight = layout.viewHeight;
+    this.viewHeight = layout.viewHeight + this.overviewPadding;
     this.camera.zoom = 1;
     this.controls.target.copy(focus);
     this.camera.position.copy(focus).add(this.isoOffset);
@@ -793,7 +801,7 @@ export class RoomView {
     else this.vrButton.textContent = supported ? 'Enter VR' : 'VR not supported';
   }
 
-  private async enterVr(): Promise<void> {
+  async enterVr(): Promise<void> {
     if (!this.store.canEdit) return;
     // Unlock audio here, on the click itself: controller selects inside the session do not grant
     // user activation, so the jukebox's Play would otherwise always come back browser-blocked.
@@ -802,6 +810,7 @@ export class RoomView {
       await this.xr?.enter();
     } catch (error) {
       this.vrButton.textContent = error instanceof Error ? error.message : String(error);
+      throw error;
     }
   }
 

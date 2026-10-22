@@ -1,4 +1,5 @@
 import type { Store } from '../core/store';
+import { roomCatalog, randomRoom, visitCatalogRoom } from '../core/room-portal';
 import { OBJECT_KINDS, OBJECT_LABELS, type ObjectKind } from '../core/types';
 import { LIGHTING_PRESETS, type Lighting } from '../core/appearance';
 import { ROOM_TRACKS, TRACK_LABELS, type RoomTrack } from '../core/soundtrack';
@@ -180,6 +181,9 @@ export function xrSelect(store: Store, hit: { kind: 'object' | 'destination' | '
 }
 
 export type PanelPage =
+  | 'room-portal'
+  | 'overworld'
+  | 'customize'
   | 'home'
   | 'lighting'
   | 'music'
@@ -206,6 +210,8 @@ export interface PanelButton {
 }
 
 export interface PanelActionResult {
+  devSandbox?: boolean;
+  roomFile?: 'save' | 'load';
   portalFiles?: boolean;
   portalDrop?: boolean;
   musicAction?: 'play' | 'pause' | 'mute';
@@ -308,6 +314,21 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
   const selected = store.selectedId
     ? store.state.representations.find((r) => r.id === store.selectedId)
     : undefined;
+  if (page === 'room-portal') return [
+    {id:'page:home',label:'Back'},
+    {id:'rooms:random',label:'Visit a random room'},
+    {id:'rooms:save',label:'Save room · JSON (browser form)'},
+    {id:'rooms:load',label:'Load room · JSON (browser form)'},
+    {id:'page:overworld',label:'Neighborhood / Overworld'},
+    {id:'page:customize',label:'Customize · lighting, walls & floors'},
+    {id:'rooms:dev',label:'Dev sandbox'},
+    ...(store.visiting ? [{id:'home:return',label:'Return to My room'}] : []),
+  ];
+  if (page === 'customize') return [
+    {id:'page:room-portal',label:'Back'},
+    {id:'page:lighting',label:'Lighting'}, {id:'page:surfaces',label:'Walls & floors'},
+    {id:'undo',label:'Undo look change'}, {id:'rooms:save',label:'Backup room · JSON (browser form)'},
+  ];
   if (page === 'lighting') {
     return [
       { id: 'page:home', label: 'Back' },
@@ -467,6 +488,13 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   if (id === 'page:lighting') return { page: 'lighting', tutorialEvent: 'open-style' };
   if (id === 'page:music') return { page: 'music' };
   if (id === 'page:surfaces') return { page: 'surfaces' };
+  if (id === 'rooms:dev') return {devSandbox:true};
+  if (id === 'page:room-portal') return {page:'room-portal'};
+  if (id === 'page:overworld') return {page:'overworld'};
+  if (id === 'page:customize') return {page:'customize'};
+  if (id === 'rooms:save' || id === 'rooms:load') return {roomFile:id === 'rooms:save' ? 'save' : 'load'};
+  if (id === 'rooms:random') { const r=randomRoom(roomCatalog(rooms),store.visiting);if(r)visitCatalogRoom(store,r);return {page:'room-portal'}; }
+  if (id.startsWith('island:')) { const r=roomCatalog(rooms).find(r=>r.id===id.slice(7));if(r)visitCatalogRoom(store,r);return {page:'room-portal'}; }
   if (id === 'page:object') return { page: 'object' };
   if (id === 'page:inbox') return { page: 'inbox', tutorialEvent: 'inbox-open' };
   if (id === 'page:rooms') return { page: 'rooms', tutorialEvent:'open-rooms' };

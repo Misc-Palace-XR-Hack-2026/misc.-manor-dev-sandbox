@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { VrCameraEntry } from '../core/vr-camera';
+import { mountRoomPortal } from './room-portal';
+import { buildRoomPortal, ROOM_PORTAL_POS } from './room-portal-model';
 import { Store, roomKeys } from '../core/store';
 import type { ObjectKind, RoomState } from '../core/types';
 import {
@@ -161,6 +164,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
 
   // The in-VR room picker needs the committed rooms here too: a headset visitor has no desktop toolbar.
   const view = new RoomView(container, store, REPO_ROOMS);
+  view.setOverviewPadding(4);
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 120);
 
   // ---- scenery outside the saved room -------------------------------------
@@ -176,9 +180,12 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   const door = buildDoor();
   const savePoint = buildSavePoint();
   savePoint.group.position.set(...SAVE_POINT_POS);
+  const roomsPortal = buildRoomPortal();
+  roomsPortal.group.visible = false;
+  const roomMenu = mountRoomPortal(store, REPO_ROOMS, () => { void loadEditor().then(e => e.openEditor()); });
   const desktopScenery = new THREE.Group();
   desktopScenery.userData.xrDesktopOnly = true;
-  desktopScenery.add(jukebox.group, box.group, door.group, savePoint.group);
+  desktopScenery.add(jukebox.group, box.group, door.group, savePoint.group, roomsPortal.group);
   view.addToScene(desktopScenery);
 
   // ---- overlay --------------------------------------------------------------
@@ -193,6 +200,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   const dev = el('a', 'demo-dev', 'dev');
   dev.href = `${import.meta.env.BASE_URL}dev/`;
   dev.title = 'Dev sandbox';
+  dev.hidden = true; // Navigation lives inside the Rooms pillar, not on the production screen.
   // Dev shortcut: straight to the save point part with the starters already on the shelf (still in the tutorial).
   const skipSeq = el('button', 'demo-skip-seq', 'skip seq 1');
   skipSeq.type = 'button';
@@ -325,6 +333,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       fadeJukebox(t);
       box.update(t, dt);
       savePoint.update(t, dt);
+      roomsPortal.update(t, dt);
       if (mode === 'walk') { watchForSavePoint(); return; }
       if (skippingIntro) return;
       if (mode === 'intro') {
@@ -518,6 +527,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   }
 
   const typing = (e: Event): boolean => {
+    if (document.querySelector('dialog[open]')) return true;
     const t = e.target;
     return t instanceof HTMLElement && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
   };
@@ -563,6 +573,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   function goFree(): void {
     if (free) return;
     free = true;
+    roomsPortal.group.visible = true;
     markSeq2Done(storage);
     unlockEditRoom();
     hud?.free();
@@ -694,6 +705,9 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
 
   function onWalkTap(tap: DemoTap): boolean {
     if (!walk) return false;
+    if (free && !store.holding && tapped(tap, roomsPortal.hit)) {
+      return openFromAfar('Rooms portal', ROOM_PORTAL_POS, () => roomMenu.open());
+    }
     if (!store.holding && tapped(tap, savePoint.hit)) {
       return openFromAfar('portal', SAVE_POINT_POS, () => { hud?.goalMet(); savePanel.open(); });
     }
@@ -724,6 +738,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       say: (text, ms) => showHint(text, ms),
       afterFrame: syncHeld,
     });
+    const vrEntry = new VrCameraEntry();
     const cameraChoice: CameraChoice = loadCamera(storage);
     hud = mountDemoHud({
       dev,
@@ -733,8 +748,14 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
         dropPickup();
         choice === 'dollhouse' ? walk?.toOverview() : walk?.toWalk();
       },
+      onVr: async () => {
+        savePanel.close(); jukeboxPanel.close(); roomMenu.close(); dropPickup();
+        try { await vrEntry.enter(() => {}, () => view.enterVr()); }
+        catch (error) { showHint(`VR not entered: ${error instanceof Error ? error.message : String(error)}`, 3600); }
+      },
       onExit: goFree,
     });
+    void vrEntry.probe({ isSecureContext: globalThis.isSecureContext, xr: navigator.xr ?? null }).then(() => hud?.setVrAvailable(vrEntry.available));
     if (cameraChoice === 'dollhouse') walk.toOverview();
     if (returningFree) goalShown = true;
     else window.setTimeout(showGoal, GOAL_AFTER_MS);

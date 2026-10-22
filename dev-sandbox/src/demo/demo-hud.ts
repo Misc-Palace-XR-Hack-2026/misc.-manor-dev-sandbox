@@ -62,6 +62,7 @@ export interface DemoHud {
   showEditRoom(onClick: () => void): void;
   /** Free mode: the tutorial is over, so Exit tutorial goes. */
   free(): void;
+  setVrAvailable(available: boolean): void;
   dispose(): void;
 }
 
@@ -70,6 +71,7 @@ export function mountDemoHud(opts: {
   dev: HTMLElement;
   camera: CameraChoice;
   onCamera: (choice: CameraChoice) => void;
+  onVr?: () => Promise<void>;
   onExit: () => void;
 }): DemoHud {
   const hud = el('nav', 'demo-hud');
@@ -104,7 +106,12 @@ export function mountDemoHud(opts: {
   cameraWrap.append(el('span', 'demo-camera-label', 'Camera'), select);
   select.addEventListener('change', () => {
     goalMet();
-    opts.onCamera(select.value as CameraChoice);
+    if (select.value === 'vr') {
+      select.disabled = true;
+      const restore = () => { select.disabled = false; select.value = opts.camera; };
+      if (opts.onVr) void opts.onVr().finally(restore).catch(() => {});
+      else restore();
+    } else { opts.camera = select.value as CameraChoice; opts.onCamera(opts.camera); }
     select.blur(); // arrow keys and WASD walk again
   });
   hud.append(helpBtn, cameraWrap);
@@ -137,6 +144,10 @@ export function mountDemoHud(opts: {
       goalTimer = window.setTimeout(() => goal.classList.remove('demo-goal-on'), 6000);
       window.clearTimeout(pulseTimer);
       pulseTimer = window.setTimeout(goalMet, PULSE_MS);
+    },
+    setVrAvailable(available) {
+      select.querySelector('option[value="vr"]')?.remove();
+      if (available) { const o = el('option', '', 'VR'); o.value = 'vr'; select.append(o); }
     },
     goalMet,
     hideGoal() {

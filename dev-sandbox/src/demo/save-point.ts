@@ -96,7 +96,8 @@ const columnTexture = () => canvasTexture(128, (ctx, s) => {
   }
 });
 
-export function buildSavePoint(): SavePoint {
+export function buildSavePoint(tint = TEAL, highlight = MINT): SavePoint {
+  const TEAL = tint, MINT = highlight;
   const geometries: THREE.BufferGeometry[] = [];
   const materials: THREE.Material[] = [];
   const textures: THREE.Texture[] = [];

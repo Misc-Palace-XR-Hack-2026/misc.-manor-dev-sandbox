@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mountRoomPortal } from '../demo/room-portal';
 import type { Store } from '../core/store';
 import { walkStairs, inspectPreview, loftBeaconVisible, objectIdFromRay, overlayIsGranted, spawnPosition, stairHeight, stickForwardTeleport, walkableAt, walkableFloorPad, xrSelect, xrSessionInit, type NeighborhoodRoom, type PanelActionResult } from './interaction';
 import type { OnboardingState } from '../core/onboarding';
@@ -258,6 +259,8 @@ export class XrSession {
   presenting = false;
   readonly amenities: XrAmenities;
   private imports: XrImportSheet;
+  private roomFiles: ReturnType<typeof mountRoomPortal> | null = null;
+  private roomSources: NeighborhoodRoom[];
   private dropPool: ReturnType<typeof devRoomObjects>;
   private cleaning: THREE.Group | null = null;
   private cleanAt = 0;
@@ -277,6 +280,7 @@ export class XrSession {
   ) {
     this.amenities = new XrAmenities(scene);
     this.imports = new XrImportSheet(store);
+    this.roomSources = rooms;
     this.dropPool = devRoomObjects(Object.fromEntries(rooms.map(r => [r.name, r.data])));
     this.renderer.xr.enabled = true;
     this.renderer.xr.setReferenceSpaceType('local-floor');
@@ -307,8 +311,6 @@ export class XrSession {
     if (!globalThis.isSecureContext) throw new Error('Enter VR needs HTTPS or localhost.');
     const xr = navigator.xr;
     if (!xr) throw new Error('WebXR is not available in this browser.');
-    const ok = await xr.isSessionSupported('immersive-vr');
-    if (!ok) throw new Error('This headset/browser does not support immersive VR.');
     const session = await xr.requestSession('immersive-vr', xrSessionInit(this.overlay));
     this.overlayGranted = overlayIsGranted(session);
     this.objectMenu.useDomOverlay = this.overlayGranted;
@@ -349,6 +351,7 @@ export class XrSession {
 
   private onStart(): void {
     this.presenting = true;
+    this.roomFiles?.close();
     this.lastWalk = 0;
     this.imports.close();
     this.amenities.start();
@@ -370,6 +373,7 @@ export class XrSession {
 
   private onEnd(): void {
     this.presenting = false;
+    this.roomFiles?.close();
     this.stopClean();
     this.imports.close();
     this.amenities.end();
@@ -447,7 +451,7 @@ export class XrSession {
 
   private onSelectStart(controller: THREE.Group): void {
     if (controller.userData.targetRayMode && controller.userData.targetRayMode !== 'tracked-pointer') return;
-    if (!this.presenting || this.imports.visible) return;
+    if (!this.presenting || this.imports.visible || this.roomFiles?.isOpen) return;
     controller.userData.selecting = true;
     const hit = this.pick(controller);
     if (hit?.kind === 'panel' && hit.uv && this.panel.actionAt(hit.uv) === 'portal:clean' && this.store.canEdit) {
@@ -462,9 +466,9 @@ export class XrSession {
   private onSelectEnd(controller: THREE.Group): void {
     controller.userData.selecting = false;
     if (this.cleaning === controller) { this.stopClean(); return; }
-    if (!this.presenting || this.imports.visible) return;
+    if (!this.presenting || this.imports.visible || this.roomFiles?.isOpen) return;
     const hit = this.pick(controller);
-    if (hit?.kind === 'portal' || hit?.kind === 'jukebox') {
+    if (hit?.kind === 'portal' || hit?.kind === 'jukebox' || hit?.kind === 'room-portal') {
       this.store.select(null);
       this.placing = false;
       this.panel.setStatus('');
@@ -500,10 +504,21 @@ export class XrSession {
   }
 
   private onPanel(result: PanelActionResult): void {
+    if (result.devSandbox) {
+      void this.exit().then(() => location.assign(`${import.meta.env.BASE_URL}dev/`)).catch(() => this.panel.setStatus('Could not leave VR. Exit VR, then open Dev sandbox from the Rooms pillar.'));
+      return;
+    }
     if (result.portalDrop && this.store.canEdit) {
       const { picked, placed } = randomPortalDrop(this.store, this.dropPool);
       if (placed.length && this.amenities.portal) this.onPortalDrop?.(placed, this.amenities.portal.center.clone());
       this.panel.setStatus(placed.length ? `Added ${placed.length} objects.` : picked.length ? 'Room is full. Hold spring clean or put objects away.' : 'Nothing new to drop in.');
+    }
+    if (result.roomFile) {
+      // Native file APIs need a DOM gesture. Use a granted overlay, otherwise exit before showing the browser action.
+      const action=result.roomFile;
+      const files = this.roomFiles ??= mountRoomPortal(this.store, this.roomSources);
+      if (this.overlayGranted) { this.overlay.hidden = false; files.openFiles(action, this.overlay); }
+      else void this.exit().then(()=>files.openFiles(action)).catch(()=>this.panel.setStatus('Exit VR, then use Rooms to save or load JSON.'));
     }
     if (result.portalFiles) void this.openImports();
     if (result.musicAction) {
@@ -630,7 +645,7 @@ export class XrSession {
       const hit = this.pick(controller);
       if (hit?.kind === 'panel' && hit.uv) this.panel.setHover(hit.uv, hit.target);
       if (hit?.kind === 'action' && hit.target) this.objectMenu.setHover(hit.target);
-      if (hit?.kind === 'portal' || hit?.kind === 'jukebox') this.hoverLabel.show({ title: hit.kind === 'portal' ? 'New-item portal' : 'Jukebox', detail: 'Select to open', href: null, embedSrc: null }, hit.point, this.camera);
+      if (hit?.kind === 'portal' || hit?.kind === 'jukebox' || hit?.kind === 'room-portal') this.hoverLabel.show({ title: hit.kind === 'portal' ? 'New-item portal' : hit.kind === 'room-portal' ? 'Rooms portal' : 'Jukebox', detail: 'Select to open', href: null, embedSrc: null }, hit.point, this.camera);
       if (hit?.kind === 'object' && hit.id && hit.id !== this.store.selectedId) {
         const preview = inspectPreview(this.store, hit.id);
         if (preview.title) this.hoverLabel.show(preview, hit.point, this.camera);
@@ -697,7 +712,7 @@ export class XrSession {
   }
 
   private pick(controller: THREE.Group):
-    | { kind: 'object' | 'slot' | 'floor' | 'panel' | 'action' | 'portal' | 'jukebox'; id?: string; point: THREE.Vector3; uv?: { x: number; y: number }; target?: THREE.Mesh }
+    | { kind: 'object' | 'slot' | 'floor' | 'panel' | 'action' | 'portal' | 'jukebox' | 'room-portal'; id?: string; point: THREE.Vector3; uv?: { x: number; y: number }; target?: THREE.Mesh }
     | null {
     const ray = this.rayFrom(controller);
     const actionHit = this.objectMenu.hit(ray);

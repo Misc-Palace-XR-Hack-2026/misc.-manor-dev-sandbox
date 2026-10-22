@@ -590,6 +590,7 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
 
   const onKeyDown = (e: KeyboardEvent) => {
     const t = e.target;
+    if (document.querySelector('dialog[open]')) return;
     if (t instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
     if (e.key === 'Escape' && withOverview && mode === 'walk' && store.selectedId === null) {
       e.preventDefault();

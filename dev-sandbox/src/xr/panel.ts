@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { roomCatalog } from '../core/room-portal';
+import { drawRoomDiorama } from '../views/room-diorama';
 import { HUD, hudPanel, hudButton } from './hud';
 import type { Store } from '../core/store';
 import { guideActionMatches, inspectPreview, panelButtons, runPanelAction, type NeighborhoodRoom, type PanelActionResult, type PanelPage } from './interaction';
@@ -267,7 +269,7 @@ export class XrPanel {
     c.fillText(section, 48, 122);
     const detail = this.page === 'create' && this.draft.error
       ? this.draft.error
-      : this.status || (this.page === 'portal' ? 'No overlay? Browser import exits VR; your room stays saved.' : this.page === 'jukebox' || this.page === 'music' ? 'Pick a track, then Play. Own music uploads are not supported yet.' : preview?.href || preview?.detail || 'Point at an object to see its name and link.');
+      : this.status || (this.page === 'overworld' ? 'Select an island to visit. More islands shows every available room.' : this.page === 'room-portal' ? 'JSON uses a browser form; without DOM overlay it exits VR.' : this.page === 'portal' ? 'No overlay? Browser import exits VR; your room stays saved.' : this.page === 'jukebox' || this.page === 'music' ? 'Pick a track, then Play. Own music uploads are not supported yet.' : preview?.href || preview?.detail || 'Point at an object to see its name and link.');
     c.fillStyle = this.page === 'create' && this.draft.error ? HUD.danger : HUD.muted;
     const description = this.page === 'create' && this.draft.error ? detail : preview?.title ? preview.title + ' · ' + detail : detail;
     c.fillText(this.clip(c, description, 928), 48, 158);
@@ -283,6 +285,23 @@ export class XrPanel {
       return;
     }
 
+    if (this.page === 'overworld') {
+      const catalog=roomCatalog(this.rooms);
+      const capacity=6;
+      this.scroll=Math.min(this.scroll,Math.max(0,Math.ceil(catalog.length/capacity)-1));
+      this.button(c,'page:room-portal','Back to Rooms',48,208,928,70);
+      catalog.slice(this.scroll*capacity,(this.scroll+1)*capacity).forEach((room,i)=>{
+        const x=48+(i%2)*472,y=306+Math.floor(i/2)*282;
+        this.button(c,'island:'+room.id,'',x,y,456,260);
+        c.fillStyle=HUD.text;c.font='26px system-ui';c.fillText(this.clip(c,room.label,408),x+24,y+236);
+        const data=room.data ?? this.store.personalRoom;
+        if(data)drawRoomDiorama(c,data,x+10,y+8,436,176);
+      });
+      if(this.scroll>0)this.button(c,'ui:prev','Previous',48,1190,448,76);
+      if((this.scroll+1)*capacity<catalog.length)this.button(c,'ui:next','More islands',528,1190,448,76);
+      c.fillStyle=HUD.text;c.font='24px system-ui';c.fillText(`${catalog.length} rooms · ${this.scroll+1} / ${Math.ceil(catalog.length/capacity)}`,48,1360);
+      this.texture.needsUpdate=true;return;
+    }
     const all = this.page === 'create' ? creationDoneButtons(this.draft) : panelButtons(this.store, this.page, this.rooms, this.draft, this.guide);
     const capacity = 10;
     this.scroll = Math.min(this.scroll, Math.max(0, Math.ceil(all.length / capacity) - 1));
