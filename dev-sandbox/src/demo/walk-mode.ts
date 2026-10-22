@@ -223,9 +223,9 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
     view.setDemo({ ...base, camera: mode === 'walk' ? camera : undefined, frame: onFrame, tap: onTap });
   };
 
-  // Objects face the isometric camera in the overview, as in the sandbox.
+  // Same object facing as walking: they must not spin when the camera switches.
   const setOverviewHooks = () => {
-    view.setDemo({ ...base, yaw: undefined, frame: onFrame, tap: onTap });
+    view.setDemo({ ...base, frame: onFrame, tap: onTap });
   };
 
   const enterWalkUi = () => {

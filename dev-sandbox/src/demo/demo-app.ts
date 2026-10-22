@@ -56,7 +56,8 @@ const RETURN_STAND: WalkPose = {
   yaw: poseFromLookAt([STAND.x, STAND.y, STAND.z], [ROOM_MIDDLE[0], STAND.y, ROOM_MIDDLE[1]]).yaw,
 };
 const JUKEBOX_SCALE = 0.6;
-const JUKEBOX_POP_S = 0.7;
+const JUKEBOX_FADE_S = 3;
+const FLY_IN = { delay: 0.35, stagger: 0.18, duration: 0.95 };
 
 const DOOR_W = 2.2, DOOR_H = 3.3, POST = 0.2, DEPTH = 0.3;
 
@@ -315,7 +316,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
       jukebox.update(t, dt);
-      popJukebox(t);
+      fadeJukebox(t);
       box.update(t, dt);
       savePoint.update(t, dt);
       if (mode === 'walk') { watchForSavePoint(); return; }
@@ -404,6 +405,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   const jukeboxPanel: SavePointPanel = mountJukeboxPanel(store, () => jukebox.setMouthOpen(0), () => music?.startFromGesture());
   let music: SoundtrackPlayer | null = null;
   const portalMouth = new THREE.Vector3();
+  let jukeboxFadeDelay = 0;
 
   /**
    * A handful of the devs' objects sprout out of the save point and fly to random free spots. The visitor turns most
@@ -417,11 +419,13 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       return;
     }
     walk?.lookToward(ROOM_MIDDLE[0], ROOM_MIDDLE[1], 0.75);
-    view.flyIn(placed, portalMouth.copy(savePoint.center).setY(savePoint.center.y + 1.1), { delay: 0.35 });
+    view.flyIn(placed, portalMouth.copy(savePoint.center).setY(savePoint.center.y + 1.1), FLY_IN);
+    // Fade the jukebox in after the last object has landed.
+    jukeboxFadeDelay = FLY_IN.delay + Math.max(0, placed.length - 1) * FLY_IN.stagger + FLY_IN.duration;
     portalUsed();
   }
 
-  // ---- progression: Edit room after the first use of the portal, free mode after the second ----
+  // ---- progression: the first portal use ends sequence 2 (Edit room, jukebox, free mode) ----
   let editor: Promise<DemoEditor> | null = null;
   const loadEditor = (): Promise<DemoEditor> => {
     document.body.classList.add('demo-edit-tools');
@@ -454,21 +458,31 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     });
   }
 
-  let jukeboxPopAt = -1;
+  let jukeboxFadeAt = -1;
   function showJukebox(): void {
-    if (jukebox.group.visible) return;
-    jukebox.group.visible = true;
-    jukebox.setGlow(0.6);
-    jukebox.group.scale.setScalar(reduced ? JUKEBOX_SCALE : 0.001);
-    jukeboxPopAt = reduced ? -1 : NaN; // NaN: starts on the next frame
+    if (jukeboxFadeAt !== -1 || jukebox.group.visible) return;
+    jukebox.group.scale.setScalar(JUKEBOX_SCALE);
+    if (returningFree || reduced) {
+      jukebox.group.visible = true;
+      jukebox.setGlow(0.6);
+      jukebox.setOpacity(1);
+      jukeboxFadeAt = -2;
+      return;
+    }
+    jukebox.group.visible = false;
+    jukebox.setGlow(0);
+    jukebox.setOpacity(0);
+    jukeboxFadeAt = NaN; // starts on the next frame, after jukeboxFadeDelay
   }
-  function popJukebox(t: number): void {
-    if (Number.isNaN(jukeboxPopAt)) jukeboxPopAt = t;
-    if (jukeboxPopAt < 0) return;
-    const k = Math.min(1, (t - jukeboxPopAt) / JUKEBOX_POP_S);
-    const back = 1 + 2.2 * (k - 1) ** 3 + 1.2 * (k - 1) ** 2; // ease out with a little overshoot
-    jukebox.group.scale.setScalar(JUKEBOX_SCALE * Math.max(0.001, back));
-    if (k >= 1) jukeboxPopAt = -1;
+  function fadeJukebox(t: number): void {
+    if (jukeboxFadeAt === -2) return;
+    if (Number.isNaN(jukeboxFadeAt)) jukeboxFadeAt = t + jukeboxFadeDelay;
+    if (jukeboxFadeAt < 0 || t < jukeboxFadeAt) return;
+    jukebox.group.visible = true;
+    const k = Math.min(1, (t - jukeboxFadeAt) / JUKEBOX_FADE_S);
+    jukebox.setOpacity(k);
+    jukebox.setGlow(0.6 * k);
+    if (k >= 1) jukeboxFadeAt = -2;
   }
 
   const seen = new THREE.Vector3();
@@ -567,7 +581,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       overview: false, // the Camera choice switches to the dollhouse; no Overview button or Esc
       overviewTapWalks: false,
       start: { from, to: returningFree ? RETURN_STAND : STAND, fov: camera.fov },
-      hooks: { frame: hooks.frame, yaw: 0, keepSelectionOnPlace: true, liftSelected: false, compactPreview: true, tap: onWalkTap },
+      hooks: { frame: hooks.frame, keepSelectionOnPlace: true, liftSelected: false, compactPreview: true, tap: onWalkTap },
       say: (text, ms) => showHint(text, ms),
       afterFrame: syncHeld,
     });

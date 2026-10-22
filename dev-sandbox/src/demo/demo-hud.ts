@@ -207,9 +207,9 @@ export function mountSavePointPanel(
   head.append(el('h2', '', 'Add objects to room'), button('demo-panel-close', 'Close', close));
   menu.append(
     head,
+    button('', '⭐ Random drop', () => { close(); onRandomDrop(); }),
     button('', 'Add link or file', () => show(addSheet)),
     button('', 'Import from bookmarks (file)', () => show(importSheet)),
-    button('', 'Random drop', () => { close(); onRandomDrop(); }),
   );
 
   function close(): void {

@@ -209,7 +209,6 @@ export function buildJukebox(): Jukebox {
   haloMesh.raycast = () => {};
 
   // ---- state ----
-  const solids = materials.filter((m) => !m.transparent);
   let mouthTarget = 0;
   let mouthNow = 0;
   let glowAmount = 0.6;
@@ -246,7 +245,15 @@ export function buildJukebox(): Jukebox {
     },
     setOpacity(amount) {
       const a = clamp01(amount);
-      for (const m of solids) { m.transparent = a < 1; m.opacity = a; m.needsUpdate = true; }
+      for (const m of materials) {
+        if (m.userData.baseOpacity === undefined) {
+          m.userData.baseOpacity = m.opacity;
+          m.userData.baseTransparent = m.transparent;
+        }
+        m.opacity = (m.userData.baseOpacity as number) * a;
+        m.transparent = a < 1 || Boolean(m.userData.baseTransparent);
+        m.needsUpdate = true;
+      }
     },
     dispose() {
       group.removeFromParent();
