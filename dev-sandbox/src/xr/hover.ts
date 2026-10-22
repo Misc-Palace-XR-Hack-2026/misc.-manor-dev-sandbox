@@ -16,7 +16,7 @@ export class XrHoverLabel {
     this.texture.colorSpace = THREE.SRGBColorSpace;
     this.mesh = new THREE.Mesh(
       new THREE.PlaneGeometry(0.62, 0.21),
-      new THREE.MeshBasicMaterial({ map: this.texture, transparent: true, depthTest: false }),
+      new THREE.MeshBasicMaterial({ map: this.texture, transparent: true, depthTest: false, depthWrite: false, toneMapped: false }),
     );
     this.mesh.renderOrder = 20;
     this.group.add(this.mesh);

@@ -40,6 +40,9 @@ try {
     panel.setHover({ x: b.x / 1024, y: 1 - b.y / 1408 });
     capture('hud-world-home-hover');
     shots['hud-home-texture'] = panel.canvas.toDataURL();
+    panel.setGuide({ status:'fresh', lesson:'create', step:0, snapshot:null, roomId:null });
+    capture('hud-world-tutorial');
+    panel.setGuide(null);
     panel.show('create');
     panel.draft.title = 'A long title '.repeat(20);
     panel.draft.text = 'https://example.com/' + 'LongPath'.repeat(40);
@@ -92,18 +95,57 @@ try {
     capture('hud-world-hover-card');
     shots['hud-hover-texture'] = hover.group.children[0].material.map.image.toDataURL();
     const labels = menu.group.children.map(c => c.userData.actionId).filter(Boolean);
-    // Quantify readable foreground/background contrast for every button state.
-    const luminance = hex => { const c = hex.slice(1).match(/../g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4); return c[0]*.2126+c[1]*.7152+c[2]*.0722; };
-    const contrasts = [HUD.base, HUD.inset, HUD.surface, HUD.hover].map(bg => (luminance(HUD.text)+.05)/(luminance(bg)+.05));
+    const glassMaterials = [panel.mesh, panel.guideMesh, ...menu.group.children, ...hover.group.children]
+      .filter(o => o.material).map(o => ({ transparent:o.material.transparent, opacity:o.material.opacity, depthWrite:o.material.depthWrite, toneMapped:o.material.toneMapped }));
+    // Real texture alpha and composited contrast: opaque-hex contrast ignores the world behind glass.
+    const ctx = panel.canvas.getContext('2d');
+    panel.show('home');
+    const alphaAt = (x, y) => ctx.getImageData(x, y, 1, 1).data[3];
+    const alpha = { panel: alphaAt(28, 500), button: alphaAt(60, 230), outside: alphaAt(0, 0) };
+    const luminance = rgb => rgb.map(v => v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);
+    const composite = (fg, a, bg) => fg.map((v,i)=>v*a+bg[i]*(1-a));
+    const contrasts = [0, 128, 255].map(value => {
+      const bg = composite([18,20,24], alpha.button/255, [value,value,value]);
+      return 1.05/(luminance(bg)+.05);
+    });
+    // The production panel material in a deterministic WebGL fixture: no CSS or canvas-only proof.
+    const glassScene = new THREE.Scene();
+    const halfWidth = .85 * 1600 / 1100;
+    const eye = new THREE.OrthographicCamera(-halfWidth,halfWidth,.85,-.85,.01,10); eye.position.z = 2;
+    const pane = panel.mesh.clone(); pane.position.set(0,0,0); glassScene.add(pane);
+    const fixtureRenderer = new THREE.WebGLRenderer({ preserveDrawingBuffer: true });
+    fixtureRenderer.setSize(1600,1100);
+    const target = new THREE.WebGLRenderTarget(160,160);
+    const pixels = new Uint8Array(160*160*4);
+    const sample = color => {
+      glassScene.background = new THREE.Color(color);
+      fixtureRenderer.setRenderTarget(target); fixtureRenderer.render(glassScene, eye);
+      fixtureRenderer.readRenderTargetPixels(target,0,0,160,160,pixels);
+      // x=55 lies inside the pane's open left margin, away from glyphs / buttons.
+      return [...pixels.slice((80*160+55)*4,(80*160+55)*4+3)];
+    };
+    const transmitted = { dark: sample(0x000000), light: sample(0xffffff) };
+    fixtureRenderer.setRenderTarget(null); target.dispose();
+    for (const [name, color] of [['light',0xf5eee3],['dark',0x13161d]]) {
+      glassScene.background = new THREE.Color(color); fixtureRenderer.render(glassScene, eye);
+      shots['hud-glass-'+name+'-background'] = fixtureRenderer.domElement.toDataURL();
+    }
+    fixtureRenderer.dispose();
     room.xr.onEnd(); room.renderer.dispose(); host.remove();
-    return { shots, pages, controls, labels, hoveredTextureVersion, clearedTextureVersion, whiteTint, hit: hit?.object.userData.actionId, contrasts };
+    return { shots, pages, controls, labels, hoveredTextureVersion, clearedTextureVersion, whiteTint, hit: hit?.object.userData.actionId, contrasts, alpha, transmitted, glassMaterials };
   });
   for (const [name, data] of Object.entries(result.shots)) writeFileSync(join(out, name+'.png'), Buffer.from(data.split(',')[1], 'base64'));
   assert.equal(result.labels.filter(id => id === 'page:object').length, 1, 'one unified Edit');
   assert.equal(result.hit, 'page:object', 'rounded buttons retain real ray targets');
   assert.equal(result.whiteTint, 0xffffff, 'hover must not multiply/darken text');
   assert.ok(result.clearedTextureVersion > result.hoveredTextureVersion, 'hover reset repaints');
-  assert.ok(result.contrasts.every(r => r >= 4.5), 'text meets 4.5:1 contrast in all states');
+  assert.ok(result.contrasts.every(r => r >= 4.5), 'opaque labels on composited button beds meet 4.5:1 over dark, mid and white worlds');
+  assert.ok(result.alpha.panel >= 94 && result.alpha.panel <= 100, 'open panel body retains 62% world visibility');
+  assert.ok(result.alpha.button > result.alpha.panel && result.alpha.button < 200, 'button beds remain translucent');
+  assert.equal(result.alpha.outside, 0, 'rounded texture corners remain clear');
+  assert.ok(result.transmitted.light.every((v,i) => v - result.transmitted.dark[i] > 80), 'real WebGL panel transmits changing world backgrounds');
+  assert.ok(result.glassMaterials.length >= 8);
+  for (const material of result.glassMaterials) assert.deepEqual(material, { transparent:true, opacity:1, depthWrite:false, toneMapped:false }, 'all glass components keep opaque ink and transparent surfaces');
   assert.deepEqual(errors, []);
   delete result.shots;
   writeFileSync(join(out, 'hud-results.json'), JSON.stringify(result, null, 2));

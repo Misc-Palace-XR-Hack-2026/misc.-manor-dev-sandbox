@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>VR glass · desktop material review</title>
+<style>html,body,#world{margin:0;width:100%;height:100%;overflow:hidden;background:#17191e}nav{position:fixed;top:16px;left:16px;z-index:9;padding:12px;border:1px solid #ffffff40;border-radius:12px;background:#17191ed9;color:white;font:14px system-ui;max-width:290px}button,select{margin:3px;padding:7px;background:#34363c;color:white;border:1px solid #ffffff40;border-radius:6px}p{font-size:12px;color:#d1d1d6;margin:8px 0 0}</style>
+<div id="world"></div><nav><strong>Production VR glass · WebGL</strong><br>
+<button data-page="home">Panel</button><button data-page="create">Keyboard</button><button id="actions">Object / preview</button><br>
+<select id="room"><option value="home">Guest room</option><option value="omari">Omari</option><option value="vinyl-lounge">Vinyl Lounge</option></select>
+<p>Desktop material review, not a headset session. Click the glass controls to exercise production hit rectangles. Room changes use an isolated guest store; personal saves are untouched.</p></nav>
+<script type="module">
+import * as THREE from '/node_modules/three/build/three.module.js';
+import { Store, newRoom } from '/src/core/store.ts';
+import { RoomView } from '/src/views/room.ts';
+import { REPO_ROOMS } from '/src/core/repo-rooms.ts';
+import { runPanelAction } from '/src/xr/interaction.ts';
+const store = new Store(newRoom(), 'guest');
+const room = new RoomView(document.querySelector('#world'), store, REPO_ROOMS);
+room.renderer.setAnimationLoop(null); room.xr.onStart();
+const panel = room.xr.panel, camera = room.xr.camera;
+camera.position.set(0,1.28,.35); camera.fov=52;
+const resize=()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();room.renderer.setSize(innerWidth,innerHeight);};
+addEventListener('resize',resize); resize();
+let objectMode=false;
+const show=page=>{objectMode=false; room.xr.objectMenu.hide(); panel.show(page);};
+document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>show(b.dataset.page));
+document.querySelector('#room').onchange=e=>{room.xr.onPanel(runPanelAction(store,e.target.value==='home'?'home:return':'visit-room:'+e.target.value,REPO_ROOMS));show('home');};
+document.querySelector('#actions').onclick=()=>{
+ panel.hide(); objectMode=true;
+ const id=store.addItem({title:'The quiet corner',sourceRef:'A place for ideas worth keeping. Select Edit to change this note, or Move to find it a new home.',type:'note',kind:'notebook'});
+ const content=store.content(store.state.representations.find(r=>r.id===id).contentItemId);
+ store.updateContent(content.id,{title:content.title,sourceRef:content.sourceRef});
+ store.select(id);
+};
+const ray=new THREE.Raycaster();
+function target(e){ray.setFromCamera(new THREE.Vector2(e.clientX/innerWidth*2-1,1-e.clientY/innerHeight*2),camera);return panel.hit(ray);}
+room.renderer.domElement.addEventListener('pointermove',e=>{const h=target(e);panel.setHover(h?.uv??null,h?.mesh); if(objectMode)room.xr.objectMenu.setHover(room.xr.objectMenu.hit(ray)?.object??null);});
+room.renderer.domElement.addEventListener('click',e=>{const h=target(e);if(h)panel.activate(h.uv,h.mesh);else if(objectMode){const b=room.xr.objectMenu.hit(ray);if(b)room.xr.objectMenu.activate(b.object);}});
+show('home');
+function frame(){if(objectMode)room.xr.objectMenu.follow(camera.localToWorld(new THREE.Vector3(0,-.85,-1.8)),camera);room.renderer.render(room.scene,camera);requestAnimationFrame(frame);}frame();
+window.review={room,store,panel,camera,show};
+</script></html>

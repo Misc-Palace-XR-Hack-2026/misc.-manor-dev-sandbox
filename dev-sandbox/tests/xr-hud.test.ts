@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Store, newRoom } from '../src/core/store';
 import { XrPanel } from '../src/xr/panel';
 import { XrHoverLabel } from '../src/xr/hover';
+import { HUD, hudPanel } from '../src/xr/hud';
 import * as THREE from 'three';
 
 let paints = 0;
@@ -38,13 +39,25 @@ test('validation errors remain readable even when the selected title is very lon
   assert.ok(text.includes('Enter a valid URL'));
 });
 
-test('HUD uses dark teal surfaces and a mint focus outline instead of gray rectangles', () => {
+test('HUD paints neutral translucent glass rather than opaque colored slabs', () => {
   colors.length = 0;
   const panel = new XrPanel(new Store(newRoom()), () => {});
   panel.show();
-  assert.ok(colors.includes('#0b2028'), 'deep teal HUD surface');
-  panel.setHover({ x: .5, y: 1 - 220 / 1408 });
-  assert.ok(colors.includes('#83f5ce'), 'mint focus ring');
+  const glass = colors.filter(color => color.startsWith('rgba('));
+  assert.ok(glass.length > 0, 'canvas surfaces must carry real alpha');
+  assert.ok(glass.includes('rgba(18, 20, 24, 0.38)'), 'neutral smoky panel retains 62% world transmission');
+  assert.ok(!colors.includes('#0b2028'), 'no opaque teal substrate');
+  const material = panel.mesh.material;
+  assert.equal(material.transparent, true);
+  assert.equal(material.depthWrite, false, 'glass must not occlude later transparent surfaces');
+});
+
+test('glass headers keep opaque white labels and a text-only contrast shadow for bright worlds', () => {
+  const c = { ...context, shadowBlur: 0, shadowColor: '', shadowOffsetY: 0 };
+  hudPanel(c as unknown as CanvasRenderingContext2D, 1024, 1408);
+  assert.equal(HUD.text, '#ffffff');
+  assert.ok(c.shadowBlur >= 4, 'bare glass headers need localized contrast, not a full opaque backplate');
+  assert.equal(c.shadowColor, 'rgba(0, 0, 0, 0.95)');
 });
 
 test('HUD clears hover feedback when the controller leaves and avoids repainting unchanged hover', () => {
