@@ -3,7 +3,7 @@ import { roomCatalog } from '../core/room-portal';
 import { drawRoomDiorama } from '../views/room-diorama';
 import { HUD, hudPanel, hudButton } from './hud';
 import type { Store } from '../core/store';
-import { guideActionMatches, inspectPreview, panelButtons, runPanelAction, type NeighborhoodRoom, type PanelActionResult, type PanelPage } from './interaction';
+import { guideActionMatches, inspectPreview, panelButtons, runPanelAction, type NeighborhoodRoom, type PanelActionResult, type PanelPage, type PanelPose } from './interaction';
 import { XrCreation, creationActionButtons, creationDoneButtons, creationFormButtons, creationKindButtons, keyLabel, keyWidthUnits, keyboardRows } from './creation';
 import { currentStep, type OnboardingState } from '../core/onboarding';
 
@@ -40,6 +40,8 @@ export class XrPanel {
   private shown: Hit[] = [];
   private guideShown: Array<{ id: string; y: number }> = [];
   status = '';
+  /** Set by the session: decides where this page's panel belongs. */
+  place: ((page: PanelPage) => void) | null = null;
   draft = new XrCreation();
   guide: OnboardingState | null = null;
 
@@ -82,6 +84,23 @@ export class XrPanel {
 
   get currentPage(): PanelPage { return this.page; }
 
+  /**
+   * Park the panel so its face lands exactly at `pose`, turned to face the viewer. The group holds the
+   * menu at a fixed local offset (and the guide card beside it), so the offset is undone here rather
+   * than moving the meshes — that keeps the tutorial card in its usual spot next to the menu.
+   */
+  placeAt(pose: PanelPose): void {
+    const { x, y, z } = this.mesh.position;
+    const sin = Math.sin(pose.yaw), cos = Math.cos(pose.yaw);
+    this.group.rotation.set(0, pose.yaw, 0);
+    this.group.position.set(pose.x - (x * cos + z * sin), pose.y - y, pose.z - (z * cos - x * sin));
+  }
+
+  /** Where the panel face currently is, in its parent's space. */
+  faceAt(): THREE.Vector3 {
+    return this.mesh.position.clone().applyEuler(this.group.rotation).add(this.group.position);
+  }
+
   get visible(): boolean {
     return this.open;
   }
@@ -94,6 +113,9 @@ export class XrPanel {
     }
     this.open = true;
     this.page = page;
+    // Every opening is parked deliberately — on the pillar, on the selected object, or in front of
+    // the viewer. Without this the panel would stay wherever it last was, including a room away.
+    this.place?.(page);
     this.scroll = 0;
     if (page === 'create' && !preserveDraft) this.draft = new XrCreation();
     this.redraw();

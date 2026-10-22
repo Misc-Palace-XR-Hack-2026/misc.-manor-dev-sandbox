@@ -281,6 +281,54 @@ export function objectMenuAnchor(origin: { x: number; y: number; z: number }, _r
   return { x: origin.x, y: origin.y + 0.55, z: origin.z };
 }
 
+export interface PanelPose { x: number; y: number; z: number; yaw: number }
+
+/**
+ * Where the big panel sits when it belongs to a thing in the room (a pillar, or the selected object)
+ * rather than to the viewer: a short step in front of that thing, on the viewer's side, turned to face
+ * them. Keeping it off the viewer's face is the whole point — the menu reads as the pillar's own.
+ */
+export function panelPose(
+  target: { x: number; y: number; z: number },
+  viewer: { x: number; y: number; z: number },
+  opts: { standoff?: number; lift?: number; minHeight?: number; maxHeight?: number } = {},
+): PanelPose {
+  const standoff = opts.standoff ?? 0.78;
+  const lift = opts.lift ?? 0.12;
+  const minHeight = opts.minHeight ?? 0.95;
+  const maxHeight = opts.maxHeight ?? 2.0;
+  let dx = viewer.x - target.x;
+  let dz = viewer.z - target.z;
+  const len = Math.hypot(dx, dz);
+  // Standing on top of the anchor gives no direction; fall back to the +Z wall of the room.
+  if (len < 1e-4) { dx = 0; dz = 1; }
+  else { dx /= len; dz /= len; }
+  // Never place the panel behind the viewer when they are closer than the standoff.
+  const distance = Math.max(0.3, Math.min(standoff, len > 0 ? len * 0.62 : standoff));
+  return {
+    x: target.x + dx * distance,
+    y: Math.min(maxHeight, Math.max(minHeight, target.y + lift)),
+    z: target.z + dz * distance,
+    yaw: Math.atan2(dx, dz),
+  };
+}
+
+/** Pages that describe the selected object, so their panel rides with that object. */
+const SELECTION_PAGES = new Set<PanelPage>(['object']);
+
+/** True when this page is about the current selection: the object actions page, or editing its text/link. */
+export function panelFollowsSelection(page: PanelPage, editingSelection: boolean): boolean {
+  return SELECTION_PAGES.has(page) || (page === 'create' && editingSelection);
+}
+
+/** Pages opened by selecting a pillar, which stay parked at that pillar. */
+export function panelPillarKind(page: PanelPage): 'portal' | 'jukebox' | 'room-portal' | null {
+  if (page === 'portal' || page === 'inbox' || page === 'create') return 'portal';
+  if (page === 'jukebox' || page === 'music') return 'jukebox';
+  if (page === 'room-portal' || page === 'rooms' || page === 'repo-rooms' || page === 'neighborhood') return 'room-portal';
+  return null;
+}
+
 export function objectMenuHit(
   at: { x: number; y: number; z: number },
   actions: PanelButton[],

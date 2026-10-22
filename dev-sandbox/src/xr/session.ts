@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { NeighborhoodWorld } from '../views/neighborhood-world';
 import { mountRoomPortal } from '../demo/room-portal';
 import type { Store } from '../core/store';
-import { walkStairs, inspectPreview, loftBeaconVisible, objectIdFromRay, overlayIsGranted, spawnPosition, stairHeight, stickForwardTeleport, walkableAt, walkableFloorPad, xrSelect, xrSessionInit, type NeighborhoodRoom, type PanelActionResult } from './interaction';
+import { walkStairs, inspectPreview, loftBeaconVisible, objectIdFromRay, overlayIsGranted, spawnPosition, stairHeight, stickForwardTeleport, walkableAt, walkableFloorPad, xrSelect, xrSessionInit, panelFollowsSelection, panelPillarKind, panelPose, type NeighborhoodRoom, type PanelActionResult, type PanelPage } from './interaction';
 import type { OnboardingState } from '../core/onboarding';
 import { XrPanel } from './panel';
 import { XrHoverLabel } from './hover';
@@ -309,6 +309,7 @@ export class XrSession {
     for (const group of [this.player, this.floors, this.marker.group, this.hoverLabel.group]) group.userData.neighborhoodKeep = true;
     this.scene.add(this.player, this.floors, this.marker.group, this.hoverLabel.group);
     this.panel = new XrPanel(store, (result) => this.onPanel(result), rooms);
+    this.panel.place = (page) => this.anchorPanel(page);
     this.objectMenu = new XrObjectMenu(store, (result) => this.onPanel(result));
     this.overlay = document.createElement('div');
     this.overlay.id = 'xr-dom-overlay';
@@ -316,9 +317,10 @@ export class XrSession {
     this.overlay.hidden = true;
     document.body.append(this.overlay);
     this.overlayCard = new PreviewCardView(this.overlay);
-    this.player.add(this.panel.group);
+    // The panel is parked on the thing that opened it, so it belongs to the world, not the player rig.
+    this.panel.group.userData.neighborhoodKeep = true;
     this.objectMenu.group.userData.neighborhoodKeep = true;
-    this.scene.add(this.objectMenu.group);
+    this.scene.add(this.panel.group, this.objectMenu.group);
     this.buildFloors();
     this.bindControllers();
     this.renderer.xr.addEventListener('sessionstart', () => this.onStart());
@@ -504,8 +506,6 @@ export class XrSession {
       this.panel.setStatus('');
       if (hit.kind === 'jukebox') ensureJukeboxTrack(this.store);
       this.amenities.jukebox?.setMouthOpen(hit.kind === 'jukebox' ? .5 : 0);
-      this.panel.group.position.set(this.camera.position.x, this.camera.position.y - 1.45, this.camera.position.z);
-      this.panel.group.rotation.y = this.camera.rotation.y;
       this.panel.show(hit.kind);
       return;
     }
@@ -653,8 +653,54 @@ export class XrSession {
     const landing = walkableAt(point) ?? (point.y > 1.6 ? { x: 2.0, y: 2.3, z: 1.6 } : null);
     if (!landing) return;
     this.player.position.set(landing.x, landing.y, landing.z);
+    // An anchored panel stays with its pillar but turns to wherever the viewer landed.
+    if (this.panel.visible) this.anchorPanel(this.panel.currentPage);
     this.syncGuides();
   }
+
+  /** World centre of the pillar a page belongs to, when that pillar is in the room. */
+  private pillarCenter(kind: 'portal' | 'jukebox' | 'room-portal'): THREE.Vector3 | null {
+    if (kind === 'portal') return this.amenities.portal?.center.clone() ?? null;
+    if (kind === 'room-portal') return this.amenities.rooms?.center.clone() ?? null;
+    const jukebox = this.amenities.jukebox;
+    if (!jukebox) return null;
+    return jukebox.group.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.9, 0));
+  }
+
+  /**
+   * Park the panel where the page belongs: on the pillar that opened it, under the selected object's
+   * action pills when the page is about that object, and only otherwise in front of the viewer.
+   */
+  private anchorPanel(page: PanelPage): void {
+    const viewer = this.camera.getWorldPosition(new THREE.Vector3());
+    const selection = this.objectMenu.anchor;
+    if (panelFollowsSelection(page, this.panel.draft.editing) && selection) {
+      // Just under the object's pill toolbar, so the object and its menu read as one stack.
+      this.panel.placeAt(panelPose(selection, viewer, { standoff: 0.62, lift: -0.52, minHeight: 0.8 }));
+      return;
+    }
+    const pillar = panelPillarKind(page);
+    const center = pillar ? this.pillarCenter(pillar) : null;
+    if (center) {
+      this.panel.placeAt(panelPose(center, viewer, { standoff: 0.85, lift: 0.22 }));
+      return;
+    }
+    this.panelInFrontOfViewer();
+  }
+
+  /** Fallback for pages with nothing in the room to belong to (home, howto, the wrist menu). */
+  private panelInFrontOfViewer(): void {
+    const viewer = this.camera.getWorldPosition(new THREE.Vector3());
+    const forward = this.camera.getWorldDirection(new THREE.Vector3());
+    const yaw = Math.atan2(-forward.x, -forward.z);
+    this.panel.placeAt({
+      x: viewer.x + forward.x * 1.15,
+      y: viewer.y - 0.17,
+      z: viewer.z + forward.z * 1.15,
+      yaw,
+    });
+  }
+
 
   private syncGuides(): void {
     const inVr = this.presenting && !this.neighborhood;
@@ -686,7 +732,6 @@ export class XrSession {
           if (hit && !hit.id) { this.teleport(hit.point); this.lastSnap = now; }
         }
         if ((gp.buttons[5] ?? gp.buttons[4] ?? gp.buttons[1])?.pressed && now - this.lastSnap > 400) {
-          this.panel.group.position.set(this.camera.position.x,this.camera.position.y-1.45,this.camera.position.z);this.panel.group.rotation.y=this.camera.rotation.y;
           this.panel.visible?this.panel.hide():this.panel.show('neighborhood');this.lastSnap = now;
         }
       }
