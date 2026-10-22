@@ -15,6 +15,17 @@ const KEY = 'mp-sandbox:room';
 const BACKUP_KEY = 'mp-sandbox:room:backup';
 const ACTIVE_KEY = 'mp-sandbox:active-room';
 const MAX_HISTORY = 60;
+/** Rapid edits (a drop, a few moves) become one localStorage write. Flushed when the page hides. */
+const SAVE_DEBOUNCE_MS = 300;
+
+/** A real page can flush on hide. Test documents have no visibility state, so they keep saving immediately. */
+function canDeferSave(): boolean {
+  return typeof window !== 'undefined'
+    && typeof window.addEventListener === 'function'
+    && typeof document !== 'undefined'
+    && typeof document.addEventListener === 'function'
+    && 'visibilityState' in document;
+}
 
 /** Each named room saves on its own. No room id = the original single-save keys (kept for old saves and tests). */
 export function roomKeys(roomId?: string): { main: string; backup: string } {
@@ -128,6 +139,8 @@ export class Store {
   /** Nested: while > 0, commits skip extra undo snapshots and localStorage writes until endBatch(). */
   private batching = 0;
   private batchDirty = false;
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private deferSave = false;
   private listeners = new Set<() => void>();
   /** An object the user picked up from a slot and has not put down yet (never saved). */
   private pickup: { repId: string; slotId: string; depth: number } | null = null;
@@ -147,6 +160,7 @@ export class Store {
   beginPractice(): void {
     if (!this.canEdit) return;
     this.endPractice();
+    this.flushSave();
     this.personal = { state: this.state, roomId: this.roomId, history: this.history, selectedId: this.selectedId,
       pickup: this.pickup, visiting: this.visiting, homeSnapshot: this.homeSnapshot, saveError: this.saveError };
     this.epoch++;
@@ -168,6 +182,11 @@ export class Store {
   constructor(initial: RoomState, roomId?: string) {
     this.state = normalizeRoom(initial);
     this.roomId = roomId;
+    this.deferSave = canDeferSave();
+    if (this.deferSave) {
+      window.addEventListener('pagehide', this.flushSave);
+      document.addEventListener('visibilitychange', this.flushIfHidden);
+    }
   }
 
   /** Last open room id, or null on first run. */
@@ -599,6 +618,7 @@ export class Store {
     const next = this.practicing
       ? this.practiceRooms.get(roomId) ?? newRoom(`Practice · ${roomId}`)
       : Store.loadSaved(roomId) ?? normalizeRoom(seed);
+    if (!this.practicing) this.flushSave();
     if (this.practicing) this.practiceRooms.set(this.roomId ?? 'guest', this.state);
     this.epoch++;
     this.roomId = roomId;
@@ -652,7 +672,10 @@ export class Store {
     if (!this.canEdit) return;
     const error = validateRoom(data);
     if (error) throw new Error(error);
-    if (!this.visiting) this.homeSnapshot = JSON.stringify(this.state);
+    if (!this.visiting) {
+      this.flushSave();
+      this.homeSnapshot = JSON.stringify(this.state);
+    }
     this.pushHistory();
     // A room transition invalidates in-flight imports/uploads, as sessionGuard() promises.
     this.epoch++;
@@ -737,8 +760,36 @@ export class Store {
     this.listeners.forEach((l) => l());
   }
 
-  /** Keep the previous save as a backup before overwriting, and surface failures instead of hiding them. */
+  /**
+   * Schedule the localStorage write so a gesture is not spent stringifying the room.
+   * Pages flush on hide. Without a page (tests), the write stays immediate.
+   */
   private save(): void {
+    if (!this.deferSave) {
+      this.writeSave();
+      return;
+    }
+    if (this.saveTimer !== null) clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      this.writeSave();
+    }, SAVE_DEBOUNCE_MS);
+  }
+
+  /** Write a pending edit now. No-op when nothing is waiting, so a visit cannot overwrite the home room. */
+  private flushSave = (): void => {
+    if (this.saveTimer === null) return;
+    clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    this.writeSave();
+  };
+
+  private flushIfHidden = (): void => {
+    if (document.visibilityState === 'hidden') this.flushSave();
+  };
+
+  /** Keep the previous save as a backup before overwriting, and surface failures instead of hiding them. */
+  private writeSave(): void {
     try {
       const keys = roomKeys(this.roomId);
       const previous = localStorage.getItem(keys.main);

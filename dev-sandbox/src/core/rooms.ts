@@ -17,7 +17,7 @@ export const GUEST_ROOM_ID = 'guest';
 
 export const ROOM_DIRECTORY: readonly RoomSlot[] = [
   { id: GUEST_ROOM_ID, defaultName: 'My room' },
-  { id: 'german', defaultName: "German's room", seed: 'sample' }, // placeholder template until German's own room is ready
+  { id: 'german', defaultName: "German's room", seed: 'german' },
   { id: 'matt', defaultName: "Matt's room", seed: 'vinyl-lounge' },
   { id: 'levi', defaultName: "Levi's room", seed: 'creative-atelier' },
   { id: 'jawan', defaultName: "Jawan's room", seed: 'garden-notebook' },

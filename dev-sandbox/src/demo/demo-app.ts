@@ -36,7 +36,7 @@ import { EYE_HEIGHT, poseFromLookAt, type WalkPose } from '../core/walk';
 type Mode = 'intro' | 'tutorial' | 'walk';
 
 /** Drag-to-look sensitivity in the tutorial, radians per pixel. */
-const LOOK_SENS = 0.0035;
+const LOOK_SENS = 0.0042;
 /**
  * Where the held object stands, in camera space (its base; it grows upward): low and left of centre, under the box
  * and clear of the shelf and bench spots above it and the dock on the right.
@@ -57,7 +57,7 @@ const RETURN_STAND: WalkPose = {
 };
 const JUKEBOX_SCALE = 0.6;
 const JUKEBOX_FADE_S = 3;
-const FLY_IN = { delay: 0, stagger: 0.1, duration: 0.85 };
+const FLY_IN = { delay: 0.32, stagger: 0.1, duration: 0.85 };
 
 const DOOR_W = 2.2, DOOR_H = 3.3, POST = 0.2, DEPTH = 0.3;
 
@@ -421,7 +421,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       showHint(picked.length ? 'Room is full, visit portal for spring cleaning.' : 'Nothing new to drop in', 2200);
       return;
     }
-    walk?.lookToward(ROOM_MIDDLE[0], ROOM_MIDDLE[1], 1);
+    walk?.lookToward(ROOM_MIDDLE[0], ROOM_MIDDLE[1], 1, 1.05);
     view.flyIn(placed, portalMouth.copy(savePoint.center).setY(savePoint.center.y + 1.1), FLY_IN);
     // Fade the jukebox in after the last object has landed.
     jukeboxFadeDelay = FLY_IN.delay + Math.max(0, placed.length - 1) * FLY_IN.stagger + FLY_IN.duration;

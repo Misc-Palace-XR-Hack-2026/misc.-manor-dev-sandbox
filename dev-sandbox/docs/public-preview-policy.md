@@ -14,7 +14,8 @@ here. Existing saved links, researched notes and room JSON are untouched; no sch
 1. **Safe URL parse.** `safeUrl()` rejects unsafe schemes (`javascript:`, `data:`, `file:`, `ftp:`, …).
 2. **Eligibility gate — `publicPreviewUrl()`.** Syntactic only (see below). Ineligible → card + Open.
 3. **Official provider embeds win.** YouTube watch/short/embed/live → `youtube-nocookie.com/embed`;
-   Vimeo numeric video; Spotify track/album/playlist/episode/show/artist; SoundCloud track path;
+   Vimeo numeric video; Spotify track/album/playlist/episode/show/artist; SoundCloud track/set or
+   `on.soundcloud.com` short link (visual player); Deezer track/album/playlist/artist;
    Wikipedia `/wiki/` article. A channel, profile or landing page is **not** a player and falls through.
 4. **Blocklist.** Known-unsuitable host → card + Open, no wasted iframe attempt.
 5. **Otherwise** → `provider: 'page'` sandboxed attempt at the unmodified destination URL.
@@ -102,6 +103,10 @@ dev-sandbox maintainers. **Maintenance rules:**
 | `vimeo.com` | provider route only; non-video paths are not players |
 | `spotify.com` | provider route only; profile/landing pages are not players |
 | `soundcloud.com` | provider route only; profile pages are not players |
+| `on.soundcloud.com` | SoundCloud short link; official widget, not a generic page frame |
+| `deezer.com` | provider route only; landing pages are not players |
+| `widget.deezer.com` | reached only via the official embed route built above |
+| `link.deezer.com` | Deezer short link; we do not follow redirects |
 | `wikipedia.org` | provider route only; non-article paths are not previews |
 | `twitch.tv` | framing refusal on channel pages |
 | `distrokid.com` | verified X-Frame-Options SAMEORIGIN refusal (see web-previews.md) |
@@ -136,9 +141,9 @@ framing of channel pages without removing the official player for a watch URL.
 
 | State | What the user sees |
 |---|---|
-| attempting | `Loading preview… Blank? This site may block previews or need browser features.` (`role="status"`) |
-| iframe `load` fired | `Preview availability unverified.` — a cross-origin **load event is not proof of** render success, so we never upgrade this to "loaded" |
-| iframe `error` fired | `Preview could not load.` |
+| attempting | `Loading…` (`role="status"`) |
+| iframe `load` fired | `Blank? Use Open.` (or `Mute music, or Open.` when room audio cannot duck automatically) — a cross-origin **load event is not proof of** render success, so we never upgrade this to "loaded" |
+| iframe `error` fired | `Could not load.` |
 | ineligible / blocked | card with title, domain, favicon and the reason — **plus the Open action**; the card root drops `aria-hidden` and becomes pointer-interactive so the link is actually clickable and reachable by assistive tech |
 | unsafe scheme | card with the raw text and **no link at all** (nothing safe to navigate to) |
 | always | **Open in browser** action, outside the iframe, reachable in every state that has a safe address |
@@ -179,7 +184,7 @@ rather than DOM stubs:
 
 - a frameable public fixture **outside the old allowlist** renders inside the frame, and the frame's
   document reports an opaque origin (`data-isolated`), with `sandbox="allow-scripts"`;
-- the guidance text says `unverified` after `load` — never "loaded";
+- the guidance text says `Blank?` after `load` — never "loaded";
 - `X-Frame-Options: DENY` and `Content-Security-Policy: frame-ancestors 'none'` fixtures produce
   `net::ERR_BLOCKED_BY_RESPONSE` and no framed content;
 - an aborted request and a dispatched `error` keep the panel populated and the Open action visible;

@@ -1,4 +1,7 @@
-import { publicPreviewUrl, previewOpenUrl, type Preview } from '../core/preview';
+import {
+  playerSrcFromSoundCloudOembedHtml, previewOpenUrl, publicPreviewUrl, soundcloudOembedRequest, soundcloudShortLink,
+  type Preview,
+} from '../core/preview';
 import { registerEmbedAudio, supportsEmbedAudio } from './embed-audio';
 import type { MediaArt } from '../core/media-art';
 
@@ -13,6 +16,11 @@ export type PreviewArt = MediaArt;
 
 /** Space kept free at the top of the viewport (the Skip button, browser chrome) so a tall card never runs under it. */
 const TOP_CLEARANCE = 64;
+const STATUS_LOADING = 'Loading…';
+const STATUS_BLANK = 'Blank? Use Open.';
+const STATUS_FAIL = 'Could not load.';
+const STATUS_NONE = 'No preview.';
+const STATUS_MUTE = 'Mute music, or Open.';
 
 const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string) => {
   const e = document.createElement(tag);
@@ -34,11 +42,40 @@ export function createEmbedFrame(preview: Extract<Preview, { kind: 'embed' }>): 
   const destination = new URL(preview.src);
   // Main's public-HTTPS preview policy decides eligibility; audio coordination only ever attaches to a frame
   // that policy already allowed to load. No proxying, no header rewriting, no sandbox relaxation.
-  if (publicPreviewUrl(destination)) {
-    frame.src = preview.src;
-    registerEmbedAudio(frame, preview.provider);
+  if (!publicPreviewUrl(destination)) return frame;
+  const track = destination.searchParams.get('url');
+  if (preview.provider === 'soundcloud' && track && soundcloudShortLink(track)) {
+    // Short links are not widget URLs. Leave src empty until oEmbed returns the player, but keep
+    // the frame in the card so that resolve can run (it bails if the node is disconnected).
+    frame.setAttribute('data-pending', 'soundcloud');
+    void resolveSoundCloudWidget(track).then((src) => {
+      if (!frame.isConnected) return;
+      frame.removeAttribute('data-pending');
+      if (!src || !publicPreviewUrl(new URL(src))) {
+        frame.dispatchEvent(new Event('error'));
+        return;
+      }
+      frame.src = src;
+      registerEmbedAudio(frame, preview.provider);
+    });
+    return frame;
   }
+  frame.src = preview.src;
+  registerEmbedAudio(frame, preview.provider);
   return frame;
+}
+
+async function resolveSoundCloudWidget(page: string): Promise<string | null> {
+  const request = soundcloudOembedRequest(page);
+  if (!request) return null;
+  try {
+    const res = await fetch(request);
+    if (!res.ok) return null;
+    const data = await res.json() as { html?: unknown };
+    return typeof data.html === 'string' ? playerSrcFromSoundCloudOembedHtml(data.html) : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Fallback picture: an icon for the media type, captioned with what it is. */
@@ -170,23 +207,16 @@ export class PreviewCardView {
     if (this.compact) return this.renderCompact(body, p, art);
     if (p.kind === 'embed') {
       const frame = createEmbedFrame(p);
-      if (frame.getAttribute('src')) body.append(frame);
+      if (frame.getAttribute('src') || frame.getAttribute('data-pending')) body.append(frame);
       body.append(make('div', 'preview-title', p.title));
-      const fallback = 'This site may block previews or need browser features.';
-      const guidance = make('div', 'preview-text', `Loading preview… Blank? ${fallback}`);
+      const mute = !supportsEmbedAudio(p.provider, p.src);
+      const guidance = make('div', 'preview-text', STATUS_LOADING);
       guidance.setAttribute('role', 'status');
       // Cross-origin failures often fire load too. Never mark the page as successfully rendered.
-      frame.addEventListener('load', () => { guidance.textContent = `Preview availability unverified. ${fallback}`; });
-      frame.addEventListener('error', () => { guidance.textContent = `Preview could not load. ${fallback}`; });
+      frame.addEventListener('load', () => { guidance.textContent = mute ? STATUS_MUTE : STATUS_BLANK; });
+      frame.addEventListener('error', () => { guidance.textContent = STATUS_FAIL; });
       const open = openAction(this.openUrl ?? previewOpenUrl(p.src));
-      // Order matters: main's preview policy checks `.preview-text` first-match for the load guidance,
-      // so the guidance stays first and PR #81's manual-mute notice follows it.
       body.append(guidance);
-      // PR #81: providers without a supported player API cannot be coordinated automatically; tell the user how to
-      // avoid double audio instead of silently overlapping the room soundtrack.
-      if (!supportsEmbedAudio(p.provider, p.src)) {
-        body.append(make('div', 'preview-text', 'Automatic audio coordination is unavailable for this preview. Mute room music before playing media here, or use Open in browser.'));
-      }
       if (open) body.append(open);
     } else if (p.kind === 'image') {
       const frame = make('div', 'preview-frame');
@@ -240,12 +270,13 @@ export class PreviewCardView {
     };
     if (p.kind === 'embed') {
       const frame = createEmbedFrame(p);
-      const loads = Boolean(frame.getAttribute('src'));
+      const loads = Boolean(frame.getAttribute('src') || frame.getAttribute('data-pending'));
       if (loads) body.append(frame);
-      const status = make('div', 'preview-text', loads ? 'Loading…' : 'No preview here.');
+      const mute = !supportsEmbedAudio(p.provider, p.src);
+      const status = make('div', 'preview-text', loads ? STATUS_LOADING : STATUS_NONE);
       status.setAttribute('role', 'status');
-      frame.addEventListener('load', () => { status.textContent = 'Blank? Use Open.'; });
-      frame.addEventListener('error', () => { status.textContent = 'No preview here.'; });
+      frame.addEventListener('load', () => { status.textContent = mute ? STATUS_MUTE : STATUS_BLANK; });
+      frame.addEventListener('error', () => { status.textContent = STATUS_FAIL; });
       body.append(row(p.title, this.openUrl ?? previewOpenUrl(p.src)), status);
     } else if (p.kind === 'image') {
       const frame = make('div', 'preview-frame');

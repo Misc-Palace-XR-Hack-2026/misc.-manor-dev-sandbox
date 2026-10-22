@@ -4,6 +4,7 @@ import type { RoomView, DemoHooks, DemoTap } from '../views/room';
 import {
   DOLLY_S,
   dollyLens,
+  clampPitch,
   dragLook,
   EYE_HEIGHT,
   smooth,
@@ -54,6 +55,10 @@ interface Glide {
 }
 
 const LOOK_DAMP = 14;
+/** After a flick, leftover look speed dies out this fast (1/seconds). */
+const LOOK_FLICK_DECAY = 5.5;
+const LOOK_FLICK_MAX = 3.2;
+const LOOK_FLICK_MIN = 0.35;
 const ZOOM_DAMP = 8;
 /** Zoom per wheel pixel (mouse wheel), per pixel of trackpad pinch (ctrl+wheel), per pixel of two-finger pinch. */
 const WHEEL_ZOOM = 0.0015;
@@ -94,7 +99,7 @@ export interface WalkHandle {
   /** Glide back down to where the visitor stood before the overview. */
   toWalk(): void;
   /** While walking, ease the view part of the way (0..1, shortest turn) toward facing a point on the floor plan. */
-  lookToward(x: number, z: number, amount: number): void;
+  lookToward(x: number, z: number, amount: number, maxTurn?: number): void;
   dispose(): void;
 }
 
@@ -102,7 +107,11 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
   const base = options.hooks ?? {};
   const withOverview = options.overview !== false;
   const regions = floorRegionsFromBoxes(store.layout.boxes);
-  const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  let prefersReducedMotion = Boolean(motionQuery?.matches);
+  const onReducedMotion = () => { prefersReducedMotion = Boolean(motionQuery?.matches); };
+  motionQuery?.addEventListener('change', onReducedMotion);
+  const reducedMotion = () => prefersReducedMotion;
 
   const camera = new THREE.PerspectiveCamera(WALK_FOV, 1, WALK_NEAR, WALK_FAR);
   camera.rotation.order = 'YXZ';
@@ -122,6 +131,9 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
   let dragging = false;
   let dragPointer: number | null = null;
   let lastDrag = { x: 0, y: 0 };
+  let lastDragAt = 0;
+  let lookVelYaw = 0;
+  let lookVelPitch = 0;
   let frameTime = 0;
   let lastFrameTime = 0;
   const keys = new Set<string>();
@@ -451,6 +463,17 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
         done?.();
       }
     } else if (mode === 'walk' && !dragging) {
+      if (lookVelYaw || lookVelPitch) {
+        lookTargetYaw += lookVelYaw * dt;
+        lookTargetPitch = clampPitch(lookTargetPitch + lookVelPitch * dt);
+        const fade = Math.exp(-LOOK_FLICK_DECAY * dt);
+        lookVelYaw *= fade;
+        lookVelPitch *= fade;
+        if (Math.abs(lookVelYaw) + Math.abs(lookVelPitch) < LOOK_FLICK_MIN * 0.25) {
+          lookVelYaw = 0;
+          lookVelPitch = 0;
+        }
+      }
       const k = 1 - Math.exp(-LOOK_DAMP * dt);
       lookYaw += (lookTargetYaw - lookYaw) * k;
       lookPitch += (lookTargetPitch - lookPitch) * k;
@@ -500,6 +523,9 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
     if (glide || touches.size > 2) return;
     dragPointer = e.pointerId;
     lastDrag = { x: e.clientX, y: e.clientY };
+    lastDragAt = 0;
+    lookVelYaw = 0;
+    lookVelPitch = 0;
     dragging = false;
     canvas.setPointerCapture(e.pointerId);
   };
@@ -521,9 +547,16 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
       lastDrag = { x: e.clientX, y: e.clientY };
       return;
     }
+    const now = performance.now() / 1000;
+    const moveDt = lastDragAt > 0 ? Math.max(1 / 240, now - lastDragAt) : 0;
     lastDrag = { x: e.clientX, y: e.clientY };
+    lastDragAt = now;
     if (Math.abs(dx) + Math.abs(dy) < 0.5) return;
     const next = dragLook(lookTargetYaw, lookTargetPitch, dx, dy);
+    if (moveDt) {
+      lookVelYaw = Math.max(-LOOK_FLICK_MAX, Math.min(LOOK_FLICK_MAX, (next.yaw - lookTargetYaw) / moveDt));
+      lookVelPitch = Math.max(-LOOK_FLICK_MAX, Math.min(LOOK_FLICK_MAX, (next.pitch - lookTargetPitch) / moveDt));
+    }
     lookTargetYaw = next.yaw;
     lookTargetPitch = next.pitch;
     lookYaw = next.yaw;
@@ -541,6 +574,10 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
     if (e.pointerId !== dragPointer) return;
     dragging = false;
     dragPointer = null;
+    if (Math.abs(lookVelYaw) + Math.abs(lookVelPitch) < LOOK_FLICK_MIN) {
+      lookVelYaw = 0;
+      lookVelPitch = 0;
+    }
     try { canvas.releasePointerCapture(e.pointerId); } catch { /* already released */ }
   };
 
@@ -603,15 +640,19 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
     toWalk() {
       if (mode === 'overview' || leaving) walkBack(frameTime);
     },
-    lookToward(x, z, amount) {
+    lookToward(x, z, amount, maxTurn = 0.32) {
       if (mode !== 'walk' || leaving || glide || dragging) return;
       const yaw = horizontalYaw([pose.x, pose.y, pose.z], [x, pose.y, z]);
       const d = shortestYawDelta(lookYaw, yaw) * amount;
-      // A small nudge the short way, so the portal (and the objects flying out of it) stay on screen.
-      const cap = 0.32; // ~18°
+      const cap = Number.isFinite(maxTurn) && maxTurn > 0 ? maxTurn : 0.32;
+      lookVelYaw = 0;
+      lookVelPitch = 0;
       lookTargetYaw = lookYaw + Math.sign(d) * Math.min(Math.abs(d), cap);
+      // A little down, so the floor and the middle of the room stay in view.
+      lookTargetPitch = lookPitch + (ENTRY_PITCH - lookPitch) * 0.45;
     },
     dispose() {
+      motionQuery?.removeEventListener('change', onReducedMotion);
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerup', endDrag);

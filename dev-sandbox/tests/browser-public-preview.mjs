@@ -45,7 +45,7 @@ try {
     await page.frameLocator('#policy-preview iframe').getByRole('heading', { name: 'Frameable public fixture' }).waitFor();
     assert.equal(await page.frameLocator('#policy-preview iframe').locator('body').getAttribute('data-isolated'), 'yes');
     assert.equal(await root.locator('iframe').getAttribute('sandbox'), 'allow-scripts');
-    assert.match(await root.innerText(), /unverified/i, 'load must not claim success');
+    assert.match(await root.innerText(), /Blank\?/, 'load must not claim success');
     await checkOpen(`${fixture}/frameable`);
     await page.screenshot({ path: `${out}/${name}-frameable.png` });
     const popupPromise = page.waitForEvent('popup'); await root.getByRole('link').click();
@@ -54,7 +54,7 @@ try {
       const url = `${fixture}/${kind}`;
       await page.route(url, r => r.fulfill({ contentType: 'text/html', headers, body: '<h1>Forbidden content</h1>' }));
       await show(url);
-      await page.waitForFunction(() => document.querySelector('#policy-preview .preview-text')?.textContent.includes('unverified'));
+      await page.waitForFunction(() => document.querySelector('#policy-preview .preview-text')?.textContent.includes('Blank?'));
       assert.equal(await page.frameLocator('#policy-preview iframe').getByText('Forbidden content').count(), 0);
       assert.ok(failures.some(f => f.url === url && f.error === 'net::ERR_BLOCKED_BY_RESPONSE'), `${kind} enforced`);
       await checkOpen(url); await page.screenshot({ path: `${out}/${name}-${kind}.png` });

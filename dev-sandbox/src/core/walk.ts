@@ -19,7 +19,7 @@ export const FLOOR_NORMAL_MIN = 0.7;
 /** Slight downward tilt when landing from overview. */
 export const ENTRY_PITCH = -0.12;
 export const MOVE_SPEED = 3.5;
-export const LOOK_SENS = 0.0022;
+export const LOOK_SENS = 0.0042;
 /** Fully zoomed out: this far behind the visitor and this much higher, never above ZOOM_TOP (walls top out at 4.2). */
 export const ZOOM_BACK = 3.5;
 export const ZOOM_UP = 2.0;

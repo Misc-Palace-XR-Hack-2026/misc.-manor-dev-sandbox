@@ -23,7 +23,7 @@ globalThis.localStorage = {
 const roomsDir = join(process.cwd(), 'rooms');
 const readRoom = (name: string): unknown => JSON.parse(readFileSync(join(roomsDir, `${name}.json`), 'utf8'));
 const repo = (): Record<string, unknown> => Object.fromEntries(
-  ['matt', 'levi', 'omari', 'sample', 'garden-notebook', 'vinyl-lounge', 'creative-atelier']
+  ['matt', 'levi', 'omari', 'german', 'sample', 'garden-notebook', 'vinyl-lounge', 'creative-atelier']
     .map((n) => [n, readRoom(n)]),
 );
 
