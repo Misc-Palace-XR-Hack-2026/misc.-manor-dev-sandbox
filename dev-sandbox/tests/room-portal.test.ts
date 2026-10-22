@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Store, newRoom, roomKeys } from '../src/core/store';
-import { roomCatalog, visitCatalogRoom, randomRoom, loadRoomJson } from '../src/core/room-portal';
+import { roomCatalog, seededRepoNames, visitCatalogRoom, randomRoom, loadRoomJson } from '../src/core/room-portal';
 const saved = new Map<string,string>();
 globalThis.localStorage = { getItem: (k:string) => saved.get(k) ?? null, setItem: (k:string,v:string) => saved.set(k,v), removeItem:(k:string)=>saved.delete(k) } as Storage;
 const repo = [{name:'german',data:newRoom('German')}, {name:'extra',data:newRoom('Extra')}];
@@ -11,6 +11,25 @@ test('catalog includes My room, every directory room and every committed room wi
  assert.ok(catalog.some(r=>r.id==='repo:extra'));
  assert.ok(catalog.some(r=>r.id==='directory:matt'));
  assert.equal(new Set(catalog.map(r=>r.id)).size,catalog.length);
+});
+test('a named room and the file it seeds from are one entry, not two', () => {
+ // german.json is German's room's own content; vinyl-lounge is Matt's seed when matt.json is absent.
+ const files = [{name:'german',data:newRoom('German')},{name:'vinyl-lounge',data:newRoom('Vinyl')},{name:'curious-web',data:newRoom('Curious')}];
+ assert.deepEqual([...seededRepoNames(Object.fromEntries(files.map(f=>[f.name,f.data])))].sort(),
+   ['creative-atelier','garden-notebook','german','omari','vinyl-lounge']);
+ const catalog = roomCatalog(files);
+ assert.equal(catalog.filter(r=>r.id==='repo:german').length,0,'German is listed once, as the named room');
+ assert.equal(catalog.filter(r=>r.id==='repo:vinyl-lounge').length,0,"Matt's seed is not a second room");
+ assert.ok(catalog.some(r=>r.id==='repo:curious-web'),'rooms no named room represents are still offered');
+ assert.ok(catalog.some(r=>r.label==="German's room"));
+ assert.equal(new Set(catalog.map(r=>r.label)).size,catalog.length,'no two rooms share a label');
+
+ // A file matching the room id wins over the slot seed, so only that file is consumed.
+ const withMatt = [...files,{name:'matt',data:newRoom('Matt file')}];
+ const consumed = seededRepoNames(Object.fromEntries(withMatt.map(f=>[f.name,f.data])));
+ assert.ok(consumed.has('matt'));
+ assert.ok(!consumed.has('vinyl-lounge'),'the unused seed becomes a room of its own');
+ assert.ok(roomCatalog(withMatt).some(r=>r.id==='repo:vinyl-lounge'));
 });
 test('random visits exclude home/current; repeated visits preserve the personal room and persisted JSON', () => {
  const store = new Store(newRoom('Personal'), 'demo-visit');

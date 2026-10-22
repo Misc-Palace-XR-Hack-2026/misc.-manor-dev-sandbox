@@ -2,11 +2,28 @@ import { Store, normalizeRoom } from './store';
 import { ROOM_DIRECTORY, seedRoom } from './rooms';
 import type { RoomState } from './types';
 export interface CatalogRoom { id: string; label: string; data?: RoomState }
+
+/**
+ * Which rooms/<name>.json each named room actually seeds from, mirroring `seedSource()`:
+ * a file matching the room id wins over the slot's `seed`. Those files are the named room's own
+ * content, so listing them again as unnamed repo rooms would show the same room twice.
+ */
+export function seededRepoNames(repo: Record<string, unknown>): Set<string> {
+  const used = new Set<string>();
+  for (const slot of ROOM_DIRECTORY) {
+    if (slot.seed === undefined) continue;
+    used.add(slot.id in repo ? slot.id : slot.seed);
+  }
+  return used;
+}
+
 export function roomCatalog(rooms: {name:string;data:unknown}[]): CatalogRoom[] {
  const repo=Object.fromEntries(rooms.map(r=>[r.name,r.data]));
+ const named=seededRepoNames(repo);
  return [ {id:'home',label:'My room'},
   ...ROOM_DIRECTORY.filter(r=>r.id!=='guest').map(r=>({id:'directory:'+r.id,label:r.defaultName,data:seedRoom(r.id,repo)})),
-  ...rooms.map(r=>({id:'repo:'+r.name,label:r.name.replaceAll('-',' ').replace(/\b\w/g,c=>c.toUpperCase()),data:normalizeRoom(r.data)})),
+  // Only the repo rooms no named room already represents.
+  ...rooms.filter(r=>!named.has(r.name)).map(r=>({id:'repo:'+r.name,label:r.name.replaceAll('-',' ').replace(/\b\w/g,c=>c.toUpperCase()),data:normalizeRoom(r.data)})),
  ];
 }
 export function visitCatalogRoom(store:Store, room:CatalogRoom):void {

@@ -30,7 +30,10 @@ try{
  const hudBefore={camera:await page.locator('.demo-camera').boundingBox(),help:await page.locator('.demo-hud').getByRole('button',{name:'Help',exact:true}).boundingBox()};
  await dlg.getByRole('button',{name:'Neighborhood / Overworld',exact:true}).click();
  await page.waitForFunction(()=>window.__productionRoomView.neighborhood);
- const count=await page.evaluate(()=>window.__productionRoomView.neighborhood.pavilions.length);assert.equal(count,16);facts.desktopPavilions=count;
+ const expected=await page.evaluate(async()=>{const {roomCatalog}=await import('/src/core/room-portal.ts');const {REPO_ROOMS}=await import('/src/core/repo-rooms.ts');const catalog=roomCatalog(REPO_ROOMS);return {count:catalog.length,labels:catalog.map(r=>r.label)};});
+ const count=await page.evaluate(()=>window.__productionRoomView.neighborhood.pavilions.length);assert.equal(count,expected.count);
+ assert.equal(new Set(expected.labels).size,expected.count,'no two neighborhood rooms share a label');
+ facts.desktopPavilions=count;facts.roomLabels=expected.labels;
  facts.culDeSacs=await page.evaluate(()=>{const w=window.__productionRoomView.neighborhood;const groups={};for(const p of w.pavilions)(groups[p.theme]??=[]).push(p.id);const lights=[];w.group.traverse(o=>{if(o.isPointLight)lights.push({distance:o.distance,shadow:o.castShadow,color:o.color.getHexString(),visible:o.visible});});const home=w.pavilions.find(p=>p.id==='home');if(w.street.position.distanceTo(home.doorway)>.001)throw Error('not outside My room');if(lights.length!==w.courts.length||lights.filter(l=>l.visible).length>4||lights.some(l=>!l.distance||l.shadow))throw Error('local light budget');return {groups,lights,homeSpawn:true};});
  facts.homeCameraHud=await page.evaluate(()=>{const home=document.querySelector('.demo-hud .neighborhood-back'),camera=document.querySelector('.demo-camera');if(!home||home.hidden||home.getBoundingClientRect().right>camera.getBoundingClientRect().left)throw Error('Home must precede Help/Camera');const h=home.getBoundingClientRect(),c=camera.getBoundingClientRect();if(Math.abs(h.y+h.height/2-c.y-c.height/2)>10||innerHeight-h.bottom>80)throw Error('Home not beside bottom Camera');if(!home.contains(document.elementFromPoint(h.x+h.width/2,h.y+h.height/2)))throw Error('Home occluded');return {adjacent:true,bottom:true};});
  // Icon-only, Help-styled, and the bar itself resizes instead of reserving an empty slot.
@@ -53,7 +56,7 @@ try{
  assert.ok(await page.evaluate(before=>window.__productionRoomView.neighborhood.street.position.distanceTo({x:before[0],y:before[1],z:before[2]})>.3,streetBefore));
  await page.screenshot({path:OUT+'/street-overworld.png'});
  await page.locator('.demo-camera-select').selectOption('dollhouse');await page.waitForTimeout(150);
- assert.equal(await page.evaluate(()=>window.__productionRoomView.neighborhood.pavilions.length),16);
+ assert.equal(await page.evaluate(()=>window.__productionRoomView.neighborhood.pavilions.length),expected.count);
  await clickPavilion('directory:matt');await page.waitForFunction(()=>window.__productionRoomView.store.visiting==='directory:matt');
  assert.equal(await page.locator('.demo-hud .neighborhood-back').isVisible(),true);
  await page.locator('.neighborhood-back').click();
@@ -72,7 +75,7 @@ try{
   }
   assert.equal(await page.evaluate(()=>window.__productionRoomView.store.exportJson()),homeBefore);facts.clickedDestinations.push(id);
  }
- assert.equal(new Set(facts.clickedDestinations).size,16);
+ assert.equal(new Set(facts.clickedDestinations).size,expected.count);
  await openRooms();await page.locator('dialog[open]').getByRole('button',{name:'Neighborhood / Overworld',exact:true}).click();
  await page.locator('.demo-camera-select').selectOption('tactile');
  await page.evaluate(()=>{const w=window.__productionRoomView.neighborhood,p=w.pavilions.find(p=>p.id==='directory:matt');w.setStreetPose(p.doorway,p.group.rotation.y);});
@@ -136,7 +139,7 @@ try{
   function click(){controller.dispatchEvent({type:'selectstart'});controller.dispatchEvent({type:'selectend'});}
   panel.hide();aim(xr.amenities.rooms.group.position.clone().add(new THREE.Vector3(0,1,0)));check(xr.pick(controller)?.kind==='room-portal','ray hits rooms portal');click();check(panel.page==='room-portal','portal opens rooms page');
   function press(id){for(let i=0;i<30;i++){const b=panel.shown.find(b=>b.id===id);if(b){aim(panel.mesh.localToWorld(new THREE.Vector3((b.x/1024-.5)*.84,(.5-b.y/1408)*1.16,0)));click();return;}const next=panel.shown.find(b=>b.id==='ui:next');if(!next)throw Error('Unreachable '+id);panel.activate({x:next.x/1024,y:1-next.y/1408});}throw Error('paging loop');}
-  press('page:overworld');check(view.neighborhood===xr.neighborhood,'XR shares actual neighborhood scene');const seen=view.neighborhood.pavilions.map(p=>p.id);check(seen.length===16,'16 physical pavilions');
+  press('page:overworld');check(view.neighborhood===xr.neighborhood,'XR shares actual neighborhood scene');const seen=view.neighborhood.pavilions.map(p=>p.id);const {roomCatalog:xrRoomCatalog}=await import('/src/core/room-portal.ts');const {REPO_ROOMS:xrRepoRooms}=await import('/src/core/repo-rooms.ts');const catalogIds=xrRoomCatalog(xrRepoRooms).map(r=>r.id);check(seen.length===catalogIds.length&&catalogIds.every(id=>seen.includes(id)),'every catalog room is a physical pavilion, with no duplicates');
   const world=view.neighborhood;const homeP=world.pavilions.find(p=>p.id==='directory:matt');
   xr.player.position.copy(homeP.doorway).setY(0);controller.position.set(0,1.5,0);aim(homeP.center);
   check(world.pick(xr.rayFrom(controller))?.id==='directory:matt','controller hits real pavilion');click();
