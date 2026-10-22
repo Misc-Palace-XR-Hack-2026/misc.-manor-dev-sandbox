@@ -8,7 +8,7 @@ import { previewOpenUrl } from '../core/preview';
 import { SHOW_PREVIEW_BUTTON } from '../core/demo-flags';
 import { safeUrl } from '../core/content';
 import { Store } from '../core/store';
-import { ROOM_DIRECTORY, isDemoHomeAlias, openRoom, seedRoom } from '../core/rooms';
+import { ROOMS_PICKER_ORDER, isDemoHomeAlias, openRoom, seedRoom } from '../core/rooms';
 import { THEMES } from '../core/themes';
 import { CONTENT_TYPES, OBJECT_KINDS, OBJECT_LABELS, type ContentType, type ObjectKind } from '../core/types';
 import { buildKindInventory } from './kind-picker';
@@ -215,7 +215,7 @@ export class MenuView {
   /** Rebuilt on open (not every render) because reading other rooms' names touches localStorage. */
   private refreshRooms(): void {
     const current = this.store.roomId;
-    this.roomList.replaceChildren(...ROOM_DIRECTORY.map((slot) => {
+    this.roomList.replaceChildren(...ROOMS_PICKER_ORDER.map((slot) => {
       const label = this.store.practicing ? `Practice · ${slot.defaultName}` : slot.id === current ? this.store.state.owner : (Store.savedName(slot.id) ?? slot.defaultName);
       const b = el('button', { type: 'button', textContent: label });
       b.setAttribute('aria-current', String(slot.id === current));
@@ -544,7 +544,7 @@ export class MenuView {
     this.soundtrack.value = !soundtrack || soundtrack.mode === 'follow' ? 'follow' : soundtrack.mode === 'off' ? 'off' : soundtrack.track;
     for(const [target,select] of this.surfaceSelects) select.value = state.surfaces?.[target]?.preset ?? '';
     this.undoBtn.disabled = !this.store.canUndo;
-    this.roomsBtn.textContent = state.owner || 'Rooms';
+    this.roomsBtn.textContent = 'Rooms';
     this.syncItemSheet(selectedId);
     this.renderStatus();
 
