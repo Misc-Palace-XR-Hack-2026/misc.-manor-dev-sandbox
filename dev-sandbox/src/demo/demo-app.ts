@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { Store, roomKeys } from '../core/store';
 import type { ObjectKind, RoomState } from '../core/types';
 import {
-  BOX_POS, DOOR_POS, INTRO_DURATION, JUKEBOX_POS, clampLook, introFrame, lookAround, markIntroSeen, tutorialView,
-  type View,
+  BOX_POS, DOOR_POS, INTRO_DURATION, JUKEBOX_POS, SAVE_POINT_POS, SAVE_POINT_REACH, clampLook, introFrame, lookAround,
+  markIntroSeen, tutorialView, type View,
 } from '../core/intro-timeline';
 import { RoomView, type DemoHooks, type DemoTap } from '../views/room';
 import { REPO_ROOMS } from '../core/repo-rooms';
@@ -12,7 +12,9 @@ import { buildObject } from '../views/objects';
 import { disposeGroup } from '../views/resources';
 import { buildJukebox } from './jukebox';
 import { buildCardboardBox } from './cardboard-box';
-import { mountWalkMode } from './walk-mode';
+import { SAVE_POINT_RADIUS, buildSavePoint } from './save-point';
+import { mountDemoHud, mountSavePointPanel, type DemoHud, type SavePointPanel } from './demo-hud';
+import { mountWalkMode, type WalkHandle } from './walk-mode';
 import {
   DEMO_ROOM_ID, SHELF_SLOTS, TUTORIAL_SLOTS, inBox, migrateDemoRoom, normalizeDemoOwner, prepareIntroReplayRoom,
   seedDemoRoom, tutorialDone,
@@ -22,7 +24,9 @@ import { EYE_HEIGHT, poseFromLookAt, type WalkPose } from '../core/walk';
 // The demo is one real room (the same RoomView the sandbox uses). Every visit, a scripted walk-in plays inside it and
 // ends on a locked tutorial view of the shelf: the visitor unpacks the starter objects from a cardboard box, looks at
 // them and sets them on the shelf. Finishing (or skipping) lifts the lock: the camera drops to standing height and
-// they walk the room in first person. The isometric room with edit tools ("free demo mode") is not reachable yet.
+// they walk the room in first person ("tactile"). Their goal now is the save point across the room: they get there by
+// walking or by switching the Camera to "dollhouse" (the isometric room). The save point adds links, files and
+// bookmarks. Only Exit tutorial brings in the sandbox edit tools.
 
 type Mode = 'intro' | 'tutorial' | 'walk';
 
@@ -145,7 +149,9 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   box.group.position.set(...BOX_POS);
   box.setFill(inBox(store.state).length);
   const door = buildDoor();
-  view.addToScene(jukebox.group, box.group, door.group);
+  const savePoint = buildSavePoint();
+  savePoint.group.position.set(...SAVE_POINT_POS);
+  view.addToScene(jukebox.group, box.group, door.group, savePoint.group);
 
   // ---- overlay --------------------------------------------------------------
   const black = el('div', 'demo-black');
@@ -282,6 +288,8 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       last = now;
       jukebox.update(t, dt);
       box.update(t, dt);
+      savePoint.update(t, dt);
+      if (mode === 'walk') { watchForSavePoint(); return; }
       if (skippingIntro) return;
       if (mode === 'intro') {
         elapsed = Math.min(INTRO_DURATION, elapsed + dt);
@@ -351,18 +359,63 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     }
   }
 
-  /** Walk the room from wherever the tutorial camera is: it glides down to standing height, then the visitor is free. */
-  function startWalking(): void {
-    camera.updateMatrixWorld();
-    const p = camera.position;
-    const dir = camera.getWorldDirection(new THREE.Vector3());
-    const from = poseFromLookAt([p.x, p.y, p.z], [p.x + dir.x, p.y + dir.y, p.z + dir.z]);
-    mountWalkMode(view, store, {
-      overview: false,
-      start: { from, to: STAND, fov: camera.fov },
-      hooks: { frame: hooks.frame, yaw: 0, keepSelectionOnPlace: true, liftSelected: false, compactPreview: true },
-      say: (text, ms) => showHint(text, ms),
-    });
+  // ---- after the tutorial: the save point, the camera choice, Exit tutorial --------------------------------------
+  let walk: WalkHandle | null = null;
+  let hud: DemoHud | null = null;
+  let exited = false;
+  let goalShown = false;
+  const savePanel: SavePointPanel = mountSavePointPanel(store, (text, ms) => showHint(text, ms));
+  const seen = new THREE.Vector3();
+
+  /** The first time the save point comes into view while walking, show the goal. */
+  function watchForSavePoint(): void {
+    if (goalShown || !walk || !hud || walk.mode !== 'walk') return;
+    const ndc = seen.copy(savePoint.center).project(walk.camera);
+    if (ndc.z < -1 || ndc.z > 1 || Math.abs(ndc.x) > 0.8 || Math.abs(ndc.y) > 0.9) return;
+    goalShown = true;
+    hud.showGoal();
+  }
+
+  /** How far the walking visitor stands from the save point, on the floor plan. */
+  const savePointDistance = (): number => {
+    const eye = walk!.camera.position;
+    return Math.hypot(eye.x - SAVE_POINT_POS[0], eye.z - SAVE_POINT_POS[2]);
+  };
+
+  /** Did this tap land on the save point (and not on something in front of it)? */
+  function onSavePoint(tap: DemoTap): boolean {
+    if (tap.repId) return false;
+    const d = savePoint.hit(tap.raycaster);
+    if (d !== null) return !tap.room || tap.room.distance >= d;
+    // Standing inside the light the column isn't hit from within: looking down at the runes counts.
+    const p = tap.room?.point;
+    return walk?.mode === 'walk' && !!p && savePointDistance() < SAVE_POINT_RADIUS
+      && Math.hypot(p.x - SAVE_POINT_POS[0], p.z - SAVE_POINT_POS[2]) < SAVE_POINT_RADIUS;
+  }
+
+  /**
+   * A tap on the save point never walks the visitor there. Walking, it opens from within reach; from farther it says
+   * to come closer (that is how walking gets learned). From the dollhouse it opens from anywhere.
+   */
+  function onWalkTap(tap: DemoTap): boolean {
+    if (!walk || !onSavePoint(tap)) return false;
+    if (walk.mode === 'walk' && savePointDistance() > SAVE_POINT_REACH) {
+      showHint(exited ? 'Walk closer to use the save point' : 'Too far. Walk closer, or switch camera.', 2200);
+      return true;
+    }
+    hud?.goalMet();
+    store.select(null);
+    savePanel.open();
+    return true;
+  }
+
+  /** Leave the tutorial: the sandbox edit tools and Rooms picker come in, still walking in first person. */
+  function exitTutorial(): void {
+    if (exited) return;
+    exited = true;
+    hud?.dispose();
+    hud = null;
+    if (walk?.mode === 'overview') walk.toWalk();
     // The edit tools carry the Rooms picker: visiting a built room and choosing My room again keeps this room as is.
     void import('./room-app').then(({ mountEditTools }) => {
       mountEditTools(store, view);
@@ -370,7 +423,28 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     });
   }
 
-  /** Lift the lock, stay in first person and bring in the edit tools. The iso overview is not in the demo yet. */
+  /** Walk the room from wherever the tutorial camera is: it glides down to standing height, then the visitor is free. */
+  function startWalking(): void {
+    camera.updateMatrixWorld();
+    const p = camera.position;
+    const dir = camera.getWorldDirection(new THREE.Vector3());
+    const from = poseFromLookAt([p.x, p.y, p.z], [p.x + dir.x, p.y + dir.y, p.z + dir.z]);
+    walk = mountWalkMode(view, store, {
+      overview: false, // the Camera choice switches to the dollhouse; no Overview button or Esc
+      overviewTapWalks: false,
+      start: { from, to: STAND, fov: camera.fov },
+      hooks: { frame: hooks.frame, yaw: 0, keepSelectionOnPlace: true, liftSelected: false, compactPreview: true, tap: onWalkTap },
+      say: (text, ms) => showHint(text, ms),
+    });
+    hud = mountDemoHud({
+      dev,
+      camera: 'tactile',
+      onCamera: (choice) => (choice === 'dollhouse' ? walk?.toOverview() : walk?.toWalk()),
+      onExit: exitTutorial,
+    });
+  }
+
+  /** Lift the lock and walk in first person (tactile). The edit tools wait for Exit tutorial. */
   function release(): void {
     if (mode !== 'tutorial') return;
     window.clearTimeout(doneTimer);

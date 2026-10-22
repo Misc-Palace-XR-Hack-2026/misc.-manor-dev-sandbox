@@ -37,7 +37,7 @@ import {
 } from '../core/walk';
 import './walk-mode.css';
 
-type Mode = 'overview' | 'walk';
+export type Mode = 'overview' | 'walk';
 
 interface Glide {
   start: WalkPose;
@@ -57,8 +57,10 @@ const TOUCH_PINCH_ZOOM = 0.005;
 export interface WalkOptions {
   /** Hooks kept in every mode (frame, liftSelected, ...). Their `tap` runs first and can consume the tap. */
   hooks?: Omit<DemoHooks, 'camera'>;
-  /** Offer the isometric overview (button and Esc). False: walking only. Default true. */
+  /** Offer the isometric overview (button and Esc). False: no button or Esc (the caller can still switch). Default true. */
   overview?: boolean;
+  /** In the overview, a floor tap glides down to walk there. Default true. */
+  overviewTapWalks?: boolean;
   /** Start walking right away, gliding from `from` (any camera pose, with its `fov`) to standing pose `to`. */
   start?: { from: WalkPose; to: WalkPose; fov?: number };
   /** Show a short line of text to the visitor. */
@@ -72,7 +74,19 @@ const PUSH_GAP = 0.3;
 const POP_S = 0.45;
 const FIRST_POP_LINE = 'Well, this is your room. Do you…';
 
-export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions = {}): { dispose(): void } {
+export interface WalkHandle {
+  /** The walking eye (used while walking; the overview renders through the room's isometric camera). */
+  readonly camera: THREE.PerspectiveCamera;
+  /** Where the visitor is headed: 'overview' as soon as a glide up starts, 'walk' as soon as one down starts. */
+  readonly mode: Mode;
+  /** Glide up to the isometric overview, remembering where the visitor stood. */
+  toOverview(): void;
+  /** Glide back down to where the visitor stood before the overview. */
+  toWalk(): void;
+  dispose(): void;
+}
+
+export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions = {}): WalkHandle {
   const base = options.hooks ?? {};
   const withOverview = options.overview !== false;
   const regions = floorRegionsFromBoxes(store.layout.boxes);
@@ -111,6 +125,9 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
   // Zooming out under the loft: one continuous push, from its start and its latest input (seconds).
   let push: { since: number; last: number } | null = null;
   let pops = 0;
+  // Gliding up to the overview (mode is still 'walk' until it lands).
+  let leaving = false;
+  let lastWalk: { pose: WalkPose; region: FloorRegion } | null = null;
 
   const overviewBtn = document.createElement('button');
   overviewBtn.type = 'button';
@@ -194,8 +211,9 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
     view.setDemo({ ...base, camera: mode === 'walk' ? camera : undefined, frame: onFrame, tap: onTap });
   };
 
+  // Objects face the isometric camera in the overview, as in the sandbox.
   const setOverviewHooks = () => {
-    view.setDemo({ ...base, frame: onFrame, tap: onTap });
+    view.setDemo({ ...base, yaw: undefined, frame: onFrame, tap: onTap });
   };
 
   const enterWalkUi = () => {
@@ -286,18 +304,55 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
   };
 
   const returnToOverview = (t: number) => {
+    // Remember where the visitor stands (or is headed), at eye level, for toWalk().
+    if (here) lastWalk = { pose: { ...(glide ? glide.end : pose), y: eyeYForFloor(here.floorY) }, region: here };
     zoom = zoomTarget = backed = 0;
     const from = cancelGlidePose();
     applyPose(from);
     const { camera: oc, target } = view.overview;
     const { pos, lookAt } = overviewExitEnd([oc.position.x, oc.position.y, oc.position.z], [target.x, target.y, target.z]);
     const end = poseFromLookAt(pos, lookAt);
-    const finish = () => leaveWalkUi();
+    leaving = true;
+    const finish = () => { leaving = false; leaveWalkUi(); };
     if (reducedMotion()) {
       finish();
       return;
     }
     startGlide(from, end, GLIDE_EXIT_S, t, finish);
+  };
+
+  /** From the overview (or on the way up to it) back down to where the visitor stood. */
+  const walkBack = (t: number) => {
+    const back = lastWalk;
+    if (!back) return;
+    if (leaving) {
+      // Still gliding up: turn around from wherever the glide is.
+      leaving = false;
+      const from = cancelGlidePose();
+      stand(back.region);
+      applyPose(from);
+      if (reducedMotion()) applyPose(back.pose);
+      else startGlide(from, back.pose, GLIDE_MOVE_S, t);
+      return;
+    }
+    stand(back.region);
+    if (reducedMotion()) {
+      applyPose(back.pose);
+      enterWalkUi();
+      return;
+    }
+    const { camera: oc, target } = view.overview;
+    const { pos, lookAt } = overviewEntryStart(
+      [oc.position.x, oc.position.y, oc.position.z],
+      [target.x, target.y, target.z],
+      back.pose.x,
+      back.pose.z,
+      back.region.floorY,
+    );
+    const start = poseFromLookAt(pos, lookAt);
+    applyPose(start);
+    enterWalkUi();
+    startGlide(start, back.pose, GLIDE_ENTER_S, t);
   };
 
   function clampTap(x: number, z: number, region: FloorRegion): [number, number] {
@@ -324,6 +379,7 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
     const region = walkFloorTap(tap);
     if (!region) return false;
     if (mode === 'overview') {
+      if (options.overviewTapWalks === false) return false;
       beginWalkAt(tap.room!.point.x, tap.room!.point.z, region, frameTime);
       return true;
     }
@@ -486,6 +542,14 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
   }
 
   return {
+    camera,
+    get mode() { return leaving ? 'overview' : mode; },
+    toOverview() {
+      if (mode === 'walk' && !leaving) returnToOverview(frameTime);
+    },
+    toWalk() {
+      if (mode === 'overview' || leaving) walkBack(frameTime);
+    },
     dispose() {
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointermove', onPointerMove);

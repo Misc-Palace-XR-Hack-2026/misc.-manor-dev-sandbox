@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   BOX_POS, DESIGN_ASPECT, DOOR_POS, FRAME_BANDS, FRAME_POINTS, INTRO_DURATION, INTRO_SEEN_KEY, JUKEBOX_POS, LOOK_LIMITS, PHASE_STARTS,
-  ROOM_EAST, TUTORIAL_PITCH, TUTORIAL_VIEW, clampLook, introFrame, lookAround, markIntroSeen, phaseAt, shouldPlayIntro,
+  ROOM_EAST, SAVE_POINT_POS, SAVE_POINT_REACH, TUTORIAL_PITCH, TUTORIAL_VIEW, clampLook, introFrame, lookAround, markIntroSeen, phaseAt, shouldPlayIntro,
   tutorialView, type Vec3, type View,
 } from '../src/core/intro-timeline';
 import { getLayout } from '../src/core/layout';
@@ -160,6 +160,25 @@ test('scene anchors line up with the real room layout', () => {
   assert.ok(JUKEBOX_POS[0] < ROOM_EAST + 2, 'jukebox sits right beside the end of the wall');
   assert.equal(JUKEBOX_POS[1], 0, 'jukebox stands at ground level');
   assert.ok(JUKEBOX_POS[2] < 3, 'jukebox is by the back-right wall, not out front');
+});
+
+test('the save point stands on the ground floor by the stairs, clear of every slot, the stairs and the loft', () => {
+  const layout = getLayout('cozy-loft')!;
+  const [x, y, z] = SAVE_POINT_POS;
+  assert.equal(y, 0);
+  const ringR = 0.55;
+  for (const slot of layout.slots.filter((s) => s.pos[1] === 0)) {
+    assert.ok(Math.hypot(slot.pos[0] - x, slot.pos[2] - z) > ringR + 0.3, `clear of ${slot.id}`);
+  }
+  for (const b of layout.boxes.filter((b) => b.walkable || b.id === 'loft')) {
+    const outside = x + ringR < b.min[0] || x - ringR > b.min[0] + b.size[0] || z + ringR < b.min[2] || z - ringR > b.min[2] + b.size[2];
+    assert.ok(outside, `nothing overhead or in the way: ${b.id}`);
+  }
+  const stairs = layout.boxes.filter((b) => b.id.startsWith('step-'));
+  const nearest = Math.min(...stairs.map((b) => x - (b.min[0] + b.size[0])));
+  assert.ok(nearest > 0 && nearest < 1, 'right beside the stairs');
+  // Across the room from where the tutorial leaves the visitor (x 8.3, z 4.8): out of reach until they walk over.
+  assert.ok(Math.hypot(8.3 - x, 4.8 - z) > SAVE_POINT_REACH * 2);
 });
 
 test('first visit plays the intro; after it is seen, it does not, unless ?intro is given', () => {
