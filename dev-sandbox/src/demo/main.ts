@@ -2,7 +2,7 @@ import '../style.css';
 import './demo.css';
 
 // Demo entry: every visit starts with the walk-in and the tutorial at the shelf, then the visitor walks the room.
-// (`shouldPlayIntro` / `hasSavedDemoRoom` decided first visits before; `/` now always plays, see planIntro.)
+// (`shouldPlayIntro` / `hasSavedDemoRoom` decided first visits before; `/` now always plays.)
 
 function storage(): Storage | null {
   try { return window.localStorage; } catch { return null; }

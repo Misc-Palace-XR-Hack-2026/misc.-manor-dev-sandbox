@@ -16,7 +16,6 @@ import { mountWalkMode } from './walk-mode';
 import {
   DEMO_ROOM_ID, SHELF_SLOTS, TUTORIAL_SLOTS, inBox, migrateDemoRoom, normalizeDemoOwner, seedDemoRoom, tutorialDone,
 } from './demo-room';
-import { planIntro } from './intro-gate';
 import { EYE_HEIGHT, poseFromLookAt, type WalkPose } from '../core/walk';
 
 // The demo is one real room (the same RoomView the sandbox uses). Every visit, a scripted walk-in plays inside it and
@@ -122,9 +121,9 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     catch { /* storage may be blocked/full; the repaired label still appears for this session */ }
   }
   const store = new Store(initial, DEMO_ROOM_ID);
-  // `/` is always the demo: every visit is an explicit request for the walk-in, from a full box (planIntro reseeds).
-  const plan = planIntro({ explicit: true, introAllowed: true, tutorialDone: tutorialDone(store.state) });
-  if (plan.reseed) store.replaceState(seedDemoRoom());
+  // `/` is always the demo and always plays the walk-in. Partial progress is kept (placed starters stay put, the rest
+  // wait in the box); only a finished room starts over with a full box.
+  if (tutorialDone(store.state)) store.replaceState(seedDemoRoom());
 
   // The in-VR room picker needs the committed rooms here too: a headset visitor has no desktop toolbar.
   const view = new RoomView(container, store, REPO_ROOMS);
