@@ -1,22 +1,54 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEMO_ROOM_ID, SHELF_SLOTS, TRAY_SLOTS, TUTORIAL_SLOTS, repIdFor, seedDemoRoom, tutorialDone } from '../src/demo/demo-room';
+import {
+  DEMO_ROOM_ID, LEGACY_TRAY_SLOTS, SHELF_SLOTS, TUTORIAL_SLOTS, inBox, migrateDemoRoom, repIdFor, seedDemoRoom, tutorialDone,
+} from '../src/demo/demo-room';
 import { INTRO_OBJECTS } from '../src/demo/intro-objects';
 import { Store, normalizeRoom, roomKeys } from '../src/core/store';
 import { getLayout } from '../src/core/layout';
 import { buildPreview } from '../src/core/preview';
 
-test('the seeded demo room is a valid cozy-loft with the three starters in the tray', () => {
+test('the seeded demo room is a valid cozy-loft with the three starters packed in the box (no slots yet)', () => {
   const room = normalizeRoom(seedDemoRoom());
   assert.equal(room.layoutId, 'cozy-loft');
   assert.deepEqual(room.representations.map((r) => r.objectKind), ['rocket', 'drum', 'cassette']);
-  assert.deepEqual(room.placements.map((p) => p.slotId), [...TRAY_SLOTS]);
+  assert.deepEqual(room.placements, []);
+  assert.deepEqual(inBox(room), INTRO_OBJECTS.map((o) => repIdFor(o.id)));
 });
 
-test('tutorial slots all exist in the layout', () => {
+test('during the tutorial objects can only go on the bench or shelf, and those slots exist', () => {
   const ids = new Set(getLayout('cozy-loft')!.slots.map((s) => s.id));
   for (const id of TUTORIAL_SLOTS) assert.ok(ids.has(id), id);
-  assert.equal(TUTORIAL_SLOTS.size, TRAY_SLOTS.length + SHELF_SLOTS.length);
+  assert.deepEqual([...TUTORIAL_SLOTS], [...SHELF_SLOTS]);
+});
+
+test('taking objects out of the box and placing them empties it', () => {
+  const store = new Store(seedDemoRoom(), DEMO_ROOM_ID);
+  store.place(repIdFor('intro-drum'), 'shelf-2');
+  assert.deepEqual(inBox(store.state), [repIdFor('intro-rocket'), repIdFor('intro-cassette')]);
+  // Putting a held object on a taken spot sends the one there back into the box.
+  store.place(repIdFor('intro-rocket'), 'shelf-2');
+  assert.deepEqual(inBox(store.state), [repIdFor('intro-drum'), repIdFor('intro-cassette')]);
+});
+
+test('an unfinished tutorial saved with starters on the old floor tray goes back into the box', () => {
+  const old = seedDemoRoom();
+  old.placements = INTRO_OBJECTS.map((o, i) => ({ representationId: repIdFor(o.id), slotId: LEGACY_TRAY_SLOTS[i] }));
+  old.placements[0].slotId = 'shelf-1';
+  const migrated = migrateDemoRoom(old);
+  assert.deepEqual(migrated.placements, [{ representationId: repIdFor('intro-rocket'), slotId: 'shelf-1' }]);
+  assert.deepEqual(inBox(migrated), [repIdFor('intro-drum'), repIdFor('intro-cassette')]);
+  assert.doesNotThrow(() => normalizeRoom(migrated));
+});
+
+test('a finished room is left alone', () => {
+  const done = seedDemoRoom();
+  done.placements = [
+    { representationId: repIdFor('intro-rocket'), slotId: 'shelf-1' },
+    { representationId: repIdFor('intro-drum'), slotId: 'shelf-2' },
+    { representationId: repIdFor('intro-cassette'), slotId: 'bench-1' },
+  ];
+  assert.equal(migrateDemoRoom(done), done);
 });
 
 test('the tutorial is done only when every starter is on the bench or shelf', () => {

@@ -18,4 +18,28 @@ html, body { margin: 0; height: 100dvh; overflow: hidden; background: #000; font
   border-radius: 12px; border: 1px solid rgba(241, 233, 220, 0.2); background: rgba(30, 26, 38, 0.92);
 }
 .demo-dock[hidden] { display: none; }
+
+.demo-hint {
+  position: fixed; z-index: 22; left: 50%; top: max(64px, calc(env(safe-area-inset-top) + 56px)); margin: 0;
+  transform: translate(-50%, -6px); padding: 8px 14px; border-radius: 999px; pointer-events: none;
+  background: rgba(20, 16, 28, 0.78); color: #f1e9dc; font-size: 14px; white-space: nowrap;
+  opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.demo-hint-on { opacity: 1; transform: translate(-50%, 0); }
+
+.demo-dev {
+  position: fixed; z-index: 51; left: max(12px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom));
+  padding: 3px 8px; border-radius: 6px; background: rgba(20, 16, 28, 0.45); color: rgba(241, 233, 220, 0.6);
+  font: 11px/1.4 ui-monospace, monospace; text-decoration: none;
+}
+.demo-dev:hover, .demo-dev:focus-visible { color: #f1e9dc; outline: none; }
+
+.demo-add {
+  position: fixed; z-index: 21; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom));
+  width: 52px; height: 52px; border-radius: 50%; border: 1px solid rgba(241, 233, 220, 0.35); padding: 0;
+  background: rgba(30, 26, 38, 0.85); color: #f1e9dc; font: 300 30px/1 system-ui, sans-serif; cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+.demo-add:hover, .demo-add:focus-visible { background: rgba(60, 52, 74, 0.95); outline: none; }
+.demo-add[hidden] { display: none; }
 .demo-dock-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

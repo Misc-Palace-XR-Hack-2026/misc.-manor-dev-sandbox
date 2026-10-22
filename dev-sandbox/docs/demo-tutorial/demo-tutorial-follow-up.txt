@@ -17,7 +17,7 @@ do this for the demo space only for now not the /dev, later in dev we add the ju
 > also should we add the minecraft camera/movement that floats around anywhere? idk but can we add the random object import from random other rooms? it should be lie max 5-10
   objects at a time, random number between those, and they should land on the floor somewhere or in a box for us to sort throgh? maybe we rethink this dont implment yet 
 
-whats needed next is how we determine the camera to then drive the rts of the interactions in the demo the random drio ir the import or single add manually, also editing the room should be easy and fun from the dmeo experinece but we cna discuss that later
+whats needed next is how we determine the camera to then drive the rts of the interactions in the demo the random drop or the import or single add manually, also editing the room should be easy and fun from the dmeo experinece but we cna discuss that later
 
 lets settle on the most focused things we need to do now to get this to the next stage, audio change, and set up for how we move and how we want to interactin the dmeo space w things and the random drops or the imported fromfiles or something, 
 
