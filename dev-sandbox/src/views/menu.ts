@@ -8,7 +8,7 @@ import { previewOpenUrl } from '../core/preview';
 import { SHOW_PREVIEW_BUTTON } from '../core/demo-flags';
 import { safeUrl } from '../core/content';
 import { Store } from '../core/store';
-import { ROOMS_PICKER_ORDER, isDemoHomeAlias, openRoom, seedRoom } from '../core/rooms';
+import { ROOMS_PICKER_ORDER, displayRoomName, isDemoHomeAlias, openRoom, seedRoom } from '../core/rooms';
 import { THEMES } from '../core/themes';
 import { CONTENT_TYPES, OBJECT_KINDS, OBJECT_LABELS, type ContentType, type ObjectKind } from '../core/types';
 import { buildKindInventory } from './kind-picker';
@@ -216,7 +216,11 @@ export class MenuView {
   private refreshRooms(): void {
     const current = this.store.roomId;
     this.roomList.replaceChildren(...ROOMS_PICKER_ORDER.map((slot) => {
-      const label = this.store.practicing ? `Practice · ${slot.defaultName}` : slot.id === current ? this.store.state.owner : (Store.savedName(slot.id) ?? slot.defaultName);
+      const label = this.store.practicing
+        ? `Practice · ${slot.defaultName}`
+        : slot.id === current
+          ? this.store.state.owner
+          : displayRoomName(slot.id, slot.defaultName, Store.savedName(slot.id));
       const b = el('button', { type: 'button', textContent: label });
       b.setAttribute('aria-current', String(slot.id === current));
       b.dataset.tutorial = 'room-pick';
