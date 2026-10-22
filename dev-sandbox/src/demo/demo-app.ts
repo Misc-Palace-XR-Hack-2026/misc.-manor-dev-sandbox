@@ -433,6 +433,8 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   let vacuuming: string | null = null;
   let pointerVacuum = false;
   let vacuumBatch = false;
+  let vacuumKick: ReturnType<typeof setTimeout> | null = null;
+  const VACUUM_WINDUP_MS = 320;
 
   function setVacuumHold(on: boolean): void {
     if (on) {
@@ -453,11 +455,23 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     }
     vacuumHold = true;
     showHint('Hold to keep clearing…', 2800);
-    suckNext();
+    if (vacuuming || vacuumKick !== null) return;
+    if (reduced) {
+      suckNext();
+      return;
+    }
+    vacuumKick = setTimeout(() => {
+      vacuumKick = null;
+      suckNext();
+    }, VACUUM_WINDUP_MS);
   }
 
   function stopVacuum(): void {
     vacuumHold = false;
+    if (vacuumKick !== null) {
+      clearTimeout(vacuumKick);
+      vacuumKick = null;
+    }
     if (!vacuumBatch) return;
     vacuumBatch = false;
     store.endBatch();
@@ -487,7 +501,6 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     }
     vacuuming = id;
     if (store.selectedId) store.select(null);
-    walk?.lookToward(SAVE_POINT_POS[0], SAVE_POINT_POS[2], 1);
     const to = portalMouth.copy(savePoint.center).setY(savePoint.center.y + 1.1);
     const finish = (): void => {
       if (store.state.representations.some((r) => r.id === id)) store.stash(id);
