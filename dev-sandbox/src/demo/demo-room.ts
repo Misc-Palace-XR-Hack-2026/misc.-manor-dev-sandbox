@@ -4,37 +4,38 @@ import type { RoomState } from '../core/types';
 import { INTRO_OBJECTS } from './intro-objects';
 
 // The visitor's own room in the public demo: the regular cozy loft, seeded once with the three starter objects
-// sitting in a tray on the floor. Until they are all on the bench or shelf, the room is in its locked tutorial state.
+// packed in a cardboard box (they have objects but no slot yet). Until they are all on the bench or shelf, the room
+// is in its locked tutorial state.
 
 /** The visitor's saved room. The 'demo-' prefix keeps it in the demo's own storage (see roomKeys). */
 export const DEMO_ROOM_ID = 'demo-visit';
 export const DEMO_OWNER = 'My room';
 
-/** Where the starter objects begin: three floor slots in a row in front of the bench. */
-export const TRAY_SLOTS = ['floor-7', 'floor-8', 'floor-9'] as const;
-/** Where they are meant to end up: the bench and wall shelf. */
+/** Where the starter objects are meant to end up: the bench and wall shelf. */
 export const SHELF_SLOTS = ['shelf-1', 'shelf-2', 'shelf-3', 'bench-1', 'bench-2', 'bench-3'] as const;
-/** During the locked tutorial an object may only move between the tray and the shelves. */
-export const TUTORIAL_SLOTS: ReadonlySet<string> = new Set([...TRAY_SLOTS, ...SHELF_SLOTS]);
+/** During the locked tutorial an object may only be put on the bench or shelf. */
+export const TUTORIAL_SLOTS: ReadonlySet<string> = new Set(SHELF_SLOTS);
+/** Floor slots the starters sat on before the box (older saves). */
+export const LEGACY_TRAY_SLOTS = ['floor-7', 'floor-8', 'floor-9'] as const;
 
 export const repIdFor = (introId: string): string => `rep-${introId}`;
+const STARTER_REPS = INTRO_OBJECTS.map((o) => repIdFor(o.id));
 
 export function seedDemoRoom(): RoomState {
   const room = newRoom(DEMO_OWNER);
   const createdAt = new Date().toISOString();
-  INTRO_OBJECTS.forEach((o, i) => {
+  for (const o of INTRO_OBJECTS) {
     room.contentItems.push({
       id: o.id, type: guessType(o.url), title: o.title, sourceKind: 'url', sourceRef: o.url, tags: ['intro'], createdAt, locked: o.locked,
     });
     room.representations.push({ id: repIdFor(o.id), contentItemId: o.id, objectKind: o.kind });
-    room.placements.push({ representationId: repIdFor(o.id), slotId: TRAY_SLOTS[i] });
-  });
+  }
   return room;
 }
 
 /**
- * Replaying ?intro should not wipe My room customizations.
- * It only restores the starter intro objects and re-boxes them into free tray slots.
+ * Replaying the intro must not wipe My room customizations: only the starter objects are restored (if stashed or
+ * edited) and go back in the cardboard box (no placement). Everything the visitor added stays where it is.
  */
 export function prepareIntroReplayRoom(current: RoomState): RoomState {
   const room: RoomState = JSON.parse(JSON.stringify(current));
@@ -70,17 +71,8 @@ export function prepareIntroReplayRoom(current: RoomState): RoomState {
     }
   });
 
-  // Remove existing starter placements, then put them back only where tray slots are free.
+  // Back in the box: a starter in the box has no placement.
   room.placements = room.placements.filter((p) => !introRepIds.includes(p.representationId));
-  const occupied = new Set(room.placements.map((p) => p.slotId));
-
-  introRepIds.forEach((repId, i) => {
-    const traySlot = TRAY_SLOTS[i];
-    if (!occupied.has(traySlot)) {
-      room.placements.push({ representationId: repId, slotId: traySlot });
-      occupied.add(traySlot);
-    }
-  });
 
   return room;
 }
@@ -110,6 +102,20 @@ export function normalizeDemoOwner(room: RoomState): boolean {
 /** The tutorial is done once every starter object stands on the bench or shelf. */
 export function tutorialDone(state: RoomState): boolean {
   const shelves = new Set<string>(SHELF_SLOTS);
-  return INTRO_OBJECTS.every((o) =>
-    state.placements.some((p) => p.representationId === repIdFor(o.id) && shelves.has(p.slotId)));
+  return STARTER_REPS.every((id) => state.placements.some((p) => p.representationId === id && shelves.has(p.slotId)));
+}
+
+/** Starter objects still in the box: they exist but have no slot. */
+export function inBox(state: RoomState): string[] {
+  return STARTER_REPS.filter((id) =>
+    state.representations.some((r) => r.id === id) && !state.placements.some((p) => p.representationId === id));
+}
+
+/** An unfinished tutorial saved before the box had its starters on floor slots: pack those back in the box. */
+export function migrateDemoRoom(state: RoomState): RoomState {
+  if (tutorialDone(state)) return state;
+  const tray = new Set<string>(LEGACY_TRAY_SLOTS);
+  const starters = new Set(STARTER_REPS);
+  const placements = state.placements.filter((p) => !(starters.has(p.representationId) && tray.has(p.slotId)));
+  return placements.length === state.placements.length ? state : { ...state, placements };
 }

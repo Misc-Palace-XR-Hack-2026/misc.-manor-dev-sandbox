@@ -18,34 +18,108 @@ const E = ROOM_EAST;
 export const DOOR_POS: Vec3 = [E + 1.6, 0, 3.3];
 /** Stands on the ground level beside the east end of the back-right wall, outside the room, facing into it. */
 export const JUKEBOX_POS: Vec3 = [E + 1.1, 0, 1.3];
-/** Middle of the starter box, in front of the bench and wall shelf. */
-export const TRAY_POS: Vec3 = [8.2, 0, 2.6];
+/** The cardboard box of starter objects, on the floor in front of the bench and wall shelf. */
+export const BOX_POS: Vec3 = [8.3, 0, 2.2];
 /** What the camera looks at while the starter objects are introduced. */
-const BOX_LOOK: Vec3 = [TRAY_POS[0], 0.4, TRAY_POS[2]];
+const BOX_LOOK: Vec3 = [BOX_POS[0], 0.4, BOX_POS[2]];
 
-/** The locked tutorial camera: looks straight at the box, bench and shelf. */
-export const TUTORIAL_VIEW = { camera: [8.2, 2.2, 6.2] as Vec3, lookAt: [8.2, 0.95, 1.2] as Vec3, fov: 46 };
+// ---- tutorial framing ----------------------------------------------------------
+// Led from mobile: the camera is solved for a narrow phone screen, so the bench, shelf and box always fit there.
+// Wider screens keep the same pose and simply see more around it; narrower ones back off further.
+
+export interface View { camera: Vec3; lookAt: Vec3; fov: number }
+
+/** The screen shape the framing is designed for (a portrait phone browser). */
+export const DESIGN_ASPECT = 0.46;
+/** Vertical field of view of the tutorial camera, degrees. */
+export const TUTORIAL_FOV = 55;
+/** How far the tutorial camera looks down, degrees. Steep enough that the top shelf faces the visitor. */
+export const TUTORIAL_PITCH = 32;
+/** Share of the frustum the framed points may use; the rest is breathing room at the edges. */
+const FILL = 0.9;
+
+const corners = (min: Vec3, max: Vec3): Vec3[] =>
+  [0, 1, 2, 3, 4, 5, 6, 7].map((i) => [i & 1 ? max[0] : min[0], i & 2 ? max[1] : min[1], i & 4 ? max[2] : min[2]]);
+
+/** Everything that must be on screen in the tutorial: bench and shelf with room for objects on them, and the box. */
+export const FRAME_POINTS: readonly Vec3[] = [
+  ...corners([6.8, 0, 0], [9.8, 2.4, 0.9]),
+  ...corners([BOX_POS[0] - 0.7, 0, BOX_POS[2] - 0.6], [BOX_POS[0] + 0.7, 0.8, BOX_POS[2] + 0.6]),
+];
+
+const FRAME_CENTER: Vec3 = [0, 1, 2].map((c) => {
+  const vs = FRAME_POINTS.map((p) => p[c]);
+  return (Math.min(...vs) + Math.max(...vs)) / 2;
+}) as Vec3;
+
+const rad = (deg: number) => (deg * Math.PI) / 180;
+
+/** The locked tutorial camera for a screen aspect (width / height): looks north and down at the frame points. */
+export function tutorialView(aspect: number): View {
+  const a = Number.isFinite(aspect) && aspect > 0 ? Math.min(aspect, DESIGN_ASPECT) : DESIGN_ASPECT;
+  const tanV = Math.tan(rad(TUTORIAL_FOV) / 2) * FILL;
+  const tanH = tanV * a;
+  const s = Math.sin(rad(TUTORIAL_PITCH)), c = Math.cos(rad(TUTORIAL_PITCH));
+  // Camera basis: forward (0, -s, -c), up (0, c, -s), right (1, 0, 0). Back off until every point is inside.
+  let d = 0;
+  for (const p of FRAME_POINTS) {
+    const ry = p[1] - FRAME_CENTER[1], rz = p[2] - FRAME_CENTER[2];
+    const depth = -ry * s - rz * c;
+    d = Math.max(d, Math.abs(p[0] - FRAME_CENTER[0]) / tanH - depth, Math.abs(ry * c - rz * s) / tanV - depth);
+  }
+  return {
+    camera: [FRAME_CENTER[0], FRAME_CENTER[1] + s * d, FRAME_CENTER[2] + c * d],
+    lookAt: [...FRAME_CENTER],
+    fov: TUTORIAL_FOV,
+  };
+}
+
+/** How far the visitor may turn the tutorial camera by dragging, degrees. */
+export const LOOK_LIMITS = { yaw: 25, pitch: 12 };
+
+export function clampLook(yaw: number, pitch: number): { yaw: number; pitch: number } {
+  const clamp = (n: number, limit: number) => (Number.isFinite(n) ? Math.min(limit, Math.max(-limit, n)) : 0);
+  return { yaw: clamp(yaw, rad(LOOK_LIMITS.yaw)), pitch: clamp(pitch, rad(LOOK_LIMITS.pitch)) };
+}
+
+/**
+ * Where to look when the view is turned by (yaw, pitch) radians from its framing. Same convention as three.js
+ * cameras: positive yaw turns left (toward -x when looking north), positive pitch looks up.
+ */
+export function lookAround(view: View, yaw: number, pitch: number): Vec3 {
+  const [cx, cy, cz] = view.camera;
+  const dx = view.lookAt[0] - cx, dy = view.lookAt[1] - cy, dz = view.lookAt[2] - cz;
+  const len = Math.hypot(dx, dy, dz) || 1;
+  const turned = clampLook(yaw, pitch);
+  const y = Math.atan2(-dx, -dz) + turned.yaw;
+  const p = Math.asin(Math.max(-1, Math.min(1, dy / len))) + turned.pitch;
+  return [cx - Math.sin(y) * Math.cos(p) * len, cy + Math.sin(p) * len, cz - Math.cos(y) * Math.cos(p) * len];
+}
+
+/** The framing used when the screen shape is unknown (tests, first frame). */
+export const TUTORIAL_VIEW: View = tutorialView(DESIGN_ASPECT);
 
 // The camera path is one smooth curve (Catmull-Rom through the keys: no stop at each key, so no jank). Up to the
 // doorway the look keys sit exactly AHEAD west of the camera keys, so the camera looks straight ahead and never flips.
+// Inside, it rises and steps back to the tutorial view, which depends on the screen shape.
 const AHEAD = 4;
-const POS: Key<Vec3>[] = [
+const posKeys = (view: View): Key<Vec3>[] => [
   { t: 0, v: [E + 5.4, 1.6, 3.3] },
   { t: 1.9, v: [E + 1.6, 1.6, 3.3] }, // in the doorway
   { t: 2.8, v: [E - 0.6, 1.6, 3.3] }, // just inside the room
-  { t: 4.0, v: [9.0, 1.7, 4.4] },
-  { t: 5.4, v: TUTORIAL_VIEW.camera },
+  { t: 4.0, v: [9.0, 2.6, 5.4] },
+  { t: 5.4, v: view.camera },
 ];
 
-const LOOK: Key<Vec3>[] = [
+const lookKeys = (view: View): Key<Vec3>[] => [
   { t: 0, v: [E + 5.4 - AHEAD, 1.6, 3.3] },
   { t: 1.9, v: [E + 1.6 - AHEAD, 1.6, 3.3] },
   { t: 2.8, v: [E - 0.6 - AHEAD, 1.6, 3.3] },
-  { t: 4.0, v: BOX_LOOK }, // inside: look at the objects
-  { t: 5.4, v: TUTORIAL_VIEW.lookAt }, // then the shelf, where the camera stays
+  { t: 4.0, v: BOX_LOOK }, // inside: look at the box
+  { t: 5.4, v: view.lookAt }, // then the shelf, where the camera stays
 ];
 
-const FOV: Key<number>[] = [{ t: 0, v: 62 }, { t: 4.0, v: 62 }, { t: 5.4, v: TUTORIAL_VIEW.fov }];
+const fovKeys = (view: View): Key<number>[] => [{ t: 0, v: 62 }, { t: 4.0, v: 62 }, { t: 5.4, v: view.fov }];
 /** Black overlay opacity: starts pure black so the first frame has no pop. */
 const BLACK: Key<number>[] = [{ t: 0, v: 1 }, { t: 0.7, v: 0 }];
 /** The door swings open (0 closed, 1 fully open) while the screen fades up. */
@@ -115,15 +189,18 @@ export function phaseAt(time: number): IntroPhase {
   return 'dark';
 }
 
-/** Everything the walk-in needs to draw the intro at `time` seconds. Clamps to [0, INTRO_DURATION]. */
-export function introFrame(time: number): IntroFrame {
+/**
+ * Everything the walk-in needs to draw the intro at `time` seconds, ending on `view` (the tutorial framing for the
+ * current screen). Clamps to [0, INTRO_DURATION].
+ */
+export function introFrame(time: number, view: View = TUTORIAL_VIEW): IntroFrame {
   const t = Number.isFinite(time) ? Math.min(INTRO_DURATION, Math.max(0, time)) : 0;
   return {
     time: t,
     phase: phaseAt(t),
-    camera: glide(POS, t),
-    lookAt: glide(LOOK, t),
-    fov: sample(FOV, t),
+    camera: glide(posKeys(view), t),
+    lookAt: glide(lookKeys(view), t),
+    fov: sample(fovKeys(view), t),
     black: sample(BLACK, t),
     doorOpen: sample(DOOR_OPEN, t),
     doorLight: sample(DOOR_LIGHT, t),

@@ -1,45 +1,42 @@
 import * as THREE from 'three';
 import { Store, roomKeys } from '../core/store';
-import type { RoomState } from '../core/types';
-import { DOOR_POS, INTRO_DURATION, JUKEBOX_POS, TRAY_POS, TUTORIAL_VIEW, introFrame, introRequested, markIntroSeen } from '../core/intro-timeline';
-import { RoomView } from '../views/room';
-import { buildKindInventory } from '../views/kind-picker';
-import { buildJukebox } from './jukebox';
-import { DEMO_ROOM_ID, TUTORIAL_SLOTS, normalizeDemoOwner, prepareIntroReplayRoom, seedDemoRoom, tutorialDone } from './demo-room';
-import { planIntro } from './intro-gate';
+import type { ObjectKind, RoomState } from '../core/types';
+import {
+  BOX_POS, DOOR_POS, INTRO_DURATION, JUKEBOX_POS, clampLook, introFrame, lookAround, markIntroSeen, tutorialView,
+  type View,
+} from '../core/intro-timeline';
+import { RoomView, type DemoHooks, type DemoTap } from '../views/room';
 import { REPO_ROOMS } from '../core/repo-rooms';
+import { buildKindInventory } from '../views/kind-picker';
+import { buildObject } from '../views/objects';
+import { disposeGroup } from '../views/resources';
+import { buildJukebox } from './jukebox';
+import { buildCardboardBox } from './cardboard-box';
+import { mountWalkMode } from './walk-mode';
+import {
+  DEMO_ROOM_ID, SHELF_SLOTS, TUTORIAL_SLOTS, inBox, migrateDemoRoom, normalizeDemoOwner, prepareIntroReplayRoom,
+  seedDemoRoom, tutorialDone,
+} from './demo-room';
+import { EYE_HEIGHT, poseFromLookAt, type WalkPose } from '../core/walk';
 
-// The demo is one real room (the same RoomView the sandbox uses). A visitor's first time, a scripted walk-in plays
-// inside it and ends on a locked tutorial view of the shelf: they can only pick up the starter objects, look at
-// them and set them on the shelf. Finishing (or skipping) lifts the lock and they stay in the same, now open, room.
+// The demo is one real room (the same RoomView the sandbox uses). Every visit, a scripted walk-in plays inside it and
+// ends on a locked tutorial view of the shelf: the visitor unpacks the starter objects from a cardboard box, looks at
+// them and sets them on the shelf. Finishing (or skipping) lifts the lock: the camera drops to standing height and
+// they walk the room in first person. The isometric room with edit tools ("free demo mode") is not reachable yet.
 
-type Mode = 'intro' | 'tutorial' | 'open';
+type Mode = 'intro' | 'tutorial' | 'walk';
 
-const std = (color: number) => new THREE.MeshStandardMaterial({ color, roughness: 0.85 });
-
-function slab(w: number, h: number, d: number, color: number, x: number, y: number, z: number): THREE.Mesh {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), std(color));
-  m.position.set(x, y, z);
-  m.castShadow = true;
-  m.receiveShadow = true;
-  return m;
-}
-
-/** An open wooden box under the three starter slots. Decoration only; it is not part of the saved room. */
-function buildBox(): THREE.Group {
-  const group = new THREE.Group();
-  group.position.set(TRAY_POS[0], 0, TRAY_POS[2]);
-  const wood = 0xb08150, dark = 0x7a5230;
-  const w = 4.0, d = 1.2, h = 0.42, t = 0.08;
-  group.add(
-    slab(w, 0.05, d, dark, 0, 0.025, 0),
-    slab(w, h, t, wood, 0, h / 2, d / 2 - t / 2),
-    slab(w, h, t, wood, 0, h / 2, -d / 2 + t / 2),
-    slab(t, h, d, wood, -w / 2 + t / 2, h / 2, 0),
-    slab(t, h, d, wood, w / 2 - t / 2, h / 2, 0),
-  );
-  return group;
-}
+/** Drag-to-look sensitivity in the tutorial, radians per pixel. */
+const LOOK_SENS = 0.0035;
+/**
+ * Where the held object stands, in camera space (its base; it grows upward): low and left of centre, under the box
+ * and clear of the shelf and bench spots above it and the dock on the right.
+ */
+const HANDS = new THREE.Vector3(-0.14, -0.5, -1.1);
+const HELD_SCALE = 0.4;
+const POP_S = 0.45;
+/** Where the visitor stands once the tutorial is over: back from the bench, facing the shelf. */
+const STAND: WalkPose = { x: 8.3, y: EYE_HEIGHT, z: 4.8, yaw: 0, pitch: -0.12 };
 
 const DOOR_W = 2.2, DOOR_H = 3.3, POST = 0.2, DEPTH = 0.3;
 
@@ -107,11 +104,11 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, te
   return node;
 }
 
-export function startDemo(container: HTMLElement, wantIntro: boolean, storage: Storage | null, search: string): void {
+export function startDemo(container: HTMLElement, storage: Storage | null): void {
   // ---- the visitor's room -------------------------------------------------
   let initial: RoomState;
   try {
-    initial = Store.loadSaved(DEMO_ROOM_ID) ?? seedDemoRoom();
+    initial = migrateDemoRoom(Store.loadSaved(DEMO_ROOM_ID) ?? seedDemoRoom());
   } catch (error) {
     // Never start a fresh room over an unreadable save.
     const warning = el('p', 'demo-error', error instanceof Error ? error.message : String(error));
@@ -121,14 +118,9 @@ export function startDemo(container: HTMLElement, wantIntro: boolean, storage: S
     return;
   }
   let shouldPersist = normalizeDemoOwner(initial);
-  // One decision for both the intro start and replay behavior.
-  // Explicit ?intro should replay without wiping the visitor's customized room.
-  const plan = planIntro({
-    explicit: introRequested(search),
-    introAllowed: wantIntro,
-    tutorialDone: tutorialDone(initial),
-  });
-  if (plan.reseed) {
+  // `/` is always the demo and always plays the walk-in. Partial progress is kept (placed starters stay put, the rest
+  // wait in the box); a finished room gets its starters back in the box, keeping everything else the visitor added.
+  if (tutorialDone(initial)) {
     initial = prepareIntroReplayRoom(initial);
     shouldPersist = true;
   }
@@ -140,7 +132,7 @@ export function startDemo(container: HTMLElement, wantIntro: boolean, storage: S
 
   // The in-VR room picker needs the committed rooms here too: a headset visitor has no desktop toolbar.
   const view = new RoomView(container, store, REPO_ROOMS);
-  const camera = new THREE.PerspectiveCamera(TUTORIAL_VIEW.fov, 1, 0.1, 120);
+  const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 120);
 
   // ---- scenery outside the saved room -------------------------------------
   const jukebox = buildJukebox();
@@ -149,9 +141,11 @@ export function startDemo(container: HTMLElement, wantIntro: boolean, storage: S
   jukebox.group.scale.setScalar(0.6);
   jukebox.setGlow(0.4);
   jukebox.setOpacity(0.55); // a little see-through so it does not pull the eye
-  const box = buildBox();
+  const box = buildCardboardBox(inBox(seedDemoRoom()).length);
+  box.group.position.set(...BOX_POS);
+  box.setFill(inBox(store.state).length);
   const door = buildDoor();
-  view.addToScene(jukebox.group, box, door.group);
+  view.addToScene(jukebox.group, box.group, door.group);
 
   // ---- overlay --------------------------------------------------------------
   const black = el('div', 'demo-black');
@@ -160,10 +154,15 @@ export function startDemo(container: HTMLElement, wantIntro: boolean, storage: S
   // The one place the selected object's preview and kind picker live during the tutorial (bottom right).
   const dock = el('aside', 'demo-dock');
   dock.hidden = true;
-  document.body.append(black, skip, dock);
+  const hint = el('p', 'demo-hint', 'Place the object down');
+  hint.setAttribute('role', 'status');
+  const dev = el('a', 'demo-dev', 'dev');
+  dev.href = `${import.meta.env.BASE_URL}dev/`;
+  dev.title = 'Dev sandbox';
+  document.body.append(black, skip, dock, hint, dev);
   document.body.classList.add('demo-locked');
 
-  let mode: Mode = 'open';
+  let mode: Mode = 'intro';
   let elapsed = 0;
   let last = performance.now();
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -176,67 +175,216 @@ export function startDemo(container: HTMLElement, wantIntro: boolean, storage: S
     camera.lookAt(look);
   };
 
+  // The tutorial framing follows the screen shape (it is solved for a phone; wider screens see more around it).
+  let framedAspect = NaN;
+  let framing: View = tutorialView(1);
+  const currentView = (): View => {
+    const aspect = view.canvas.clientWidth / (view.canvas.clientHeight || 1);
+    if (aspect !== framedAspect) { framedAspect = aspect; framing = tutorialView(aspect); }
+    return framing;
+  };
+
+  // ---- tutorial: drag to look a little --------------------------------------
+  let turn = { yaw: 0, pitch: 0 };
+  let drag: { id: number; x: number; y: number } | null = null;
+  view.canvas.addEventListener('pointerdown', (e) => { if (mode === 'tutorial') drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; });
+  view.canvas.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id || mode !== 'tutorial') return;
+    // Grab-the-world, like walking: drag right turns left, drag down tilts up.
+    turn = clampLook(turn.yaw + (e.clientX - drag.x) * LOOK_SENS, turn.pitch + (e.clientY - drag.y) * LOOK_SENS);
+    drag.x = e.clientX;
+    drag.y = e.clientY;
+  });
+  const endDrag = (e: PointerEvent) => { if (drag?.id === e.pointerId) drag = null; };
+  view.canvas.addEventListener('pointerup', endDrag);
+  view.canvas.addEventListener('pointercancel', endDrag);
+
+  // ---- tutorial: the object in the visitor's hands -------------------------
+  // RoomView only draws objects that have a slot, so the one just taken out of the box is drawn here.
+  let held: { repId: string; kind: ObjectKind; group: THREE.Group; from: THREE.Vector3; at: number } | null = null;
+  const handsPos = new THREE.Vector3();
+  const boxTop = new THREE.Vector3(BOX_POS[0], 0.55, BOX_POS[2]);
+
+  /** The selected starter while it is out of the box but not on a slot yet. */
+  const holding = (): string | null => {
+    const id = store.selectedId;
+    return id && !store.slotOf(id) && store.state.representations.some((r) => r.id === id) ? id : null;
+  };
+
+  function dropHeld(): void {
+    if (!held) return;
+    view.removeFromScene(held.group);
+    disposeGroup(held.group);
+    held = null;
+  }
+
+  function syncHeld(t: number): void {
+    const id = mode === 'tutorial' ? holding() : null;
+    const rep = id ? store.state.representations.find((r) => r.id === id) : undefined;
+    if (!id || !rep) { dropHeld(); return; }
+    if (!held || held.repId !== id || held.kind !== rep.objectKind) {
+      const popping = !held || held.repId !== id;
+      dropHeld();
+      const group = buildObject(rep.objectKind, store.content(rep.contentItemId));
+      view.addToScene(group);
+      held = { repId: id, kind: rep.objectKind, group, from: boxTop.clone(), at: popping && !reduced ? t : -Infinity };
+    }
+    camera.updateMatrixWorld();
+    handsPos.copy(HANDS).applyMatrix4(camera.matrixWorld);
+    const k = Math.min(1, (t - held.at) / POP_S);
+    const e = k * k * (3 - 2 * k);
+    const g = held.group;
+    g.position.lerpVectors(held.from, handsPos, e);
+    g.position.y += Math.sin(Math.PI * e) * 0.5 + (reduced ? 0 : Math.sin(t * 2.2) * 0.012);
+    g.scale.setScalar(1.6 * HELD_SCALE * (0.35 + 0.65 * e));
+    g.quaternion.copy(camera.quaternion);
+    if (!reduced) g.rotateY(Math.sin(t * 0.9) * 0.35);
+  }
+
+  let hintTimer = 0;
+  function showHint(text = 'Place the object down', ms = 1600): void {
+    hint.textContent = text;
+    hint.classList.add('demo-hint-on');
+    window.clearTimeout(hintTimer);
+    hintTimer = window.setTimeout(() => hint.classList.remove('demo-hint-on'), ms);
+  }
+
+  /** Tutorial taps: the box hands out one object at a time, and it has to be put down before the next one. */
+  function onTap(tap: DemoTap): boolean {
+    if (mode !== 'tutorial') return mode === 'intro';
+    if (holding()) {
+      if (tap.slotId) return false;
+      showHint();
+      return true;
+    }
+    const remaining = inBox(store.state).filter((id) => id !== store.selectedId);
+    if (remaining.length && box.hit(tap.raycaster)) {
+      store.select(remaining[Math.floor(Math.random() * remaining.length)]);
+      box.pop();
+      return true;
+    }
+    return false;
+  }
+
   // ---- modes ----------------------------------------------------------------
-  const hooks = {
+  const hooks: DemoHooks = {
     camera,
     slots: TUTORIAL_SLOTS,
     yaw: 0, // objects face the tutorial camera, which looks north along -z
     dock,
+    keepSelectionOnPlace: true,
+    liftSelected: false,
+    tap: onTap,
     frame: (t: number) => {
       const now = performance.now();
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
       jukebox.update(t, dt);
-      if (mode !== 'intro') return;
-      elapsed = Math.min(INTRO_DURATION, elapsed + dt);
-      const f = introFrame(elapsed);
-      const bob = f.walking && !reduced ? Math.sin(t * 7.5) * 0.022 : 0;
-      const sway = f.walking && !reduced ? Math.sin(t * 3.75) * 0.025 : 0;
-      aimAt(f.camera, f.lookAt, f.fov, bob, sway);
-      black.style.opacity = String(f.black);
-      door.leaf.rotation.y = f.doorOpen * Math.PI * 0.52;
-      door.light.opacity = f.doorLight;
-      door.veil.opacity = f.darkness;
-      if (f.phase === 'done') beginTutorial();
+      box.update(t, dt);
+      if (mode === 'intro') {
+        elapsed = Math.min(INTRO_DURATION, elapsed + dt);
+        const f = introFrame(elapsed, currentView());
+        const bob = f.walking && !reduced ? Math.sin(t * 7.5) * 0.022 : 0;
+        const sway = f.walking && !reduced ? Math.sin(t * 3.75) * 0.025 : 0;
+        aimAt(f.camera, f.lookAt, f.fov, bob, sway);
+        black.style.opacity = String(f.black);
+        door.leaf.rotation.y = f.doorOpen * Math.PI * 0.52;
+        door.light.opacity = f.doorLight;
+        door.veil.opacity = f.darkness;
+        if (f.phase === 'done') beginTutorial();
+        return;
+      }
+      if (mode !== 'tutorial') return;
+      if (!drag) {
+        const k = reduced ? 1 : 1 - Math.exp(-dt * 3);
+        turn = { yaw: turn.yaw * (1 - k), pitch: turn.pitch * (1 - k) };
+      }
+      const v = currentView();
+      aimAt(v.camera, lookAround(v, turn.yaw, turn.pitch), v.fov);
+      box.cue(!holding() && inBox(store.state).length > 0);
+      syncHeld(t);
     },
   };
 
   function beginTutorial(): void {
     if (mode !== 'intro') return;
     mode = 'tutorial';
-    aimAt(TUTORIAL_VIEW.camera, TUTORIAL_VIEW.lookAt, TUTORIAL_VIEW.fov);
     door.group.visible = false;
     black.style.opacity = '0';
     skip.textContent = 'Skip tutorial';
     checkDone();
   }
 
-  // No instructions: the visitor drives. A moment after the last starter object is on the shelf, the lock lifts.
+  // No instructions: the visitor drives. Once the last starter is on the shelf the box goes, then the lock lifts.
   let doneTimer = 0;
+  let boxGone = false;
   function checkDone(): void {
     if (mode !== 'tutorial') return;
     window.clearTimeout(doneTimer);
-    if (tutorialDone(store.state)) doneTimer = window.setTimeout(release, 1400);
+    if (tutorialDone(store.state)) {
+      boxGone = true;
+      box.vanish();
+      doneTimer = window.setTimeout(release, 1400);
+    }
   }
 
-  /** Lift the lock: the same room, now open (isometric view, orbit, edit tools). */
+  /** Nothing is lost on Skip: whatever is still in the box or in hand goes onto a free bench or shelf spot. */
+  function unpackRest(): void {
+    for (const id of inBox(store.state)) {
+      const free = SHELF_SLOTS.find((slot) => !store.repAt(slot));
+      if (free) store.place(id, free);
+    }
+  }
+
+  /** Walk the room from wherever the tutorial camera is: it glides down to standing height, then the visitor is free. */
+  function startWalking(): void {
+    camera.updateMatrixWorld();
+    const p = camera.position;
+    const dir = camera.getWorldDirection(new THREE.Vector3());
+    const from = poseFromLookAt([p.x, p.y, p.z], [p.x + dir.x, p.y + dir.y, p.z + dir.z]);
+    mountWalkMode(view, store, {
+      overview: false,
+      start: { from, to: STAND, fov: camera.fov },
+      hooks: { frame: hooks.frame, yaw: 0, keepSelectionOnPlace: true, liftSelected: false },
+      say: (text, ms) => showHint(text, ms),
+    });
+    // The edit tools carry the Rooms picker: visiting a built room and choosing My room again keeps this room as is.
+    void import('./room-app').then(({ mountEditTools }) => {
+      mountEditTools(store, view);
+      dev.classList.add('demo-dev-raised');
+    });
+  }
+
+  /** Lift the lock, stay in first person and bring in the edit tools. The iso overview is not in the demo yet. */
   function release(): void {
-    if (mode === 'open') return;
+    if (mode === 'walk') return;
+    const fromIntro = mode === 'intro';
     window.clearTimeout(doneTimer);
-    mode = 'open';
+    mode = 'walk';
     markIntroSeen(storage);
+    dropHeld();
+    unpackRest();
+    store.select(null);
+    skip.remove();
+    dock.remove();
+    hint.classList.remove('demo-hint-on');
+    door.group.visible = false;
+    if (fromIntro) box.group.visible = false;
+    else if (!boxGone) box.vanish();
+    boxGone = true;
+    if (!fromIntro) {
+      startWalking();
+      return;
+    }
+    // Skipped mid walk-in: cut through black to the tutorial view, then walk from there.
     black.style.transition = 'opacity 0.45s ease';
     black.style.opacity = '1';
     window.setTimeout(() => {
-      view.setDemo({ frame: hooks.frame }); // default camera and slots again; the jukebox keeps animating
-      door.group.visible = false;
-      box.visible = false;
-      document.body.classList.remove('demo-locked');
-      skip.remove();
-      dock.remove();
-      void import('./room-app').then(({ mountEditTools }) => mountEditTools(store, view));
+      const v = currentView();
+      aimAt(v.camera, lookAround(v, 0, 0), v.fov);
+      door.veil.opacity = 0;
+      startWalking();
       black.style.opacity = '0';
-      window.setTimeout(() => black.remove(), 600);
     }, reduced ? 0 : 480);
   }
 
@@ -257,20 +405,17 @@ export function startDemo(container: HTMLElement, wantIntro: boolean, storage: S
     );
   }
 
-  store.subscribe(() => { checkDone(); syncDock(); });
+  store.subscribe(() => {
+    box.setFill(inBox(store.state).length - (holding() ? 1 : 0));
+    checkDone();
+    syncDock();
+  });
   skip.addEventListener('click', release);
 
   // ---- start ----------------------------------------------------------------
-  if (plan.playIntro) {
-    mode = 'intro';
-    view.setDemo(hooks);
-    const f = introFrame(0);
-    aimAt(f.camera, f.lookAt, f.fov);
-    black.style.opacity = '1';
-    if (reduced) elapsed = INTRO_DURATION;
-  } else {
-    // A returning visitor goes straight to their open room (the black overlay fades away on release).
-    mode = 'tutorial';
-    release();
-  }
+  view.setDemo(hooks);
+  const f = introFrame(0, currentView());
+  aimAt(f.camera, f.lookAt, f.fov);
+  black.style.opacity = '1';
+  if (reduced) elapsed = INTRO_DURATION;
 }

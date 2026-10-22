@@ -34,6 +34,24 @@ export interface DemoHooks {
   frame?: (t: number) => void;
   /** A fixed panel (bottom right) the preview card always docks above, in place of the menu's item sheet. */
   dock?: HTMLElement;
+  /** Sees every tap (not drags) before the default select/place behaviour. Return true to consume it. */
+  tap?: (tap: DemoTap) => boolean;
+  /** Keep an object selected after it is placed, so its preview stays up until the visitor taps elsewhere. */
+  keepSelectionOnPlace?: boolean;
+  /** False: a selected object stays put on its slot instead of lifting toward the isometric camera. */
+  liftSelected?: boolean;
+}
+
+/** What a tap landed on, as seen through the active camera. */
+export interface DemoTap {
+  /** Already aimed through the active camera at the tap point. */
+  raycaster: THREE.Raycaster;
+  repId: string | null;
+  /** A slot marker under the tap that the current hooks allow. */
+  slotId: string | null;
+  /** First hit on the room shell (walls, floors, built-ins). Floor meshes have `userData.surface === 'floor'`. */
+  room: THREE.Intersection | null;
+  event: PointerEvent;
 }
 
 interface Entry {
@@ -206,8 +224,21 @@ export class RoomView {
     this.scene.add(...objects);
   }
 
+  removeFromScene(...objects: THREE.Object3D[]): void {
+    this.scene.remove(...objects);
+  }
+
   get activeCamera(): THREE.Camera {
     return this.demo?.camera ?? this.camera;
+  }
+
+  get canvas(): HTMLCanvasElement {
+    return this.renderer.domElement;
+  }
+
+  /** The default isometric camera and the point it orbits, for a demo camera that starts from the overview. */
+  get overview(): { camera: THREE.OrthographicCamera; target: THREE.Vector3 } {
+    return { camera: this.camera, target: this.controls.target };
   }
 
   private get yaw(): number {
@@ -281,6 +312,7 @@ export class RoomView {
       mesh.position.set(b.min[0] + b.size[0] / 2, b.min[1] + b.size[1] / 2, b.min[2] + b.size[2] / 2);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
+      mesh.userData.surface = b.material;
       this.roomGroup.add(mesh);
     }
     this.markers.clear();
@@ -420,7 +452,7 @@ export class RoomView {
       }
     }
     animateIgnite(this.objectsGroup, t, window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    const selected = this.store.selectedId;
+    const selected = this.demo?.liftSelected === false ? null : this.store.selectedId;
     for (const [id, e] of this.objects) {
       const presenting = Boolean(this.xr?.presenting);
       const bob = presenting || id !== selected ? 0 : 0.2 + Math.sin(t * 4) * 0.05;
@@ -651,6 +683,13 @@ export class RoomView {
     const selected = this.store.selectedId;
     const repId = this.repIdAt(e); // What object did we click on?
 
+    const tap = this.demo?.tap;
+    if (tap) {
+      const slotId = this.slotIdAt(e);
+      const room = this.raycaster.intersectObjects(this.roomGroup.children, true)[0] ?? null;
+      if (tap({ raycaster: this.raycaster, repId, slotId, room, event: e })) return;
+    }
+
     // If we clicked on an object, select it. This takes priority over placement.
     if (repId) {
       this.store.select(repId !== selected ? repId : null);
@@ -662,7 +701,7 @@ export class RoomView {
       const slotId = this.slotIdAt(e);
       if (slotId) {
         this.store.place(selected, slotId);
-        this.store.select(null);
+        if (!this.demo?.keepSelectionOnPlace) this.store.select(null);
         return;
       }
     }

@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  DOOR_POS, INTRO_DURATION, INTRO_SEEN_KEY, JUKEBOX_POS, PHASE_STARTS, ROOM_EAST, TRAY_POS, TUTORIAL_VIEW,
-  introFrame, markIntroSeen, phaseAt, shouldPlayIntro,
+  BOX_POS, DESIGN_ASPECT, DOOR_POS, FRAME_POINTS, INTRO_DURATION, INTRO_SEEN_KEY, JUKEBOX_POS, LOOK_LIMITS, PHASE_STARTS,
+  ROOM_EAST, TUTORIAL_PITCH, TUTORIAL_VIEW, clampLook, introFrame, lookAround, markIntroSeen, phaseAt, shouldPlayIntro,
+  tutorialView, type Vec3, type View,
 } from '../src/core/intro-timeline';
 import { getLayout } from '../src/core/layout';
 
@@ -52,7 +53,7 @@ test('the camera looks straight ahead (west) all the way through the door, witho
 
 test('inside the room the camera looks at the starter objects, then settles on the shelf', () => {
   const f = introFrame(4.0);
-  assert.ok(Math.abs(f.lookAt[0] - TRAY_POS[0]) < 0.1 && Math.abs(f.lookAt[2] - TRAY_POS[2]) < 0.1);
+  assert.ok(Math.abs(f.lookAt[0] - BOX_POS[0]) < 0.1 && Math.abs(f.lookAt[2] - BOX_POS[2]) < 0.1);
   assert.ok(f.camera[0] < ROOM_EAST, 'camera is inside the room by then');
 });
 
@@ -66,6 +67,67 @@ test('phases advance in order and the last frame is the locked tutorial view', (
   assert.deepEqual(end.lookAt, TUTORIAL_VIEW.lookAt);
   assert.equal(end.fov, TUTORIAL_VIEW.fov);
   assert.equal(end.walking, false);
+});
+
+/** Where a point lands on screen through a view: x and y in [-1, 1] when visible. */
+function project(view: View, aspect: number, p: Vec3): { x: number; y: number; depth: number } {
+  const f = [0, 1, 2].map((c) => view.lookAt[c] - view.camera[c]);
+  const len = Math.hypot(f[0], f[1], f[2]);
+  const fw = f.map((v) => v / len);
+  const right = [-fw[2], 0, fw[0]].map((v) => v / Math.hypot(fw[2], fw[0]));
+  const up = [right[1] * fw[2] - right[2] * fw[1], right[2] * fw[0] - right[0] * fw[2], right[0] * fw[1] - right[1] * fw[0]];
+  const r = [0, 1, 2].map((c) => p[c] - view.camera[c]);
+  const dot = (a: number[]) => a[0] * r[0] + a[1] * r[1] + a[2] * r[2];
+  const tanV = Math.tan((view.fov * Math.PI) / 360);
+  const depth = dot(fw);
+  return { x: dot(right) / (depth * tanV * aspect), y: dot(up) / (depth * tanV), depth };
+}
+
+test('the tutorial view keeps the bench, shelf and box fully on screen for phones and desktops alike', () => {
+  for (const aspect of [0.4, DESIGN_ASPECT, 0.56, 0.75, 1, 1.6, 2.2]) {
+    const view = tutorialView(aspect);
+    for (const p of FRAME_POINTS) {
+      const s = project(view, aspect, p);
+      assert.ok(s.depth > 0 && Math.abs(s.x) <= 1 && Math.abs(s.y) <= 1, `aspect ${aspect}: ${p} at ${s.x.toFixed(2)}, ${s.y.toFixed(2)}`);
+    }
+  }
+});
+
+test('lead from mobile: screens wider than a phone keep the phone framing, narrower ones back off', () => {
+  assert.deepEqual(tutorialView(1.8), tutorialView(DESIGN_ASPECT));
+  assert.deepEqual(tutorialView(NaN), tutorialView(DESIGN_ASPECT));
+  const phone = tutorialView(DESIGN_ASPECT), narrow = tutorialView(0.35);
+  assert.ok(narrow.camera[2] > phone.camera[2]);
+});
+
+test('the tutorial camera looks north and down at the shelf, steeply enough that the top shelf faces it', () => {
+  const v = TUTORIAL_VIEW;
+  const dy = v.lookAt[1] - v.camera[1], dz = v.lookAt[2] - v.camera[2];
+  assert.equal(v.lookAt[0], v.camera[0]);
+  assert.ok(dz < 0, 'looks north');
+  assert.ok(Math.abs(Math.atan2(-dy, -dz) * 180 / Math.PI - TUTORIAL_PITCH) < 1e-9);
+  assert.ok(TUTORIAL_PITCH >= 25);
+});
+
+test('drag to look turns only a little and never moves the camera', () => {
+  const max = clampLook(10, -10);
+  assert.ok(Math.abs(max.yaw - (LOOK_LIMITS.yaw * Math.PI) / 180) < 1e-9);
+  assert.ok(Math.abs(max.pitch + (LOOK_LIMITS.pitch * Math.PI) / 180) < 1e-9);
+  assert.deepEqual(clampLook(NaN, NaN), { yaw: 0, pitch: 0 });
+  const v = TUTORIAL_VIEW;
+  const still = lookAround(v, 0, 0);
+  for (let c = 0; c < 3; c++) assert.ok(Math.abs(still[c] - v.lookAt[c]) < 1e-9);
+  const left = lookAround(v, 0.3, 0);
+  assert.ok(left[0] < v.lookAt[0], 'positive yaw turns toward -x (left, looking north)');
+  const up = lookAround(v, 0, 0.1);
+  assert.ok(up[1] > v.lookAt[1]);
+});
+
+test('the walk-in ends on whatever framing the screen needs', () => {
+  const wide = tutorialView(0.35);
+  const end = introFrame(INTRO_DURATION, wide);
+  assert.deepEqual(end.camera, wide.camera);
+  assert.deepEqual(end.lookAt, wide.lookAt);
 });
 
 test('frames clamp out-of-range and bad times instead of extrapolating', () => {
@@ -83,7 +145,8 @@ test('scene anchors line up with the real room layout', () => {
   const floor = layout.boxes.find((b) => b.id === 'floor')!;
   assert.ok(Math.abs(floor.min[0] + floor.size[0] - 0.3 - ROOM_EAST) < 1e-9, 'ROOM_EAST must match layout width');
   const bench = layout.boxes.find((b) => b.id === 'bench')!;
-  assert.ok(TRAY_POS[0] >= bench.min[0] && TRAY_POS[0] <= bench.min[0] + bench.size[0], 'box sits in front of the bench');
+  assert.ok(BOX_POS[0] >= bench.min[0] && BOX_POS[0] <= bench.min[0] + bench.size[0], 'box sits in front of the bench');
+  assert.ok(BOX_POS[2] > bench.min[2] + bench.size[2], 'box is in front of the bench, not under it');
   assert.ok(JUKEBOX_POS[0] > ROOM_EAST, 'jukebox stands just outside the open east side');
   assert.ok(JUKEBOX_POS[0] < ROOM_EAST + 2, 'jukebox sits right beside the end of the wall');
   assert.equal(JUKEBOX_POS[1], 0, 'jukebox stands at ground level');

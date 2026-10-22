@@ -13,6 +13,8 @@ export interface Box {
   min: Vec3;
   size: Vec3;
   material: Material;
+  /** A visitor can stand on its top (floors always can; this marks things like stair steps). */
+  walkable?: boolean;
 }
 
 export interface Slot {
@@ -46,7 +48,7 @@ const steps: Box[] = STEP_TOPS.map((top, i) => {
   const front = 5.8 - 0.75 * i;
   // The landing starts at the loft edge, not 0.2m inside its coplanar top.
   const back = i === 3 ? 3.0 : front - 0.75;
-  return box(`step-${i + 1}`, [0, top - 0.3, back], [1.4, 0.3, front - back], 'accent');
+  return { ...box(`step-${i + 1}`, [0, top - 0.3, back], [1.4, 0.3, front - back], 'accent'), walkable: true };
 });
 
 // New floor area added beyond the original 6.3 x 6.3 footprint: a grid along the right wall plus a front strip.

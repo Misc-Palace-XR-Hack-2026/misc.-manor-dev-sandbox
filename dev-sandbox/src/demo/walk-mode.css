@@ -1,0 +1,20 @@
+.walk-overview-btn {
+  position: fixed;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  left: calc(16px + env(safe-area-inset-left));
+  z-index: 12;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font: 600 14px/1.2 ui-sans-serif, system-ui, sans-serif;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--line);
+}
+.walk-overview-btn[hidden] { display: none; }
+.walk-overview-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+canvas.walk-mode-touch {
+  touch-action: none;
+}
