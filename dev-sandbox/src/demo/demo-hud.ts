@@ -25,13 +25,11 @@ export function saveCamera(storage: { setItem(key: string, value: string): void 
 }
 
 export const HELP_LINES = [
-  'Tap the floor to walk there.',
-  'Drag to look around.',
-  'Pinch or scroll to step back.',
-  'Camera: Tactile walks the room, Dollhouse shows all of it.',
-  'Tap the glowing portal to add your stuff.',
-  'Tap an object to see it. Tap it again to move it, then tap an empty glowing spot.',
-  'Hold Space (or Hold on the portal) to spring-clean extra objects.',
+  'Tactile: tap the floor to walk, WASD or arrow keys to step, drag to look, pinch or scroll to step back.',
+  'Dollhouse shows the whole room from above. The Camera choice is remembered next visit.',
+  'Tap an object to see it. Double-tap to pick it up, then tap an empty glowing spot. Esc cancels.',
+  'Tap the glowing portal to add stuff. Hold Space (or Hold on the portal) to spring-clean.',
+  'The jukebox by the door plays the room music.',
 ];
 
 export const GOAL_LINE = 'Choose your camera / motion to get to the portal';
