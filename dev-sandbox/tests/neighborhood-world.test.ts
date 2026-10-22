@@ -12,7 +12,7 @@ test('all 16 furnished pavilions share connected terrain and safe exterior telep
  assert.equal(world.pavilions.length,16);
  assert.equal(new Set(world.pavilions.map(p=>p.id)).size,16);
  for(const p of world.pavilions){
-  assert.ok(p.group.children.length>=12,'each pavilion has physical furniture, walls and flooring');
+  assert.ok(p.group.getObjectByName('preview-interior')?.userData.layoutBoxIds.length,'each pavilion contains its real complete layout');
   assert.equal(world.walkable(p.center),false,'no teleport inside furniture or walls');
   assert.equal(world.walkable(p.doorway),true,'connected doorstep street');
   world.spawnOutside(p.id);assert.ok(world.street.position.distanceTo(p.doorway)<.001);
@@ -37,6 +37,18 @@ test('all 16 furnished pavilions share connected terrain and safe exterior telep
  world.dispose();assert.equal(world.group.children.length,0);
  for(const count of counts.values())assert.equal(count,1,'shared GPU resource disposed exactly once');
 });
+import { getLayout } from '../src/core/layout';
+
+test('preview contains every actual layout box including loft/stairs and only actual placed objects at exact local transforms',()=>{
+ const room=newRoom('Faithful');const layout=getLayout(room.layoutId)!;
+ room.representations=[{id:'real-book',contentItemId:'a',objectKind:'book'},{id:'real-plant',contentItemId:'b',objectKind:'plant'}];room.placements=[{representationId:'real-book',slotId:'floor-1'},{representationId:'real-plant',slotId:'loft-1'}];
+ const world=new NeighborhoodWorld([{id:'home',label:'Mine'}],room,()=>{});const interior=world.pavilions[0].group.getObjectByName('preview-interior');assert.ok(interior,'actual layout interior');
+ const ids=interior.userData.layoutBoxIds;assert.deepEqual(ids,layout.boxes.map(b=>b.id));assert.ok(ids.some((id:string)=>id.includes('loft')));assert.ok(ids.includes('step-1')&&ids.includes('step-4'));
+ const objects=interior.children.filter(o=>o.userData.repId);assert.equal(objects.length,room.placements.length);
+ for(const placement of room.placements){const model=objects.find(o=>o.userData.repId===placement.representationId)!;const rep=room.representations.find(r=>r.id===placement.representationId)!;const slot=layout.slots.find(s=>s.id===placement.slotId)!;assert.equal(model.userData.objectKind,rep.objectKind);assert.deepEqual(model.position.toArray(),slot.pos);assert.equal(model.rotation.y,Math.PI/4);assert.deepEqual(model.scale.toArray(),[1.6,1.6,1.6]);}
+ assert.ok(interior.children.every(o=>o.userData.repId||o.userData.layoutBoxIds),'no invented room furniture or shell geometry');world.dispose();
+});
+
 test('pavilion shell preserves the actual room wall/floor finish identity',()=>{
  const room=newRoom('Mine');room.surfaces={wall:{preset:'brick'},floor:{preset:'stone'}};
  const before=JSON.stringify(room);const world=new NeighborhoodWorld([{id:'home',label:'Mine'}],room,()=>{});

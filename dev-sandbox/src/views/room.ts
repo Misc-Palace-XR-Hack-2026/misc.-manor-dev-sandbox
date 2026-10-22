@@ -151,7 +151,6 @@ export class RoomView {
       ? 'Neighborhood · drag to pan · scroll / pinch to zoom · select a pavilion to visit'
       : 'Neighborhood · WASD / arrows to walk · drag to look · tap path to walk or a room to visit';
     this.neighborhoodBack.hidden = !this.neighborhood && !this.store.visiting;
-    this.neighborhoodBack.textContent = 'Return to my room';
   }
   openNeighborhood(): void {
     if (this.neighborhood) return;
@@ -190,8 +189,16 @@ export class RoomView {
 
   constructor(private container: HTMLElement, private store: Store, rooms: NeighborhoodRoom[] = []) {
     this.neighborhoodRooms = rooms;
+    // A house icon, styled like Help. The label stays in title/aria so the bar can stay compact,
+    // and the bar itself shrinks when this button is hidden rather than reserving an empty slot.
     this.neighborhoodBack.className = 'demo-hud-btn neighborhood-back';
-    this.neighborhoodBack.textContent='Return to my room';
+    this.neighborhoodBack.type = 'button';
+    this.neighborhoodBack.title = 'Return to my room';
+    this.neighborhoodBack.setAttribute('aria-label', 'Return to my room');
+    this.neighborhoodBack.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+      + '<path d="M3 11.2 12 4l9 7.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+      + '<path d="M5.6 10.4V19a1 1 0 0 0 1 1h3.2v-5h4.4v5h3.2a1 1 0 0 0 1-1v-8.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+      + '</svg>';
     this.neighborhoodHint.className = 'neighborhood-hint';
     this.neighborhoodBack.hidden = this.neighborhoodHint.hidden = true;
     this.neighborhoodBack.onclick = () => { this.closeNeighborhood(); this.store.returnHome(); this.xr?.neighborhoodEnteredRoom(); this.updateNeighborhoodHint(); };

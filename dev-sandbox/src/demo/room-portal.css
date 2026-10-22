@@ -7,10 +7,11 @@
 .room-portal-dialog :is(button,a):hover,.room-portal-dialog :is(button,a):focus-visible {background:#b1a5ef40;outline:2px solid #b1a5ef}
 .neighborhood-back {position:fixed;z-index:60;left:20px;top:80px;min-height:44px;padding:10px 18px;border:1px solid #fff5;border-radius:999px;background:#302b265e;backdrop-filter:blur(18px);color:white;font:14px system-ui;cursor:pointer;pointer-events:auto}
 .neighborhood-hint {position:fixed;z-index:50;left:50%;bottom:82px;transform:translateX(-50%);max-width:calc(100vw - 40px);width:max-content;box-sizing:border-box;padding:10px 18px;border-radius:999px;border:1px solid #fff4;background:#302b2666;backdrop-filter:blur(14px);color:white;font:13px/1.4 system-ui;text-align:center;pointer-events:none}
-.demo-hud .neighborhood-back{position:static;min-height:36px;padding:0 12px;border:0;background:transparent;backdrop-filter:none;font:inherit;white-space:nowrap}
-.demo-hud .neighborhood-back[hidden]{display:inline-flex;visibility:hidden;pointer-events:none}
+/* In the bar it is an icon pill with the same treatment as Help; .demo-hud-btn supplies the background. */
+.demo-hud .neighborhood-back{position:static;border:0;backdrop-filter:none;font:inherit;display:grid;place-items:center;width:var(--hud-btn-height,38px);min-height:var(--hud-btn-height,38px);padding:0;background:var(--hud-btn-bg)}
+.demo-hud .neighborhood-back[hidden]{display:none}
 .palace-immersive .demo-hud{display:none}
-@media(max-width:360px){.demo-hud .neighborhood-back{font-size:11px;padding:0 8px}.demo-hud .demo-hud-btn:not(.neighborhood-back){font-size:11px;padding:0 8px}.demo-camera-select{max-width:122px}}
+@media(max-width:360px){.demo-hud .neighborhood-back{width:34px}.demo-hud .demo-hud-btn:not(.neighborhood-back){font-size:11px;padding:0 8px}.demo-camera-select{max-width:122px}}
 .neighborhood-back[hidden],.neighborhood-hint[hidden]{display:none}
 body.demo-free .chrome button[data-tutorial="rooms"], .demo-hud .demo-edit-room {display:none}
 body:has(.demo-hud) .vr-enter {display:none}

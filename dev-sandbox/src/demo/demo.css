@@ -62,14 +62,21 @@ html, body { margin: 0; height: 100dvh; overflow: hidden; background: #000; font
 .demo-skip-seq:hover, .demo-skip-seq:focus-visible { color: #fff; background: rgba(241, 233, 220, 0.18); outline: none; }
 .demo-skip-seq { font: 11px/1.4 ui-monospace, monospace; color: rgba(241, 233, 220, 0.6); }
 
+/* Right-docked at every width: the bar grows leftward as controls appear, so Help and the Camera
+   choice keep their screen position instead of sliding when Return to my room shows or hides. */
 .demo-hud {
-  position: fixed; z-index: 14; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+  position: fixed; z-index: 14; right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
   display: flex; align-items: center; gap: 6px; padding: 5px; border-radius: 999px;
   border: 1px solid rgba(241, 233, 220, 0.2); background: rgba(20, 16, 28, 0.62); backdrop-filter: blur(8px);
 }
+/* Icon sizing only: room-portal.css owns the in-bar pill geometry. */
+.neighborhood-back svg { width: 20px; height: 20px; }
+/* One source of truth for the bar's pill treatment, so the icon-only home button can match Help exactly. */
+.demo-hud { --hud-btn-bg: rgba(241, 233, 220, 0.1); --hud-btn-height: 38px; }
 .demo-hud-btn, .demo-camera {
-  min-height: 38px; box-sizing: border-box; padding: 0 14px; border-radius: 999px; border: 0;
-  background: rgba(241, 233, 220, 0.1); color: #f1e9dc; font: 600 13px/1 system-ui, sans-serif; cursor: pointer;
+  min-height: var(--hud-btn-height, 38px); box-sizing: border-box; padding: 0 14px; border-radius: 999px; border: 0;
+  background: var(--hud-btn-bg, rgba(241, 233, 220, 0.1)); color: #f1e9dc; font: 600 13px/1 system-ui, sans-serif; cursor: pointer;
 }
 .demo-hud-btn:hover, .demo-hud-btn:focus-visible { background: rgba(241, 233, 220, 0.2); outline: none; }
 .demo-camera { display: flex; align-items: center; gap: 6px; padding-right: 6px; }
@@ -86,7 +93,7 @@ html, body { margin: 0; height: 100dvh; overflow: hidden; background: #000; font
 }
 @media (prefers-reduced-motion: reduce) { .demo-pulse { animation: none; box-shadow: 0 0 0 2px rgba(77, 255, 210, 0.6); } }
 @media (max-width: 600px) {
-  .demo-hud { left: auto; right: max(12px, env(safe-area-inset-right)); transform: none; }
+  .demo-hud { max-width: calc(100vw - 24px); }
 }
 
 .demo-goal {

@@ -32,9 +32,15 @@ try{
  await page.waitForFunction(()=>window.__productionRoomView.neighborhood);
  const count=await page.evaluate(()=>window.__productionRoomView.neighborhood.pavilions.length);assert.equal(count,16);facts.desktopPavilions=count;
  facts.culDeSacs=await page.evaluate(()=>{const w=window.__productionRoomView.neighborhood;const groups={};for(const p of w.pavilions)(groups[p.theme]??=[]).push(p.id);const lights=[];w.group.traverse(o=>{if(o.isPointLight)lights.push({distance:o.distance,shadow:o.castShadow,color:o.color.getHexString(),visible:o.visible});});const home=w.pavilions.find(p=>p.id==='home');if(w.street.position.distanceTo(home.doorway)>.001)throw Error('not outside My room');if(lights.length!==w.courts.length||lights.filter(l=>l.visible).length>4||lights.some(l=>!l.distance||l.shadow))throw Error('local light budget');return {groups,lights,homeSpawn:true};});
- facts.homeCameraHud=await page.evaluate(()=>{const home=document.querySelector('.demo-hud .neighborhood-back'),camera=document.querySelector('.demo-camera');if(!home||home.hidden||home.getBoundingClientRect().right>camera.getBoundingClientRect().left)throw Error('Home must precede Help/Camera');const h=home.getBoundingClientRect(),c=camera.getBoundingClientRect();if(Math.abs(h.y+h.height/2-c.y-c.height/2)>10||innerHeight-h.bottom>80)throw Error('Home not beside bottom Camera');if(document.elementFromPoint(h.x+h.width/2,h.y+h.height/2)!==home)throw Error('Home occluded');return {adjacent:true,bottom:true};});
+ facts.homeCameraHud=await page.evaluate(()=>{const home=document.querySelector('.demo-hud .neighborhood-back'),camera=document.querySelector('.demo-camera');if(!home||home.hidden||home.getBoundingClientRect().right>camera.getBoundingClientRect().left)throw Error('Home must precede Help/Camera');const h=home.getBoundingClientRect(),c=camera.getBoundingClientRect();if(Math.abs(h.y+h.height/2-c.y-c.height/2)>10||innerHeight-h.bottom>80)throw Error('Home not beside bottom Camera');if(!home.contains(document.elementFromPoint(h.x+h.width/2,h.y+h.height/2)))throw Error('Home occluded');return {adjacent:true,bottom:true};});
+ // Icon-only, Help-styled, and the bar itself resizes instead of reserving an empty slot.
+ facts.homeButton=await page.evaluate(()=>{const home=document.querySelector('.demo-hud .neighborhood-back'),help=[...document.querySelectorAll('.demo-hud .demo-hud-btn')].find(b=>b.textContent.trim()==='Help');const style=getComputedStyle(home),helpStyle=getComputedStyle(help);const hud=document.querySelector('.demo-hud');const wide=hud.getBoundingClientRect().width;const rightEdge=hud.getBoundingClientRect().right;home.hidden=true;const narrow=hud.getBoundingClientRect().width;const rightAfter=hud.getBoundingClientRect().right;home.hidden=false;return {text:home.textContent.trim(),label:home.getAttribute('aria-label'),title:home.title,icon:home.querySelector('svg')!==null,radius:style.borderRadius===helpStyle.borderRadius,background:style.backgroundColor===helpStyle.backgroundColor,height:Math.round(home.getBoundingClientRect().height)===Math.round(help.getBoundingClientRect().height),shrinks:wide-narrow>20,rightEdgeFixed:Math.abs(rightEdge-rightAfter)<1};});
+ assert.equal(facts.homeButton.text,'','the home control is an icon, not words');
+ assert.equal(facts.homeButton.label,'Return to my room');
+ assert.equal(facts.homeButton.title,'Return to my room');
+ for(const key of ['icon','radius','background','height','shrinks','rightEdgeFixed'])assert.equal(facts.homeButton[key],true,'home button '+key);
  assert.deepEqual(await page.locator('.demo-camera').boundingBox(),hudBefore.camera);assert.deepEqual(await page.locator('.demo-hud').getByRole('button',{name:'Help',exact:true}).boundingBox(),hudBefore.help);
- assert.equal(await page.locator('.demo-hud .neighborhood-back').innerText(),'Return to my room');facts.homeCameraHud.stableHelpAndCamera=true;
+ facts.homeCameraHud.stableHelpAndCamera=true;
  await page.screenshot({path:OUT+'/desktop-overworld.png'});
  const homeBefore=await page.evaluate(()=>window.__productionRoomView.store.exportJson());
  const clickPavilion=async id=>{
@@ -150,12 +156,14 @@ try{
  });
  await page.evaluate(()=>{const {view,xr,panel}=window.proof;view.openNeighborhood();xr.camera.position.set(0,1.65,0);xr.camera.rotation.set(0,0,0);panel.hide();view.scene.updateMatrixWorld(true);view.renderer.render(view.scene,xr.camera);});
  await page.screenshot({path:OUT+'/xr-overworld.png'});
- await page.waitForFunction(()=>{const w=window.proof.view.neighborhood;return w.pavilions.filter(p=>p.id==='home').every(p=>{const floor=p.group.children.find(m=>m.userData.surface==='floor');return floor.material.map.image.complete;});});
+ await page.waitForFunction(()=>{const w=window.proof.view.neighborhood;return w.pavilions.filter(p=>p.id==='home').every(p=>{let floor=null;p.group.traverse(m=>{if(m.userData.surface==='floor')floor=m;});return Boolean(floor?.material?.map?.image?.complete);});});
  facts.actualSurfaces=await page.evaluate(async()=>{
   const {view,store}=window.proof;const w=view.neighborhood;const {roomCatalog}=await import('/src/core/room-portal.ts');const {REPO_ROOMS}=await import('/src/core/repo-rooms.ts');const {getLayout}=await import('/src/core/layout.ts');const {surfaceTexture}=await import('/src/views/surface-textures.ts');let checked=0;
   for(const pavilion of w.pavilions){
    const data=pavilion.id==='home'?store.personalRoom:roomCatalog(REPO_ROOMS).find(r=>r.id===pavilion.id).data;
-   for(const mesh of pavilion.group.children.filter(m=>m.userData.surface)){
+   const shellMeshes=[];pavilion.group.traverse(m=>{if(m.userData.surface)shellMeshes.push(m);});
+   if(!shellMeshes.some(m=>m.userData.surface==='wall')||!shellMeshes.some(m=>m.userData.surface==='floor'))throw Error('missing shell surfaces '+pavilion.id);
+   for(const mesh of shellMeshes){
     const target=mesh.userData.surface,selection=data.surfaces?.[target];if(JSON.stringify(mesh.userData.surfaceSelection)!==JSON.stringify(selection))throw Error('surface selection mismatch '+pavilion.id);
     if(selection){if(mesh.material.color.getHex()!==0xffffff||!mesh.material.map)throw Error('tinted/missing finish');
      if(selection.preset==='custom'){if(mesh.material.map.image.src!==selection.imageData)throw Error('custom image mismatch');}

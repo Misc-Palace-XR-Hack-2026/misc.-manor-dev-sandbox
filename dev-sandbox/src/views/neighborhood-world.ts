@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { CatalogRoom } from '../core/room-portal';
 import type { RoomState, ObjectKind } from '../core/types';
@@ -88,13 +89,13 @@ export class NeighborhoodWorld {
       this.makeBox(plaque,0,.66,0,.16,1.32,.16,0x80664e);
       this.sign(plaque,area.label+(court.branch?' · '+(court.branch+1):''),0,1.7,.1,3.8,.65);
     }
-    plan.forEach((entry,index) => {
+    plan.forEach(entry => {
       const room = catalog.find(r => r.id === entry.id)!;
       const [x,z] = entry.position;
       const group = new THREE.Group(); group.position.set(x,.08,z);group.rotation.y=entry.rotation;
       group.name = room.id;group.userData.roomId=room.id;this.group.add(group);
       this.pavilions.push({id:room.id,label:room.label,group,center:new THREE.Vector3(x,1.4,z),doorway:new THREE.Vector3(entry.spawn[0],1.65,entry.spawn[1]),theme:entry.theme});
-      this.pavilion(group,room,room.data??personal,index,entry.theme);
+      this.pavilion(group,room,room.data??personal);
       this.makeBox(group,0,-.04,4.3,2.1,.05,2.5,0xe4d4b5);
     });
     // Faceted trees frame sightlines, never hide the open-front entrances.
@@ -154,64 +155,44 @@ export class NeighborhoodWorld {
     mesh.position.set(x, y, z); mesh.scale.set(w, h, d); mesh.receiveShadow = true;
     parent.add(mesh); return mesh;
   }
-  private pavilion(g: THREE.Group, room: CatalogRoom, data: RoomState, index: number, theme: NeighborhoodTheme) {
-    const walls = [0xb77557, 0x819292, 0xc4ad80, 0x8c83a0, 0x728d6c, 0xbda18b, 0x626e83, 0xc39b65];
-    const color = new THREE.Color(NEIGHBORHOOD_THEMES[theme].color).lerp(new THREE.Color(walls[index % walls.length]), .25).getHex();
-    this.makeBox(g, 0, .08, 0, 8.3, .2, 6.5, 0x80664e);
-    const palette=(getLayout(data.layoutId) ?? getLayout(DEFAULT_LAYOUT_ID)!).palette;
-    const shell=(target:'wall'|'floor',x:number,y:number,z:number,w:number,h:number,d:number)=>{
-      const selection=data.surfaces?.[target];
-      const key=target+':'+JSON.stringify(selection??palette[target]);
-      let material=this.surfaceMaterials.get(key);
+  private pavilion(g: THREE.Group, room: CatalogRoom, data: RoomState) {
+    const layout=getLayout(data.layoutId) ?? getLayout(DEFAULT_LAYOUT_ID)!;
+    const interior=new THREE.Group();interior.name='preview-interior';
+    interior.userData.layoutId=layout.id;interior.userData.layoutBoxIds=layout.boxes.map(b=>b.id);
+    const minX=Math.min(...layout.boxes.map(b=>b.min[0])),maxX=Math.max(...layout.boxes.map(b=>b.min[0]+b.size[0]));
+    const minZ=Math.min(...layout.boxes.map(b=>b.min[2])),maxZ=Math.max(...layout.boxes.map(b=>b.min[2]+b.size[2]));
+    // Uniform miniature transform only. Every interior coordinate remains the real room coordinate.
+    interior.scale.setScalar(.8);interior.position.set(-(minX+maxX)/2*.8,0,-(minZ+maxZ)/2*.8);g.add(interior);
+    for(const target of ['wall','floor','accent'] as const){
+      const boxes=layout.boxes.filter(b=>b.material===target);if(!boxes.length)continue;
+      const selection=target==='accent'?undefined:data.surfaces?.[target];
+      const key=target+':'+JSON.stringify(selection??layout.palette[target]);let material=this.surfaceMaterials.get(key);
       if(!material){
-        material=new THREE.MeshStandardMaterial({color:selection?0xffffff:palette[target],roughness:.95});
-        if(selection&&typeof document!=='undefined'){
-          material.map=surfaceTexture(target,selection,()=>{this.surfaceError=true;});material.map.anisotropy=2;
-        }
+        material=new THREE.MeshStandardMaterial({color:selection?0xffffff:layout.palette[target],roughness:.95});
+        if(selection&&target!=='accent'&&typeof document!=='undefined'){material.map=surfaceTexture(target,selection,()=>{this.surfaceError=true;});material.map.anisotropy=2;}
         this.surfaceMaterials.set(key,material);
       }
-      const mesh=new THREE.Mesh(surfaceGeometry([w,h,d],[x-w/2,y-h/2,z-d/2]),material);
-      mesh.position.set(x,y,z);mesh.receiveShadow=true;
-      mesh.userData.surface=target;mesh.userData.surfaceSelection=selection;mesh.userData.sourceRoomId=data.id;
-      g.add(mesh);return mesh;
-    };
-    shell('floor',0,.21,0,7.9,.06,6.1);
-    shell('wall',0,1.8,-3,8.2,3.4,.22);
-    shell('wall',-4,1.8,-1.5,.2,3.4,3.2);
-    // Right wall is cut away, like the reference, so actual furniture stays readable from above.
-    shell('wall',4,.55,0,.2,.8,6.2);
-    this.makeBox(g, 0, 3.6, -2.6, 8.5, .23, 1.1, 0x5d534a);
-    this.makeBox(g, -3.9, 3.6, 0, .45, .23, 6.4, 0x5d534a);
-    shell('wall',3.9,1.8,-2.5,.2,3.4,1);
-    // Broad rug, window, hearth and seating establish a room rather than an empty selectable box.
-    this.makeBox(g, .5, .255, .6, 4.5, .035, 3.2, [0x97786f, 0x778e87, 0x9e8aab, 0xb0a06e][index % 4]);
-    this.makeBox(g, 1.7, 2.05, -2.85, 2.1, 1.35, .08, 0xe6c995);
-    this.makeBox(g, 1.7, 2.05, -2.78, .08, 1.35, .08, 0xf3e3be);
-    this.makeBox(g, -2.65, .8, -2.5, 1.5, 1.1, .6, 0x6b5d51);
-    this.makeBox(g, -2.65, .6, -2.15, .8, .65, .08, 0xe3a363);
-    this.makeBox(g, 2.7, .57, 1, 1.25, .6, 1.7, color);
-    this.makeBox(g, 3.15, 1.1, 1, .35, 1.0, 1.7, color);
-    const layout = getLayout(data.layoutId);
-    // Use the room's own object kinds/placements, sharing a single model per kind across all homes.
-    data.placements.slice(0, 9).forEach((placement, i) => {
-      const rep = data.representations.find(r => r.id === placement.representationId);
-      if (!rep) return;
-      let model = this.models.get(rep.objectKind);
-      if (!model) {
-        model = buildObject(rep.objectKind);
-        const lights: THREE.Object3D[] = [];
-        model.traverse(o => { if (o instanceof THREE.Light) lights.push(o); });
-        lights.forEach(o => o.removeFromParent()); this.models.set(rep.objectKind, model);
-      }
-      const clone = model.clone(true);
-      const slot = layout?.slots.find(s => s.id === placement.slotId);
-      clone.position.set(slot ? (slot.pos[0] - 5) * .62 : -2.4 + (i % 4) * 1.4, .35 + (slot ? Math.min(1.3, slot.pos[1]) * .5 : 0), slot ? (slot.pos[2] - 3.5) * .6 : -.8 + Math.floor(i / 4) * 1.5);
-      clone.scale.multiplyScalar(.75); clone.rotation.y = .2;
-      g.add(clone);
-    });
-    this.makeBox(g, 0, 2.85, -1.9, 8, .14, .18, 0x5d534a);
-    this.sign(g, room.label, 0, 2.85, -1.8, 4.8, .75);
+      // Batch actual layout boxes by material, retaining all stairs, loft, railings and structural parts.
+      const parts=boxes.map(box=>{const geometry=surfaceGeometry(box.size,box.min);geometry.translate(box.min[0]+box.size[0]/2,box.min[1]+box.size[1]/2,box.min[2]+box.size[2]/2);return geometry;});
+      const merged=mergeGeometries(parts,false)!;parts.forEach(part=>part.dispose());
+      const mesh=new THREE.Mesh(merged,material);mesh.name='layout-'+target;mesh.receiveShadow=true;
+      mesh.userData.layoutBoxIds=boxes.map(b=>b.id);mesh.userData.sourceRoomId=data.id;
+      if(target!=='accent'){mesh.userData.surface=target;mesh.userData.surfaceSelection=selection;}
+      interior.add(mesh);
+    }
+    for(const placement of data.placements){
+      const rep=data.representations.find(r=>r.id===placement.representationId),slot=layout.slots.find(s=>s.id===placement.slotId);
+      if(!rep||!slot)continue;
+      let prototype=this.models.get(rep.objectKind);
+      if(!prototype){prototype=buildObject(rep.objectKind);const lights:THREE.Object3D[]=[];prototype.traverse(o=>{if(o instanceof THREE.Light)lights.push(o);});lights.forEach(o=>o.removeFromParent());this.models.set(rep.objectKind,prototype);}
+      const model=prototype.clone(true);model.name=rep.id;model.userData.repId=rep.id;model.userData.objectKind=rep.objectKind;model.userData.slotId=slot.id;
+      model.position.set(...slot.pos);model.rotation.y=Math.PI/4;interior.add(model);
+    }
+    // This is an exterior address sign, not furniture invented inside the room.
+    this.makeBox(g,-2.8,.575,4.15,.12,1.15,.12,0x80664e);
+    this.sign(g,room.label,-2.8,1.5,4.2,3,.6);
   }
+
   private tree(x: number, z: number, scale: number) {
     this.makeBox(this.group, x, 1, z, .3, 2, .3, 0x81664b);
     const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(1.55, 0), this.mat(z % 2 ? 0x71864e : 0x859b5d));
@@ -250,9 +231,10 @@ export class NeighborhoodWorld {
   visit(id: string) { if (this.pavilions.some(p => p.id === id)) this.enter(id); }
   mount(canvas: HTMLCanvasElement) {
     this.controls = new OrbitControls(this.overview, canvas);
-    this.controls.target.copy(this.overviewCenter); this.controls.enableRotate = false;
+    this.controls.target.copy(this.overviewCenter); this.controls.enableRotate = true;
+    this.controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
     this.controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
-    this.controls.minZoom = .65; this.controls.maxZoom = 4; this.controls.enabled = this.mode === 'dollhouse';
+    this.controls.minZoom = .65; this.controls.maxZoom = 6; this.controls.enabled = this.mode === 'dollhouse';
     this.controls.update();
     const options = { signal: this.abort.signal };
     const blocked = () => Boolean(document.querySelector('dialog[open]'));
