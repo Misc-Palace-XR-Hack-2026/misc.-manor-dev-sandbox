@@ -40,6 +40,8 @@ export interface DemoHooks {
   keepSelectionOnPlace?: boolean;
   /** False: a selected object stays put on its slot instead of lifting toward the isometric camera. */
   liftSelected?: boolean;
+  /** Small preview card with one short status line (the demo on phones). */
+  compactPreview?: boolean;
 }
 
 /** What a tap landed on, as seen through the active camera. */
@@ -559,6 +561,7 @@ export class RoomView {
     const entry = id ? this.objects.get(id) : undefined;
     const rep = id ? this.store.state.representations.find((r) => r.id === id) : undefined;
     const content = rep ? this.store.content(rep.contentItemId) : undefined;
+    this.card.setCompact(Boolean(this.demo?.compactPreview));
     // Every preview kind docks above the item sheet (bottom right) so it sits still and is easy to reach. Without the
     // sheet it floats over the object. An object that is selected but not placed yet has nowhere to float, so it
     // only shows when the sheet is there.

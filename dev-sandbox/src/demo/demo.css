@@ -18,6 +18,23 @@ html, body { margin: 0; height: 100dvh; overflow: hidden; background: #000; font
   border-radius: 12px; border: 1px solid rgba(241, 233, 220, 0.2); background: rgba(30, 26, 38, 0.92);
 }
 .demo-dock[hidden] { display: none; }
+@media (max-width: 720px) { .demo-dock { width: min(200px, calc(100vw - 24px)); padding: 8px; } }
+
+/* Compact preview card (DemoHooks.compactPreview): small, one short line, title and Open on one row. */
+.preview-card.preview-compact,
+.preview-card.preview-compact.preview-interactive { width: min(260px, calc(100vw - 24px)); }
+.preview-compact .preview-body { gap: 4px; padding: 6px; border-radius: 10px; }
+.preview-compact .preview-iframe { height: auto; aspect-ratio: 16 / 10; }
+.preview-compact .preview-frame { aspect-ratio: 16 / 9; }
+.preview-compact .preview-glyph { font-size: 30px; }
+.preview-compact .preview-text { font-size: 11px; -webkit-line-clamp: 1; }
+.preview-title-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.preview-title-row .preview-title { flex: 1; min-width: 0; -webkit-line-clamp: 1; }
+.preview-title-row .preview-open { flex: none; min-height: 32px; font-size: 12px; }
+@media (max-width: 720px) {
+  .preview-card.preview-compact,
+  .preview-card.preview-compact.preview-interactive { width: min(200px, calc(100vw - 24px)); }
+}
 
 .demo-hint {
   position: fixed; z-index: 22; left: 50%; top: max(64px, calc(env(safe-area-inset-top) + 56px)); margin: 0;
@@ -35,4 +52,3 @@ html, body { margin: 0; height: 100dvh; overflow: hidden; background: #000; font
 .demo-dev:hover, .demo-dev:focus-visible { color: #f1e9dc; outline: none; }
 /* Clear of the edit tools' bottom bar. */
 .demo-dev-raised { bottom: calc(92px + env(safe-area-inset-bottom)); }
-.demo-dock-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  BOX_POS, DESIGN_ASPECT, DOOR_POS, FRAME_POINTS, INTRO_DURATION, INTRO_SEEN_KEY, JUKEBOX_POS, LOOK_LIMITS, PHASE_STARTS,
+  BOX_POS, DESIGN_ASPECT, DOOR_POS, FRAME_BANDS, FRAME_POINTS, INTRO_DURATION, INTRO_SEEN_KEY, JUKEBOX_POS, LOOK_LIMITS, PHASE_STARTS,
   ROOM_EAST, TUTORIAL_PITCH, TUTORIAL_VIEW, clampLook, introFrame, lookAround, markIntroSeen, phaseAt, shouldPlayIntro,
   tutorialView, type Vec3, type View,
 } from '../src/core/intro-timeline';
@@ -90,6 +90,15 @@ test('the tutorial view keeps the bench, shelf and box fully on screen for phone
       const s = project(view, aspect, p);
       assert.ok(s.depth > 0 && Math.abs(s.x) <= 1 && Math.abs(s.y) <= 1, `aspect ${aspect}: ${p} at ${s.x.toFixed(2)}, ${s.y.toFixed(2)}`);
     }
+  }
+});
+
+test('the framed points stay above the bottom band (hands, dock, preview) and below the top band (Skip)', () => {
+  const bottom = -1 + 2 * FRAME_BANDS.bottom, top = 1 - 2 * FRAME_BANDS.top;
+  for (const aspect of [0.4, DESIGN_ASPECT, 0.56, 0.75, 1, 1.6]) {
+    const view = tutorialView(aspect);
+    const ys = FRAME_POINTS.map((p) => project(view, aspect, p).y);
+    for (const y of ys) assert.ok(y >= bottom - 1e-6 && y <= top + 1e-6, `aspect ${aspect}: y ${y.toFixed(3)}`);
   }
 });
 

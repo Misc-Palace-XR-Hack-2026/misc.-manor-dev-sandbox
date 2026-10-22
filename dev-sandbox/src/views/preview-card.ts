@@ -52,9 +52,9 @@ function hero(art: PreviewArt): HTMLElement {
 }
 
 /** Open in browser: the one action that must be reachable in every preview state. */
-function openAction(href: string | null | undefined): HTMLAnchorElement | null {
+function openAction(href: string | null | undefined, label = 'Open in browser'): HTMLAnchorElement | null {
   if (!href) return null;
-  const open = make('a', 'preview-open', 'Open in browser');
+  const open = make('a', 'preview-open', label);
   open.href = href;
   open.target = '_blank';
   open.rel = 'noopener noreferrer';
@@ -66,6 +66,9 @@ export class PreviewCardView {
   private shown: Preview | null = null;
   private shownArt = '';
   private openUrl: string | null = null;
+  private compact = false;
+  /** Rebuild on the next show() even if the preview is the same (the layout changed). */
+  private stale = false;
 
   constructor(container: HTMLElement) {
     this.root.hidden = true;
@@ -78,6 +81,17 @@ export class PreviewCardView {
   }
 
   /**
+   * Compact cards (the demo): smaller on phones, one short status line, title and Open on one row. Same policy and
+   * Open action as the full card.
+   */
+  setCompact(on: boolean): void {
+    if (on === this.compact) return;
+    this.compact = on;
+    this.stale = true;
+    this.root.classList.toggle('preview-compact', on);
+  }
+
+  /**
    * Show a preview, or hide the card with null. Rebuilds DOM only when the preview, its art or its link changes.
    * `openUrl` overrides where Open in browser goes (e.g. the watch page behind a provider embed); otherwise a card
    * uses its policy `openHref`. A card with a link is clickable anywhere.
@@ -86,7 +100,8 @@ export class PreviewCardView {
     const artKey = art ? `${art.type}:${art.glyph}:${art.label}` : '';
     const link = !preview ? null
       : (openUrl ? previewOpenUrl(openUrl) : null) ?? (preview.kind === 'card' ? preview.openHref ?? null : null);
-    if (preview === this.shown && artKey === this.shownArt && link === this.openUrl) return;
+    if (!this.stale && preview === this.shown && artKey === this.shownArt && link === this.openUrl) return;
+    this.stale = false;
     this.shown = preview;
     this.shownArt = artKey;
     this.openUrl = link;
@@ -143,6 +158,7 @@ export class PreviewCardView {
     // Not `preview-${p.kind}`: for a link card that is `preview-card`, the root's class, which would make this inner
     // body position:fixed at the viewport corner and (inside the scrolling root) clip it to nothing.
     const body = make('div', `preview-body preview-kind-${p.kind}`);
+    if (this.compact) return this.renderCompact(body, p, art);
     if (p.kind === 'embed') {
       const frame = createEmbedFrame(p);
       if (frame.getAttribute('src')) body.append(frame);
@@ -200,6 +216,47 @@ export class PreviewCardView {
     if (p.kind === 'image' || p.kind === 'note') {
       const open = openAction(this.openUrl);
       if (open) body.append(open);
+    }
+    return body;
+  }
+
+  /** Picture on top, then the title with Open beside it, then at most one short line. Never claims a page loaded. */
+  private renderCompact(body: HTMLElement, p: Preview, art: PreviewArt | null): HTMLElement {
+    const row = (title: string, href: string | null | undefined) => {
+      const r = make('div', 'preview-title-row');
+      r.append(make('div', 'preview-title', title));
+      const open = openAction(href, 'Open ↗');
+      if (open) r.append(open);
+      return r;
+    };
+    if (p.kind === 'embed') {
+      const frame = createEmbedFrame(p);
+      const loads = Boolean(frame.getAttribute('src'));
+      if (loads) body.append(frame);
+      const status = make('div', 'preview-text', loads ? 'Loading…' : 'No preview here.');
+      status.setAttribute('role', 'status');
+      frame.addEventListener('load', () => { status.textContent = 'Blank? Use Open.'; });
+      frame.addEventListener('error', () => { status.textContent = 'No preview here.'; });
+      body.append(row(p.title, this.openUrl ?? previewOpenUrl(p.src)), status);
+    } else if (p.kind === 'image') {
+      const frame = make('div', 'preview-frame');
+      const img = make('img');
+      img.alt = '';
+      img.referrerPolicy = 'no-referrer';
+      img.decoding = 'async';
+      img.addEventListener('error', () => {
+        if (art) frame.replaceWith(hero(art));
+        else { frame.classList.add('preview-broken'); img.remove(); }
+      });
+      img.src = p.src;
+      frame.append(img);
+      body.append(frame, row(p.title, this.openUrl));
+    } else if (p.kind === 'note') {
+      if (art) body.append(hero(art));
+      body.append(row(p.title, this.openUrl), make('div', 'preview-text', p.text));
+    } else {
+      if (art) body.append(hero(art));
+      body.append(row(p.title, this.openUrl));
     }
     return body;
   }

@@ -274,6 +274,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     dock,
     keepSelectionOnPlace: true,
     liftSelected: false,
+    compactPreview: true,
     tap: onTap,
     frame: (t: number) => {
       const now = performance.now();
@@ -359,7 +360,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     mountWalkMode(view, store, {
       overview: false,
       start: { from, to: STAND, fov: camera.fov },
-      hooks: { frame: hooks.frame, yaw: 0, keepSelectionOnPlace: true, liftSelected: false },
+      hooks: { frame: hooks.frame, yaw: 0, keepSelectionOnPlace: true, liftSelected: false, compactPreview: true },
       say: (text, ms) => showHint(text, ms),
     });
     // The edit tools carry the Rooms picker: visiting a built room and choosing My room again keeps this room as is.
@@ -387,7 +388,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     startWalking();
   }
 
-  // The dock shows the selected object's name and lets the visitor swap its object kind (the link and text stay fixed).
+  // The dock lets the visitor swap the selected object's kind (the link and text stay fixed); its name is on the card.
   let dockKey = '';
   function syncDock(): void {
     const rep = mode === 'tutorial' && store.selectedId
@@ -398,10 +399,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     const key = `${rep.id}:${rep.objectKind}`;
     if (key === dockKey) return;
     dockKey = key;
-    dock.replaceChildren(
-      el('div', 'demo-dock-title', content.title),
-      buildKindInventory({ value: rep.objectKind, onChange: (kind) => store.setKind(rep.id, kind) }),
-    );
+    dock.replaceChildren(buildKindInventory({ value: rep.objectKind, onChange: (kind) => store.setKind(rep.id, kind) }));
   }
 
   store.subscribe(() => {
