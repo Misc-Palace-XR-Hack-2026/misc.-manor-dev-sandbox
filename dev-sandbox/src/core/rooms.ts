@@ -48,6 +48,10 @@ export const isShowcaseRoom = (id: string | null | undefined): boolean =>
 export const isDemoHomeAlias = (currentRoomId: string | null | undefined, targetRoomId: string): boolean =>
   targetRoomId === GUEST_ROOM_ID && Boolean(currentRoomId?.startsWith('demo-'));
 
+/** Public demo sessions keep roomId pinned to demo-visit while users visit named rooms. */
+export const isDemoSessionRoom = (roomId: string | null | undefined): boolean =>
+  Boolean(roomId?.startsWith('demo-'));
+
 /**
  * Label shown in room pickers. Legacy saved guest names ('Guest room') are normalized to
  * the current product name ('My room') so old local saves don't resurrect old wording.
