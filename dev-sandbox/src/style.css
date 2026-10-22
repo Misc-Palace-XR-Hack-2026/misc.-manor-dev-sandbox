@@ -204,6 +204,21 @@ button:disabled { opacity: 0.4; cursor: default; }
 }
 .mode-note[hidden], .chrome button[hidden], .fab[hidden] { display: none; }
 
+/* Mirror of the public build's `.demo-dev` shortcut, lifted clear of the chrome bar. */
+.app-prod {
+  position: fixed;
+  left: max(16px, env(safe-area-inset-left));
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 72px);
+  z-index: 13;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(20, 16, 28, 0.45);
+  color: color-mix(in srgb, var(--text) 60%, transparent);
+  font: 11px/1.4 ui-monospace, monospace;
+  text-decoration: none;
+}
+.app-prod:hover, .app-prod:focus-visible { color: var(--text); outline: none; }
+
 .chrome {
   display: flex;
   position: fixed;
