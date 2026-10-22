@@ -202,13 +202,30 @@ test('Open link is offered for URLs and hands off after exiting VR', () => {
 
 test('Open link in VR uses embed overlay for iframe-safe URLs', () => {
   const store = new Store(newRoom());
-  const ytId = store.addItem({ title: 'Video', sourceRef: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', type: 'link', kind: 'book' });
+  const ytId = store.addItem({ title: 'Video', sourceRef: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1234567890abcdEF', type: 'link', kind: 'book' });
   store.select(ytId);
   const opened = runPanelAction(store, 'open:link');
   assert.equal(opened.openUrl, undefined);
   assert.equal(opened.exit, undefined);
-  assert.equal(opened.openEmbed?.fallbackUrl, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+  assert.equal(opened.openEmbed?.fallbackUrl, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1234567890abcdEF');
   assert.match(opened.openEmbed?.src ?? '', /^https:\/\/www\.youtube-nocookie\.com\/embed\//);
+});
+
+test('Open link in VR uses embed overlay for Spotify and standard websites', () => {
+  const store = new Store(newRoom());
+  const spotify = store.addItem({ title: 'Playlist', sourceRef: 'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M', type: 'link', kind: 'book' });
+  store.select(spotify);
+  const sp = runPanelAction(store, 'open:link');
+  assert.equal(sp.openUrl, undefined);
+  assert.equal(sp.exit, undefined);
+  assert.match(sp.openEmbed?.src ?? '', /^https:\/\/open\.spotify\.com\/embed\/playlist\//);
+
+  const page = store.addItem({ title: 'Site', sourceRef: 'https://www.unpackinggame.com/', type: 'link', kind: 'book' });
+  store.select(page);
+  const pg = runPanelAction(store, 'open:link');
+  assert.equal(pg.openUrl, undefined);
+  assert.equal(pg.exit, undefined);
+  assert.equal(pg.openEmbed?.src, 'https://www.unpackinggame.com/');
 });
 
 test('selected objects grow Edit, Move, Put away, and Open buttons', () => {

@@ -77,13 +77,28 @@ export function youtubeId(url: URL): string | null {
   return id && /^[A-Za-z0-9_-]{6,15}$/.test(id) ? id : null;
 }
 
+/** YouTube playlist id from watch/playlist URLs, else null. */
+export function youtubePlaylistId(url: URL): string | null {
+  const host = url.hostname.replace(/^www\./, '');
+  if (!(host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com')) return null;
+  const list = url.searchParams.get('list');
+  return list && /^[A-Za-z0-9_-]{8,64}$/.test(list) ? list : null;
+}
+
 /** Official player first, otherwise an eligible sandboxed page attempt or a card. */
 export function embedFor(url: URL): { src: string; provider: EmbedProvider; height: number } | null {
   if (!publicPreviewUrl(url)) return null;
   const host = url.hostname.replace(/^www\./, '');
 
   const yt = youtubeId(url);
+  const ytList = youtubePlaylistId(url);
+  if (yt && ytList) {
+    return { provider: 'youtube', src: `https://www.youtube-nocookie.com/embed/${yt}?list=${encodeURIComponent(ytList)}`, height: 169 };
+  }
   if (yt) return { provider: 'youtube', src: `https://www.youtube-nocookie.com/embed/${yt}`, height: 169 };
+  if (!yt && ytList) {
+    return { provider: 'youtube', src: `https://www.youtube-nocookie.com/embed/videoseries?list=${encodeURIComponent(ytList)}`, height: 169 };
+  }
 
   if (host === 'vimeo.com') {
     const m = /^\/(?:.*\/)?(\d{5,})\/?$/.exec(url.pathname);
