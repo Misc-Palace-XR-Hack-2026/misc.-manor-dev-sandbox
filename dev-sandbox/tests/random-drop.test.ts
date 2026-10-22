@@ -87,6 +87,30 @@ test('a drop keeps the other persons content but picks a random object kind', ()
   assert.ok(differed > 0, 'at least some drops should not keep the original object');
 });
 
+test('a drop skips object kinds the room already has', () => {
+  const room = seedDemoRoom();
+  const had = new Set(room.representations.map((r) => r.objectKind));
+  for (let seed = 1; seed <= 40; seed++) {
+    const kinds = pickDrop(devRoomObjects(repo), room, rng(seed)).map((p) => p.kind);
+    assert.ok(kinds.every((k) => !had.has(k) || k === 'spoon'), `seed ${seed}: ${kinds.join()}`);
+    const others = kinds.filter((k) => k !== 'spoon');
+    assert.equal(new Set(others).size, others.length, 'no duplicate non-spoon kinds in one drop');
+  }
+});
+
+test('spoons stay spoons when dropped', () => {
+  const originals = new Map([...devRoomObjects(repo).values()].flat().map((i) => [dropKey(i.content), i.kind]));
+  let spoons = 0;
+  for (let seed = 1; seed <= 50; seed++) {
+    for (const item of pickDrop(devRoomObjects(repo), seedDemoRoom(), rng(seed))) {
+      if (originals.get(dropKey(item.content)) !== 'spoon') continue;
+      assert.equal(item.kind, 'spoon');
+      spoons++;
+    }
+  }
+  assert.ok(spoons > 0, 'Omari spoons should show up in some drops');
+});
+
 test('a dropped object is credited to the person whose room it came from', () => {
   assert.equal(roomOwnerName('matt'), 'Matt');
   assert.equal(roomOwnerName('jawan'), 'Jawan');

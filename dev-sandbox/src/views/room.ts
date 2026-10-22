@@ -43,6 +43,8 @@ export interface DemoHooks {
   liftSelected?: boolean;
   /** Small preview card with one short status line (the demo on phones). */
   compactPreview?: boolean;
+  /** Demo walk: glowing pads only while moving an object, not on the first tap that opens its card. */
+  slotMarkers?: boolean | (() => boolean);
 }
 
 /** What a tap landed on, as seen through the active camera. */
@@ -54,7 +56,7 @@ export interface DemoTap {
   slotId: string | null;
   /** First hit on the room shell (walls, floors, built-ins). Floor meshes have `userData.surface === 'floor'`. */
   room: THREE.Intersection | null;
-  event: PointerEvent;
+  event: { clientX: number; clientY: number };
 }
 
 interface Entry {
@@ -165,6 +167,11 @@ export class RoomView {
       // Finish the gesture before opening overlays: touch compatibility mouse events
       // can otherwise be hit-tested against buttons that appeared during pointerup.
       if (at) this.activateAt(at);
+    });
+    el.addEventListener('dblclick', (e) => {
+      if (!this.demo) return;
+      e.preventDefault();
+      this.activateAt(e);
     });
     el.addEventListener('pointermove', (e) => this.onHover(e));
     el.addEventListener('pointerleave', () => this.hideTooltip());
@@ -432,6 +439,16 @@ export class RoomView {
     if (cam) { cam.aspect = aspect; cam.updateProjectionMatrix(); }
   }
 
+  /** Redraw from the store (demo uses this when move-mode turns on without a store change). */
+  refresh(): void {
+    this.sync();
+  }
+
+  private slotMarkersOn(): boolean {
+    const v = this.demo?.slotMarkers;
+    return typeof v === 'function' ? v() : Boolean(v);
+  }
+
   // ---- state -> scene ---------------------------------------------------
   private sync(): void {
     const surfaceKey = JSON.stringify(this.store.state.surfaces ?? {});
@@ -453,7 +470,12 @@ export class RoomView {
     for (const rep of state.representations) {
       const slotId = this.store.slotOf(rep.id);
       const slot = layout.slots.find((s) => s.id === slotId);
-      if (!slot) continue; // unplaced: lives in the menu until it is put down
+      // Demo pickup must not vanish: keep drawing a held object on the spot it left.
+      if (!slot) {
+        const keep = this.demo?.liftSelected === false && (rep.id === this.store.holding || (this.slotMarkersOn() && rep.id === this.store.selectedId));
+        if (keep && this.objects.has(rep.id)) live.add(rep.id);
+        continue;
+      }
       live.add(rep.id);
       const content=this.store.content(rep.contentItemId);
       const contentKey=JSON.stringify([content?.title,content?.imageData]);
@@ -486,10 +508,10 @@ export class RoomView {
 
     const held = this.store.holding !== null;
     const restricted = this.demo?.slots;
-    // Demo: a selected object stays on its spot; still show the glowing spots so it can be moved.
     this.markerGroup.visible = restricted
       ? held || this.store.selectedId !== null
-      : held || this.store.selectedId !== null && (!this.objects.has(this.store.selectedId) || Boolean(this.demo));
+      : held || (this.store.selectedId !== null && !this.objects.has(this.store.selectedId))
+        || this.slotMarkersOn();
     for (const [slotId, m] of this.markers) {
       m.visible = !restricted || restricted.has(slotId);
       const occupant = this.store.repAt(slotId);
@@ -730,13 +752,13 @@ export class RoomView {
     }
   }
 
-  private ray(e: PointerEvent): void {
+  private ray(e: { clientX: number; clientY: number }): void {
     const r = this.renderer.domElement.getBoundingClientRect();
     const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     this.raycaster.setFromCamera(ndc, this.activeCamera);
   }
 
-  private repIdAt(e: PointerEvent): string | null {
+  private repIdAt(e: { clientX: number; clientY: number }): string | null {
     this.ray(e);
     const hit = this.raycaster.intersectObjects(this.objectsGroup.children, true)[0];
     let o: THREE.Object3D | null = hit?.object ?? null;
@@ -744,7 +766,8 @@ export class RoomView {
     return (o?.userData.repId as string | undefined) ?? null;
   }
 
-  private slotIdAt(e: PointerEvent): string | null {
+  private slotIdAt(e: { clientX: number; clientY: number }): string | null {
+    if (!this.markerGroup.visible) return null;
     this.ray(e);
     const allowed = this.demo?.slots;
     const hit = this.raycaster.intersectObjects(this.markerGroup.children, false).find((h) => !allowed || allowed.has(h.object.userData.slotId as string));
@@ -754,10 +777,13 @@ export class RoomView {
   private onPointerUp(e: PointerEvent): void {
     const d = this.downAt;
     this.downAt = null;
-    this.clickAt = d && d.pointerId === e.pointerId && Math.hypot(e.clientX - d.x, e.clientY - d.y) <= 5 ? e : null;
+    if (!d || d.pointerId !== e.pointerId) return;
+    const dist = Math.hypot(e.clientX - d.x, e.clientY - d.y);
+    const same = Boolean(this.demo && this.store.selectedId && this.store.selectedId === this.repIdAt(e));
+    this.clickAt = dist <= 5 || (same && dist <= 24) ? e : null;
   }
 
-  private activateAt(e: PointerEvent): void {
+  private activateAt(e: { clientX: number; clientY: number }): void {
     const selected = this.store.selectedId;
     const repId = this.repIdAt(e); // What object did we click on?
 

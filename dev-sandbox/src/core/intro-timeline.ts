@@ -140,23 +140,33 @@ export const TUTORIAL_VIEW: View = tutorialView(DESIGN_ASPECT);
 // doorway the look keys sit exactly AHEAD west of the camera keys, so the camera looks straight ahead and never flips.
 // Inside, it rises and steps back to the tutorial view, which depends on the screen shape.
 const AHEAD = 4;
-const posKeys = (view: View): Key<Vec3>[] => [
-  { t: 0, v: [E + 5.4, 1.6, 3.3] },
+const INTRO_FOV = 62;
+/**
+ * Phones see a tall slice of the world, so the door filled the frame. A little extra distance and FOV on narrow
+ * screens makes it read as a door.
+ */
+export function introApproach(aspect: number): { back: number; fov: number } {
+  const a = Number.isFinite(aspect) && aspect > 0 ? aspect : DESIGN_ASPECT;
+  return a < 0.75 ? { back: 1.2, fov: 72 } : { back: 0, fov: INTRO_FOV };
+}
+
+const posKeys = (view: View, back: number): Key<Vec3>[] => [
+  { t: 0, v: [E + 5.4 + back, 1.6, 3.3] },
   { t: 1.9, v: [E + 1.6, 1.6, 3.3] }, // in the doorway
   { t: 2.8, v: [E - 0.6, 1.6, 3.3] }, // just inside the room
   { t: 4.0, v: [9.0, 2.6, 5.4] },
   { t: 5.4, v: view.camera },
 ];
 
-const lookKeys = (view: View): Key<Vec3>[] => [
-  { t: 0, v: [E + 5.4 - AHEAD, 1.6, 3.3] },
+const lookKeys = (view: View, back: number): Key<Vec3>[] => [
+  { t: 0, v: [E + 5.4 + back - AHEAD, 1.6, 3.3] },
   { t: 1.9, v: [E + 1.6 - AHEAD, 1.6, 3.3] },
   { t: 2.8, v: [E - 0.6 - AHEAD, 1.6, 3.3] },
   { t: 4.0, v: BOX_LOOK }, // inside: look at the box
   { t: 5.4, v: view.lookAt }, // then the shelf, where the camera stays
 ];
 
-const fovKeys = (view: View): Key<number>[] => [{ t: 0, v: 62 }, { t: 4.0, v: 62 }, { t: 5.4, v: view.fov }];
+const fovKeys = (view: View, fov: number): Key<number>[] => [{ t: 0, v: fov }, { t: 4.0, v: INTRO_FOV }, { t: 5.4, v: view.fov }];
 /** Black overlay opacity: starts pure black so the first frame has no pop. */
 const BLACK: Key<number>[] = [{ t: 0, v: 1 }, { t: 0.7, v: 0 }];
 /** The door swings open (0 closed, 1 fully open) while the screen fades up. */
@@ -230,14 +240,15 @@ export function phaseAt(time: number): IntroPhase {
  * Everything the walk-in needs to draw the intro at `time` seconds, ending on `view` (the tutorial framing for the
  * current screen). Clamps to [0, INTRO_DURATION].
  */
-export function introFrame(time: number, view: View = TUTORIAL_VIEW): IntroFrame {
+export function introFrame(time: number, view: View = TUTORIAL_VIEW, aspect = DESIGN_ASPECT): IntroFrame {
   const t = Number.isFinite(time) ? Math.min(INTRO_DURATION, Math.max(0, time)) : 0;
+  const { back, fov } = introApproach(aspect);
   return {
     time: t,
     phase: phaseAt(t),
-    camera: glide(posKeys(view), t),
-    lookAt: glide(lookKeys(view), t),
-    fov: sample(fovKeys(view), t),
+    camera: glide(posKeys(view, back), t),
+    lookAt: glide(lookKeys(view, back), t),
+    fov: sample(fovKeys(view, fov), t),
     black: sample(BLACK, t),
     doorOpen: sample(DOOR_OPEN, t),
     doorLight: sample(DOOR_LIGHT, t),

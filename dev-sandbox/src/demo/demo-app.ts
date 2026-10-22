@@ -14,7 +14,7 @@ import { disposeGroup } from '../views/resources';
 import { buildJukebox } from './jukebox';
 import { buildCardboardBox } from './cardboard-box';
 import { buildSavePoint } from './save-point';
-import { mountDemoHud, mountJukeboxPanel, mountSavePointPanel, type DemoHud, type SavePointPanel } from './demo-hud';
+import { loadCamera, mountDemoHud, mountJukeboxPanel, mountSavePointPanel, saveCamera, type CameraChoice, type DemoHud, type SavePointPanel } from './demo-hud';
 import type { DemoEditor } from './room-app';
 import type { SoundtrackPlayer } from '../views/soundtrack';
 import { mountWalkMode, type WalkHandle } from './walk-mode';
@@ -325,7 +325,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       if (skippingIntro) return;
       if (mode === 'intro') {
         elapsed = Math.min(introEnd, elapsed + dt);
-        const f = introFrame(elapsed, currentView());
+        const f = introFrame(elapsed, currentView(), framedAspect);
         const bob = f.walking && !reduced ? Math.sin(t * 7.5) * 0.022 : 0;
         const sway = f.walking && !reduced ? Math.sin(t * 3.75) * 0.025 : 0;
         aimAt(f.camera, f.lookAt, f.fov, bob, sway);
@@ -503,6 +503,13 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   });
   window.addEventListener('pointerup', () => setVacuumHold(false));
   window.addEventListener('pointercancel', () => setVacuumHold(false));
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const t = e.target;
+    if (t instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+    if (!moving && !store.selectedId && !store.holding) return;
+    dropPickup();
+  });
 
   // ---- progression: the first portal use ends sequence 2 (Edit room, jukebox, free mode) ----
   let editor: Promise<DemoEditor> | null = null;
@@ -605,23 +612,51 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       showHint(free ? `Too far. Move closer to get to the ${name}.` : `Too far. Move closer, or switch camera, to get to the ${name}.`, 2400);
       return true;
     }
+    moving = false;
     store.select(null);
     open();
     return true;
   }
 
+  /** Second tap on the same object: glowing pads, still on its spot. First tap is preview only. */
+  let moving = false;
+  /** First three objects tapped this visit get a "Double tap to pick up" line. */
+  const pickHinted = new Set<string>();
+
+  function dropPickup(): void {
+    moving = false;
+    if (store.holding || store.selectedId) store.select(null);
+    view.refresh();
+  }
+
   /**
-   * Moving things: tap an object (it stays put, its card shows), then tap an empty glowing spot to move it. Tapping
-   * another object only shows that object's card — it never swaps.
+   * Moving things: tap an object (card only), tap it again to move it (pads show, it stays put), then tap an empty
+   * glowing spot. Tapping another object only shows that object's card — it never swaps.
    */
   function onObjectTap(tap: DemoTap): boolean {
-    if (tap.repId) return false;
+    if (tap.repId) {
+      if (tap.repId === store.selectedId && store.slotOf(tap.repId)) {
+        moving = true;
+        view.refresh();
+        return true;
+      }
+      moving = false;
+      if (pickHinted.size < 3 && !pickHinted.has(tap.repId)) {
+        pickHinted.add(tap.repId);
+        showHint('Double tap to pick up', 1800);
+      }
+      return false;
+    }
     const selected = store.selectedId;
     const from = selected ? store.slotOf(selected) : undefined;
-    if (selected && from && tap.slotId && tap.slotId !== from) {
+    if (moving && selected && from && tap.slotId && tap.slotId !== from) {
       if (store.repAt(tap.slotId)) return true;
       store.place(selected, tap.slotId);
-      store.select(null);
+      dropPickup();
+      return true;
+    }
+    if (moving) {
+      dropPickup();
       return true;
     }
     return false;
@@ -652,16 +687,25 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       overview: false, // the Camera choice switches to the dollhouse; no Overview button or Esc
       overviewTapWalks: false,
       start: { from, to: returningFree ? RETURN_STAND : STAND, fov: camera.fov },
-      hooks: { frame: hooks.frame, keepSelectionOnPlace: true, liftSelected: false, compactPreview: true, tap: onWalkTap },
+      hooks: {
+        frame: hooks.frame, keepSelectionOnPlace: false, liftSelected: false, compactPreview: true, tap: onWalkTap,
+        slotMarkers: () => moving,
+      },
       say: (text, ms) => showHint(text, ms),
       afterFrame: syncHeld,
     });
+    const cameraChoice: CameraChoice = loadCamera(storage);
     hud = mountDemoHud({
       dev,
-      camera: 'tactile',
-      onCamera: (choice) => (choice === 'dollhouse' ? walk?.toOverview() : walk?.toWalk()),
+      camera: cameraChoice,
+      onCamera: (choice) => {
+        saveCamera(storage, choice);
+        dropPickup();
+        choice === 'dollhouse' ? walk?.toOverview() : walk?.toWalk();
+      },
       onExit: goFree,
     });
+    if (cameraChoice === 'dollhouse') walk.toOverview();
     if (returningFree) goalShown = true;
     else window.setTimeout(showGoal, GOAL_AFTER_MS);
   }
@@ -700,6 +744,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   }
 
   store.subscribe(() => {
+    if (!store.selectedId) moving = false;
     box.setFill(inBox(store.state).length - (holding() ? 1 : 0));
     checkDone();
     syncDock();
@@ -720,7 +765,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
 
   // ---- start ----------------------------------------------------------------
   view.setDemo(hooks);
-  const f = introFrame(0, currentView());
+  const f = introFrame(0, currentView(), framedAspect);
   aimAt(f.camera, f.lookAt, f.fov);
   black.style.opacity = '1';
   if (reduced) elapsed = introEnd;

@@ -498,9 +498,9 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
       return;
     }
     if (glide || touches.size > 2) return;
-    dragging = true;
     dragPointer = e.pointerId;
     lastDrag = { x: e.clientX, y: e.clientY };
+    dragging = false;
     canvas.setPointerCapture(e.pointerId);
   };
 
@@ -512,9 +512,15 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
       pinchDist = span;
       return;
     }
-    if (!dragging || e.pointerId !== dragPointer || glide) return;
+    if (e.pointerId !== dragPointer || glide) return;
     const dx = e.clientX - lastDrag.x;
     const dy = e.clientY - lastDrag.y;
+    if (!dragging) {
+      if (Math.hypot(dx, dy) < 12) return;
+      dragging = true;
+      lastDrag = { x: e.clientX, y: e.clientY };
+      return;
+    }
     lastDrag = { x: e.clientX, y: e.clientY };
     if (Math.abs(dx) + Math.abs(dy) < 0.5) return;
     const next = dragLook(lookTargetYaw, lookTargetPitch, dx, dy);

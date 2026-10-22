@@ -460,6 +460,7 @@ export class Store {
         s.placements.push({ representationId: repId, slotId });
       }
     });
+    if (this.pickup?.repId === repId) this.pickup = null;
   }
 
   /** Pick an object up without losing it: it stays in the room, just not on a slot. */

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   BOX_POS, DESIGN_ASPECT, DOOR_POS, FRAME_BANDS, FRAME_POINTS, INTRO_DURATION, INTRO_SEEN_KEY, JUKEBOX_POS, LOOK_LIMITS, PHASE_STARTS,
-  ROOM_EAST, SAVE_POINT_POS, SAVE_POINT_REACH, TUTORIAL_PITCH, TUTORIAL_VIEW, clampLook, introFrame, lookAround, markIntroSeen, markSeq2Done, phaseAt, seq2Done, shouldPlayIntro,
+  ROOM_EAST, SAVE_POINT_POS, SAVE_POINT_REACH, TUTORIAL_PITCH, TUTORIAL_VIEW, clampLook, introApproach, introFrame, lookAround, markIntroSeen, markSeq2Done, phaseAt, seq2Done, shouldPlayIntro,
   tutorialView, type Vec3, type View,
 } from '../src/core/intro-timeline';
 import { getLayout } from '../src/core/layout';
@@ -46,10 +46,16 @@ test('camera walks west through the door and into the room', () => {
 
 test('the camera looks straight ahead (west) all the way through the door, without flipping', () => {
   for (const t of [0, 0.4, 0.9, 1.4, 1.9]) {
-    const f = introFrame(t);
+    const f = introFrame(t, TUTORIAL_VIEW, 1.6);
     const d = [f.lookAt[0] - f.camera[0], f.lookAt[1] - f.camera[1], f.lookAt[2] - f.camera[2]];
     assert.ok(Math.abs(d[0] + 4) < 1e-9 && Math.abs(d[1]) < 1e-9 && Math.abs(d[2]) < 1e-9, `t=${t}: ${d}`);
   }
+});
+
+test('a phone starts the walk-in a little further back with a wider lens so the door reads as a door', () => {
+  const phone = introApproach(DESIGN_ASPECT), wide = introApproach(1.6);
+  assert.ok(phone.back > wide.back && phone.fov > wide.fov);
+  assert.ok(introFrame(0, TUTORIAL_VIEW, DESIGN_ASPECT).camera[0] > introFrame(0, TUTORIAL_VIEW, 1.6).camera[0]);
 });
 
 test('inside the room the camera looks at the starter objects, then settles on the shelf', () => {

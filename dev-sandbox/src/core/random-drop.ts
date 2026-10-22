@@ -39,6 +39,7 @@ export const dropKey = (c: ContentItem): string =>
  */
 export function pickDrop(byRoom: ReadonlyMap<string, readonly DropItem[]>, room: RoomState, random: () => number = Math.random): DropItem[] {
   const taken = new Set(room.contentItems.map(dropKey));
+  const usedKinds = new Set(room.representations.map((r) => r.objectKind));
   const count = DROP_MIN + Math.floor(random() * (DROP_MAX - DROP_MIN + 1));
   const picked: DropItem[] = [];
   while (picked.length < count) {
@@ -47,8 +48,13 @@ export function pickDrop(byRoom: ReadonlyMap<string, readonly DropItem[]>, room:
     const items = devs[Math.floor(random() * devs.length)];
     const item = items[Math.floor(random() * items.length)];
     taken.add(dropKey(item.content));
-    // Keep the other person's link/title; pick a fresh object so drops don't all look like their original rooms.
-    picked.push({ ...item, kind: OBJECT_KINDS[Math.floor(random() * OBJECT_KINDS.length)] });
+    // Keep the other person's link/title; pick a shape the room does not already have. Spoons always stay spoons.
+    const kind = item.kind === 'spoon' ? 'spoon' : (() => {
+      const free = OBJECT_KINDS.filter((k) => !usedKinds.has(k));
+      return (free.length ? free : OBJECT_KINDS)[Math.floor(random() * (free.length || OBJECT_KINDS.length))];
+    })();
+    usedKinds.add(kind);
+    picked.push({ ...item, kind });
   }
   return picked;
 }

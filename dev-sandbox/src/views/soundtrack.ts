@@ -182,11 +182,10 @@ export class SoundtrackPlayer {
       else { this.return('hidden'); if (document.hasFocus()) this.return('outbound'); }
     };
     document.addEventListener('visibilitychange', visibility);
-    window.addEventListener('blur', () => this.leave('blur'));
-    window.addEventListener('focus', () => { this.return('blur'); this.return('outbound'); });
+    // Do not pause on window blur: focusing a <select>, an iframe preview, or mobile chrome fires blur
+    // and was leaving the room music stuck muted.
     window.addEventListener('pagehide', () => this.leave('page'));
     window.addEventListener('pageshow', () => { this.return('page'); visibility(); });
-    if (!document.hasFocus()) this.leave('blur');
     visibility();
     subscribeEmbedAudio(playing => this.setEmbedPlaying(playing));
     document.addEventListener('click', (event) => {

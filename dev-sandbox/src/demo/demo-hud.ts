@@ -10,13 +10,27 @@ export type CameraChoice = 'tactile' | 'dollhouse';
 
 export const CAMERA_LABELS: Record<CameraChoice, string> = { tactile: 'Tactile', dollhouse: 'Dollhouse' };
 
+export const CAMERA_KEY = 'mp-demo:camera';
+
+export function loadCamera(storage: { getItem(key: string): string | null } | null): CameraChoice {
+  try {
+    return storage?.getItem(CAMERA_KEY) === 'dollhouse' ? 'dollhouse' : 'tactile';
+  } catch {
+    return 'tactile';
+  }
+}
+
+export function saveCamera(storage: { setItem(key: string, value: string): void } | null, choice: CameraChoice): void {
+  try { storage?.setItem(CAMERA_KEY, choice); } catch { /* storage may be blocked; the next visit starts on Tactile */ }
+}
+
 export const HELP_LINES = [
   'Tap the floor to walk there.',
   'Drag to look around.',
   'Pinch or scroll to step back.',
   'Camera: Tactile walks the room, Dollhouse shows all of it.',
   'Tap the glowing portal to add your stuff.',
-  'Tap an object to see it, then tap an empty glowing spot to move it.',
+  'Tap an object to see it. Tap it again to move it, then tap an empty glowing spot.',
   'Hold Space (or Hold on the portal) to spring-clean extra objects.',
 ];
 
