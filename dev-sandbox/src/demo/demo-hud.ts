@@ -28,7 +28,7 @@ export const HELP_LINES = [
   'Tactile: tap the floor to walk, WASD or arrow keys to step, drag to look, pinch or scroll to step back.',
   'Dollhouse shows the whole room from above. The Camera choice is remembered next visit.',
   'Tap an object to see it. Double-tap to pick it up, then tap an empty glowing spot. Esc cancels.',
-  'Tap the glowing portal to add stuff. Hold Space (or Hold on the portal) to spring-clean.',
+  'Tap the glowing portal to add stuff. Hold Space (or Hold on the portal) to spring clean.',
   'The jukebox by the door plays the room music.',
 ];
 
@@ -221,11 +221,30 @@ export function mountSavePointPanel(
   };
   const head = el('header', 'demo-panel-head');
   head.append(el('h2', '', 'Add objects to room'), button('demo-panel-close', 'Close', close));
-  const clean = el('button', 'demo-sp-clean', 'Hold to spring-clean');
+  const clean = el('button', 'demo-sp-clean', 'Hold to spring clean');
   clean.type = 'button';
   clean.hidden = true;
   clean.title = 'Hold. On a keyboard, Space does the same.';
-  clean.addEventListener('pointerdown', (e) => { e.preventDefault(); onCleanHold?.(true); });
+  let holding = false;
+  const rest = (): HTMLElement[] => [...menu.children].filter((n): n is HTMLElement => n !== clean && n instanceof HTMLElement);
+  const endHold = (): void => {
+    if (!holding) return;
+    holding = false;
+    menu.classList.remove('demo-sp-holding');
+    for (const node of rest()) node.hidden = false;
+    if (!menu.hidden) backdrop.hidden = false;
+    onCleanHold?.(false);
+  };
+  clean.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    holding = true;
+    menu.classList.add('demo-sp-holding');
+    backdrop.hidden = true;
+    for (const node of rest()) node.hidden = true;
+    onCleanHold?.(true);
+  });
+  window.addEventListener('pointerup', endHold);
+  window.addEventListener('pointercancel', endHold);
   menu.append(
     head,
     button('', '⭐ Random drop', () => { close(); onRandomDrop(); }),
@@ -236,17 +255,18 @@ export function mountSavePointPanel(
 
   function close(): void {
     version++;
+    endHold();
     for (const input of addSheet.querySelectorAll('input')) input.value = '';
     for (const node of [menu, addSheet, importSheet, backdrop]) node.hidden = true;
   }
   backdrop.addEventListener('click', close);
-  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !backdrop.hidden) close(); });
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) close(); });
   document.body.append(backdrop, menu, addSheet, importSheet);
 
   return {
     open: () => { if (store.canEdit) show(menu); },
     close,
-    get isOpen() { return !backdrop.hidden; },
+    get isOpen() { return !menu.hidden; },
     showClean() { clean.hidden = false; },
   };
 }

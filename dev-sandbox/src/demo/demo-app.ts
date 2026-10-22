@@ -57,7 +57,7 @@ const RETURN_STAND: WalkPose = {
 };
 const JUKEBOX_SCALE = 0.6;
 const JUKEBOX_FADE_S = 3;
-const FLY_IN = { delay: 0.35, stagger: 0.18, duration: 0.95 };
+const FLY_IN = { delay: 0, stagger: 0.1, duration: 0.85 };
 
 const DOOR_W = 2.2, DOOR_H = 3.3, POST = 0.2, DEPTH = 0.3;
 
@@ -221,7 +221,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   // ---- tutorial: drag to look a little --------------------------------------
   let turn = { yaw: 0, pitch: 0 };
   let drag: { id: number; x: number; y: number } | null = null;
-  view.canvas.addEventListener('pointerdown', (e) => { if (mode === 'tutorial') drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; });
+  view.canvas.addEventListener('pointerdown', (e) => { if (mode === 'tutorial' && e.button === 0) drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; });
   view.canvas.addEventListener('pointermove', (e) => {
     if (!drag || e.pointerId !== drag.id || mode !== 'tutorial') return;
     // Grab-the-world, like walking: drag right turns left, drag down tilts up.
@@ -403,6 +403,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   let hud: DemoHud | null = null;
   let free = false;
   let goalShown = false;
+  const dropPool = devRoomObjects(REPO_ROOM_MAP);
   const savePanel: SavePointPanel = mountSavePointPanel(store, (text, ms) => showHint(text, ms), randomDrop, portalUsed, setVacuumHold);
   const jukeboxPanel: SavePointPanel = mountJukeboxPanel(store, () => jukebox.setMouthOpen(0), () => music?.startFromGesture());
   let music: SoundtrackPlayer | null = null;
@@ -414,7 +415,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
    * of the way toward the middle of the room so they see them land.
    */
   function randomDrop(): void {
-    const picked = pickDrop(devRoomObjects(REPO_ROOM_MAP), store.state);
+    const picked = pickDrop(dropPool, store.state);
     const placed = store.dropIn(picked);
     if (!placed.length) {
       showHint(picked.length ? 'Room is full, visit portal for spring cleaning.' : 'Nothing new to drop in', 2200);
@@ -424,12 +425,14 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     view.flyIn(placed, portalMouth.copy(savePoint.center).setY(savePoint.center.y + 1.1), FLY_IN);
     // Fade the jukebox in after the last object has landed.
     jukeboxFadeDelay = FLY_IN.delay + Math.max(0, placed.length - 1) * FLY_IN.stagger + FLY_IN.duration;
-    portalUsed();
+    // First drop also unlocks free mode (editor, jukebox); wait a frame so that load does not eat the fly-out.
+    requestAnimationFrame(() => portalUsed());
   }
 
   let vacuumHold = false;
   let vacuuming: string | null = null;
   let pointerVacuum = false;
+  let vacuumBatch = false;
 
   function setVacuumHold(on: boolean): void {
     if (on) {
@@ -439,14 +442,25 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     }
     if (!pointerVacuum) return;
     pointerVacuum = false;
-    vacuumHold = false;
+    stopVacuum();
   }
 
   function startVacuum(): void {
     if (!free) return;
+    if (!vacuumHold) {
+      store.beginBatch();
+      vacuumBatch = true;
+    }
     vacuumHold = true;
     showHint('Hold to keep clearing…', 2800);
     suckNext();
+  }
+
+  function stopVacuum(): void {
+    vacuumHold = false;
+    if (!vacuumBatch) return;
+    vacuumBatch = false;
+    store.endBatch();
   }
 
   function nearestVacuum(): string | null {
@@ -472,7 +486,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       return;
     }
     vacuuming = id;
-    store.select(null);
+    if (store.selectedId) store.select(null);
     walk?.lookToward(SAVE_POINT_POS[0], SAVE_POINT_POS[2], 1);
     const to = portalMouth.copy(savePoint.center).setY(savePoint.center.y + 1.1);
     const finish = (): void => {
@@ -499,7 +513,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     startVacuum();
   });
   window.addEventListener('keyup', (e) => {
-    if (e.code === 'Space' || e.key === ' ') vacuumHold = false;
+    if (e.code === 'Space' || e.key === ' ') stopVacuum();
   });
   window.addEventListener('pointerup', () => setVacuumHold(false));
   window.addEventListener('pointercancel', () => setVacuumHold(false));

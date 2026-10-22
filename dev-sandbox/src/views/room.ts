@@ -145,6 +145,7 @@ export class RoomView {
     this.controls.maxZoom = 3;
     this.controls.maxPolarAngle = Math.PI * 0.49;
     this.controls.dampingFactor = 0.15; // Higher damping = stops faster after drag
+    this.controls.mouseButtons.RIGHT = -1;
     this.controls.update();
 
     this.practicePad.dataset.tutorial='place-pad';
@@ -154,6 +155,8 @@ export class RoomView {
     this.addLights();
 
     const el = this.renderer.domElement;
+    // OrbitControls preventDefault()s contextmenu so it can pan; we don't use right-drag, so keep the browser menu.
+    el.addEventListener('contextmenu', (e) => e.stopImmediatePropagation(), true);
     el.addEventListener('pointerdown', (e) => {
       this.clickAt = null;
       this.downAt = e.isPrimary && e.button === 0 ? { x: e.clientX, y: e.clientY, pointerId: e.pointerId } : null;
@@ -241,8 +244,16 @@ export class RoomView {
   flyIn(repIds: readonly string[], from: THREE.Vector3, { delay = 0, stagger = 0.18, duration = 0.95 } = {}): void {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     for (const id of this.flights.keys()) if (!this.objects.has(id)) this.flights.delete(id);
-    const start = performance.now() / 1000 + delay;
-    repIds.forEach((id, i) => this.flights.set(id, { from: from.clone(), start: start + i * stagger, duration }));
+    const now = performance.now() / 1000;
+    const start = now + delay;
+    const origin = from.clone();
+    repIds.forEach((id, i) => this.flights.set(id, { from: origin.clone(), start: start + i * stagger, duration }));
+    // Pose them at the mouth this frame so they never sit on their slots during the hitch after dropIn.
+    for (const id of repIds) {
+      const e = this.objects.get(id);
+      const f = this.flights.get(id);
+      if (e && f) this.fly(e, f, now);
+    }
   }
 
   /**
@@ -478,7 +489,7 @@ export class RoomView {
       }
       live.add(rep.id);
       const content=this.store.content(rep.contentItemId);
-      const contentKey=JSON.stringify([content?.title,content?.imageData]);
+      const contentKey = `${content?.id ?? ''}:${content?.title ?? ''}:${content?.imageData?.length ?? 0}`;
       let entry = this.objects.get(rep.id);
       if (entry && (entry.kind !== rep.objectKind || entry.contentKey !== contentKey)) {
         disposeGroup(entry.group);

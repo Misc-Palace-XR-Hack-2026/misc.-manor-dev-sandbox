@@ -126,7 +126,7 @@ test('replaying the intro preserves My room customizations and puts only the sta
   assert.doesNotThrow(() => normalizeRoom(replay));
 });
 
-test('portal spring-clean leaves the three starters, wherever they sit', () => {
+test('portal spring clean leaves the three starters, wherever they sit', () => {
   const room = seedDemoRoom();
   room.placements = INTRO_OBJECTS.map((o, i) => ({ representationId: repIdFor(o.id), slotId: SHELF_SLOTS[i] }));
   room.contentItems.push({

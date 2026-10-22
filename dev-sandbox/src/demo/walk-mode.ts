@@ -487,7 +487,7 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
   };
 
   const onPointerDown = (e: PointerEvent) => {
-    if (mode !== 'walk') return;
+    if (mode !== 'walk' || e.button !== 0) return;
     touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (touches.size === 2) {
       // A second finger turns the gesture into a pinch: stop looking, start zooming.

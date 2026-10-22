@@ -125,6 +125,9 @@ export class Store {
   roomId: string | undefined;
   private homeSnapshot: string | null = null;
   private history: string[] = [];
+  /** Nested: while > 0, commits skip extra undo snapshots and localStorage writes until endBatch(). */
+  private batching = 0;
+  private batchDirty = false;
   private listeners = new Set<() => void>();
   /** An object the user picked up from a slot and has not put down yet (never saved). */
   private pickup: { repId: string; slotId: string; depth: number } | null = null;
@@ -148,7 +151,7 @@ export class Store {
       pickup: this.pickup, visiting: this.visiting, homeSnapshot: this.homeSnapshot, saveError: this.saveError };
     this.epoch++;
     this.state = newRoom('Practice');
-    this.history = []; this.pickup = null; this.selectedId = null;
+    this.history = []; this.batching = 0; this.batchDirty = false; this.pickup = null; this.selectedId = null;
     this.visiting = null; this.homeSnapshot = null; this.saveError = null;
     this.practiceRooms.clear();
     this.emit();
@@ -473,6 +476,7 @@ export class Store {
   /** Remove the object from the room. The content stays saved in the inbox. */
   stash(repId: string): void {
     this.lastCommand = 'stash';
+    if (this.selectedId === repId) this.selectedId = null;
     this.commit((s) => {
       const rep = s.representations.find(r => r.id === repId);
       const content = rep && s.contentItems.find(c => c.id === rep.contentItemId);
@@ -480,8 +484,22 @@ export class Store {
       s.placements = s.placements.filter((p) => p.representationId !== repId);
       s.representations = s.representations.filter((r) => r.id !== repId);
     });
-    if (this.selectedId === repId) this.selectedId = null;
-    this.emit();
+  }
+
+  /**
+   * Group several edits (spring-clean, etc.) into one undo step and one save. Safe to nest.
+   * Scene listeners still run after each commit so objects can leave one by one.
+   */
+  beginBatch(): void {
+    this.batching++;
+  }
+
+  endBatch(): void {
+    if (this.batching === 0) return;
+    this.batching--;
+    if (this.batching > 0) return;
+    if (this.batchDirty) this.changed();
+    this.batchDirty = false;
   }
 
   /** Give saved content an object again and put it somewhere free. */
@@ -586,6 +604,8 @@ export class Store {
     this.roomId = roomId;
     this.state = next;
     this.history = [];
+    this.batching = 0;
+    this.batchDirty = false;
     this.selectedId = null;
     this.visiting = null;
     this.homeSnapshot = null;
@@ -701,9 +721,11 @@ export class Store {
   private commit(fn: (s: RoomState) => void): void {
     if (!this.canEdit) return;
     this.pickup = null;
-    this.pushHistory();
+    if (this.batching === 0 || !this.batchDirty) this.pushHistory();
+    if (this.batching > 0) this.batchDirty = true;
     fn(this.state);
-    this.changed();
+    if (this.batching > 0) this.emit();
+    else this.changed();
   }
 
   private changed(): void {
