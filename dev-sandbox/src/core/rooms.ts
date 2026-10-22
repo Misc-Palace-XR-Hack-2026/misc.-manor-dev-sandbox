@@ -48,6 +48,17 @@ export const isShowcaseRoom = (id: string | null | undefined): boolean =>
 export const isDemoHomeAlias = (currentRoomId: string | null | undefined, targetRoomId: string): boolean =>
   targetRoomId === GUEST_ROOM_ID && Boolean(currentRoomId?.startsWith('demo-'));
 
+/**
+ * Label shown in room pickers. Legacy saved guest names ('Guest room') are normalized to
+ * the current product name ('My room') so old local saves don't resurrect old wording.
+ */
+export const displayRoomName = (roomId: string, defaultName: string, savedName: string | null): string => {
+  const name = savedName?.trim();
+  if (!name) return defaultName;
+  if (roomId === GUEST_ROOM_ID && /^guest room$/i.test(name)) return defaultName;
+  return name;
+};
+
 /** The committed JSON a room seeds from, or undefined for rooms that start empty. */
 function seedSource(id: string, repo: Record<string, unknown>): unknown {
   const slot = ROOM_DIRECTORY.find((r) => r.id === id);

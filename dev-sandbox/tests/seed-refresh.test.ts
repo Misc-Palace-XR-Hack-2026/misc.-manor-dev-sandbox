@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { Store, roomKeys, normalizeRoom, validateRoom } from '../src/core/store';
 import { seedRevision, canonicalJson } from '../src/core/seed-revision';
 import {
-  GUEST_ROOM_ID, SHOWCASE_ROOM_IDS, isDemoHomeAlias, isShowcaseRoom, openRoom, seedRoom, seedRevisionFor,
+  GUEST_ROOM_ID, SHOWCASE_ROOM_IDS, displayRoomName, isDemoHomeAlias, isShowcaseRoom, openRoom, seedRoom, seedRevisionFor,
 } from '../src/core/rooms';
 
 // Defect: a localStorage save always beat the committed rooms/*.json, so returning visitors never saw
@@ -68,6 +68,14 @@ test('demo treats guest as an alias for demo-visit home, not a room switch targe
   assert.equal(isDemoHomeAlias('demo-visit', 'matt'), false);
   assert.equal(isDemoHomeAlias('guest', 'guest'), false);
   assert.equal(isDemoHomeAlias(undefined, 'guest'), false);
+});
+
+test("legacy saved guest label 'Guest room' is shown as 'My room' in room pickers", () => {
+  assert.equal(displayRoomName('guest', 'My room', 'Guest room'), 'My room');
+  assert.equal(displayRoomName('guest', 'My room', '  guest room  '), 'My room');
+  assert.equal(displayRoomName('guest', 'My room', 'My custom room name'), 'My custom room name');
+  assert.equal(displayRoomName('matt', "Matt's room", 'Guest room'), 'Guest room');
+  assert.equal(displayRoomName('guest', 'My room', null), 'My room');
 });
 
 test('a freshly seeded showcase room records the revision it came from', () => {
