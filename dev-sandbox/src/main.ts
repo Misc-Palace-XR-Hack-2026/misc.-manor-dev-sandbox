@@ -5,7 +5,7 @@ import { GUEST_ROOM_ID, isRoomId, openRoom } from './core/rooms';
 import { REPO_ROOMS, REPO_ROOM_MAP } from './core/repo-rooms';
 import { MenuView, type RepoRoom } from './views/menu';
 import { RoomView } from './views/room';
-import { SoundtrackPlayer } from './views/soundtrack';
+import { roomSoundtrack } from './views/soundtrack';
 import { createRoomCapture } from './views/room-capture';
 import { createSoundtrackControl } from './views/soundtrack-control';
 import { createDebugPanel } from './views/debug';
@@ -52,7 +52,7 @@ if (initial) {
   new MenuView(document.getElementById('menu')!, store, repoRooms);
   const room = new RoomView(document.getElementById('room')!, store, repoRooms);
   document.body.append(createRoomCapture(() => room.capturePhoto()));
-  const soundtrack = new SoundtrackPlayer(store);
+  const soundtrack = roomSoundtrack(store);
   document.body.append(createSoundtrackControl(soundtrack));
   if (new URLSearchParams(location.search).has('debug')) document.body.append(createDebugPanel(store, soundtrack));
 

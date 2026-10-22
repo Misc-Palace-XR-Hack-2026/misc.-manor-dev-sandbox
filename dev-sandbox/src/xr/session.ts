@@ -8,6 +8,12 @@ import { XrObjectMenu } from './object-menu';
 import { buildPreview } from '../core/preview';
 import { mediaArt } from '../core/media-art';
 import { PreviewCardView } from '../views/preview-card';
+import { XrAmenities } from './amenities';
+import { XrImportSheet } from './import-sheet';
+import { ensureJukeboxTrack, randomPortalDrop } from '../core/room-amenities';
+import { devRoomObjects } from '../core/random-drop';
+import { roomSoundtrack } from '../views/soundtrack';
+import { vacuumTargets } from '../demo/demo-room';
 
 const SNAP = Math.PI / 4;
 const RAY_LENGTH = 10;
@@ -250,6 +256,13 @@ export class XrSession {
   private hoverPoint: THREE.Vector3 | null = null;
   private placing = false;
   presenting = false;
+  readonly amenities: XrAmenities;
+  private imports: XrImportSheet;
+  private dropPool: ReturnType<typeof devRoomObjects>;
+  private cleaning: THREE.Group | null = null;
+  private cleanAt = 0;
+  private hiddenScenery: THREE.Object3D[] = [];
+  private cleanGuard: (() => boolean) | null = null;
 
   constructor(
     private renderer: THREE.WebGLRenderer,
@@ -260,7 +273,11 @@ export class XrSession {
     private room: THREE.Group,
     rooms: NeighborhoodRoom[] = [],
     private onTutorial?: (event: string) => void,
+    private onPortalDrop?: (ids: string[], from: THREE.Vector3) => void,
   ) {
+    this.amenities = new XrAmenities(scene);
+    this.imports = new XrImportSheet(store);
+    this.dropPool = devRoomObjects(Object.fromEntries(rooms.map(r => [r.name, r.data])));
     this.renderer.xr.enabled = true;
     this.renderer.xr.setReferenceSpaceType('local-floor');
     this.player.name = 'xr-player';
@@ -322,6 +339,8 @@ export class XrSession {
     this.lastWalk = now;
     this.updateControllers(now, dt);
     const t = now / 1000;
+    this.amenities.update(t, dt);
+    this.cleanTick(now);
     this.marker.update(t, dt);
     this.loftBeacon.update(t, dt);
     this.syncGuides();
@@ -330,6 +349,12 @@ export class XrSession {
 
   private onStart(): void {
     this.presenting = true;
+    this.lastWalk = 0;
+    this.imports.close();
+    this.amenities.start();
+    this.scene.traverse(object => {
+      if (object.userData.xrDesktopOnly && object.visible) { this.hiddenScenery.push(object); object.visible = false; }
+    });
     const spawn = spawnPosition();
     this.player.position.set(spawn.x, spawn.y, spawn.z);
     this.player.rotation.set(0, 0, 0);
@@ -345,6 +370,11 @@ export class XrSession {
 
   private onEnd(): void {
     this.presenting = false;
+    this.stopClean();
+    this.imports.close();
+    this.amenities.end();
+    for (const object of this.hiddenScenery) object.visible = true;
+    this.hiddenScenery = [];
     this.store.select(null);
     this.marker.setVisible(false);
     this.hoverPoint = null;
@@ -399,6 +429,7 @@ export class XrSession {
         controller.userData.targetRayMode = event.data?.targetRayMode;
       });
       controller.addEventListener('disconnected', () => {
+        if (this.cleaning === controller) this.stopClean();
         if (this.store.selectedId) this.store.select(null);
       });
       this.player.add(controller);
@@ -416,12 +447,34 @@ export class XrSession {
 
   private onSelectStart(controller: THREE.Group): void {
     if (controller.userData.targetRayMode && controller.userData.targetRayMode !== 'tracked-pointer') return;
+    if (!this.presenting || this.imports.visible) return;
     controller.userData.selecting = true;
+    const hit = this.pick(controller);
+    if (hit?.kind === 'panel' && hit.uv && this.panel.actionAt(hit.uv) === 'portal:clean' && this.store.canEdit) {
+      this.stopClean();
+      this.cleaning = controller;
+      this.cleanGuard = this.store.sessionGuard();
+      this.cleanAt = performance.now() + 320;
+      this.store.beginBatch();
+    }
   }
 
   private onSelectEnd(controller: THREE.Group): void {
     controller.userData.selecting = false;
+    if (this.cleaning === controller) { this.stopClean(); return; }
+    if (!this.presenting || this.imports.visible) return;
     const hit = this.pick(controller);
+    if (hit?.kind === 'portal' || hit?.kind === 'jukebox') {
+      this.store.select(null);
+      this.placing = false;
+      this.panel.setStatus('');
+      if (hit.kind === 'jukebox') ensureJukeboxTrack(this.store);
+      this.amenities.jukebox?.setMouthOpen(hit.kind === 'jukebox' ? .5 : 0);
+      this.panel.group.position.set(this.camera.position.x, this.camera.position.y - 1.45, this.camera.position.z);
+      this.panel.group.rotation.y = this.camera.rotation.y;
+      this.panel.show(hit.kind);
+      return;
+    }
     if (hit?.kind === 'action' && hit.target) {
       this.objectMenu.activate(hit.target);
       return;
@@ -447,6 +500,22 @@ export class XrSession {
   }
 
   private onPanel(result: PanelActionResult): void {
+    if (result.portalDrop && this.store.canEdit) {
+      const { picked, placed } = randomPortalDrop(this.store, this.dropPool);
+      if (placed.length && this.amenities.portal) this.onPortalDrop?.(placed, this.amenities.portal.center.clone());
+      this.panel.setStatus(placed.length ? `Added ${placed.length} objects.` : picked.length ? 'Room is full. Hold spring clean or put objects away.' : 'Nothing new to drop in.');
+    }
+    if (result.portalFiles) void this.openImports();
+    if (result.musicAction) {
+      const player = roomSoundtrack(this.store);
+      if (result.musicAction === 'play') player.startFromGesture();
+      else if (result.musicAction === 'pause') player.pauseFromGesture();
+      else player.muteFromGesture();
+      this.panel.setStatus(`Music: ${player.soundState}. Play retries browser-blocked audio.`);
+    }
+    if (result.page) this.panel.setStatus('');
+    if (result.page === 'jukebox') ensureJukeboxTrack(this.store);
+    if (result.page && result.page !== 'jukebox' && result.page !== 'music') this.amenities.jukebox?.setMouthOpen(0);
     if (result.openEmbed) {
       if (this.overlayGranted) {
         const rep = this.store.selectedId ? this.store.state.representations.find((r) => r.id === this.store.selectedId) : undefined;
@@ -490,6 +559,36 @@ export class XrSession {
     this.syncGuides();
   }
 
+  private async openImports(): Promise<void> {
+    if (!this.store.canEdit) return;
+    if (this.overlayGranted) {
+      this.store.select(null);
+      this.overlayCard.show(null);
+      this.imports.open(this.overlay);
+    } else {
+      // Explicitly labelled on the portal page before selection. Do not pretend file pickers work in world space.
+      try { await this.exit(); this.imports.open(document.body); }
+      catch { this.panel.setStatus('Could not leave VR. Exit VR, then use the desktop Add / Import menu.'); }
+    }
+  }
+
+  private stopClean(): void {
+    if (!this.cleaning) return;
+    this.cleaning = null;
+    this.cleanGuard = null;
+    this.store.endBatch();
+  }
+
+  private cleanTick(now: number): void {
+    if (!this.cleaning) return;
+    if (!this.presenting || !this.panel.visible || this.panel.currentPage !== 'portal' || !this.cleanGuard?.()) { this.stopClean(); return; }
+    if (now < this.cleanAt) return;
+    const id = vacuumTargets(this.store.state)[0];
+    if (!id) { this.panel.setStatus('The first objects stay. The rest are in Inbox.'); this.stopClean(); return; }
+    this.store.stash(id);
+    this.cleanAt = now + 480;
+  }
+
   private teleport(point: THREE.Vector3): void {
     const landing = walkableAt(point) ?? (point.y > 1.6 ? { x: 2.0, y: 2.3, z: 1.6 } : null);
     if (!landing) return;
@@ -525,6 +624,7 @@ export class XrSession {
       const hit = this.pick(controller);
       if (hit?.kind === 'panel' && hit.uv) this.panel.setHover(hit.uv, hit.target);
       if (hit?.kind === 'action' && hit.target) this.objectMenu.setHover(hit.target);
+      if (hit?.kind === 'portal' || hit?.kind === 'jukebox') this.hoverLabel.show({ title: hit.kind === 'portal' ? 'New-item portal' : 'Jukebox', detail: 'Select to open', href: null, embedSrc: null }, hit.point, this.camera);
       if (hit?.kind === 'object' && hit.id && hit.id !== this.store.selectedId) {
         const preview = inspectPreview(this.store, hit.id);
         if (preview.title) this.hoverLabel.show(preview, hit.point, this.camera);
@@ -591,7 +691,7 @@ export class XrSession {
   }
 
   private pick(controller: THREE.Group):
-    | { kind: 'object' | 'slot' | 'floor' | 'panel' | 'action'; id?: string; point: THREE.Vector3; uv?: { x: number; y: number }; target?: THREE.Mesh }
+    | { kind: 'object' | 'slot' | 'floor' | 'panel' | 'action' | 'portal' | 'jukebox'; id?: string; point: THREE.Vector3; uv?: { x: number; y: number }; target?: THREE.Mesh }
     | null {
     const ray = this.rayFrom(controller);
     const actionHit = this.objectMenu.hit(ray);
@@ -609,9 +709,11 @@ export class XrSession {
       const beacon = ray.intersectObject(this.loftBeacon.hitTarget, false)[0];
       if (beacon) return { kind: 'floor', point: new THREE.Vector3(2.0, 2.3, 1.6) };
     }
+    const amenity = this.amenities.hit(ray);
     const object = ray.intersectObjects(this.objects.children, true)[0];
     const floor = ray.intersectObjects(this.floors.children, false)[0];
     const occluder = ray.intersectObjects(this.room.children, true)[0];
+    if (amenity && (!occluder || amenity.distance <= occluder.distance) && (!object || amenity.distance <= object.distance) && (!floor || amenity.distance <= floor.distance)) return amenity;
     let objectId: string | undefined;
     if (object) {
       let o: THREE.Object3D | null = object.object;
