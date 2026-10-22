@@ -11,6 +11,224 @@ import { PreviewCardView } from '../views/preview-card';
 
 const SNAP = Math.PI / 4;
 const RAY_LENGTH = 10;
+const TELEPORT_TEAL = 0x4dffd2;
+const TELEPORT_MINT = 0xb8fff0;
+
+class XrTeleportPillar {
+  readonly group = new THREE.Group();
+  readonly hitTarget: THREE.Object3D;
+  private readonly float = new THREE.Group();
+  private readonly floorGlowMat: THREE.MeshBasicMaterial;
+  private readonly runeMat: THREE.MeshBasicMaterial;
+  private readonly innerRingMat: THREE.MeshBasicMaterial;
+  private readonly veilMat: THREE.MeshBasicMaterial;
+  private readonly coreMat: THREE.MeshBasicMaterial;
+  private readonly sparkMat: THREE.PointsMaterial;
+  private readonly sparkGeo: THREE.BufferGeometry;
+  private readonly sparkPos: Float32Array;
+  private readonly sparkSeed: Array<{ a: number; r: number; speed: number; y: number }>;
+  private readonly wisps: Array<{ sprite: THREE.Sprite; phase: number }>;
+  private readonly light: THREE.PointLight;
+  constructor(private radius: number, private height: number, interactive = false) {
+    this.group.add(this.float);
+    const glow = (color: number, map: THREE.Texture, opacity: number, side: THREE.Side = THREE.FrontSide) =>
+      new THREE.MeshBasicMaterial({
+        color, map, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, side, toneMapped: false,
+      });
+    const dot = this.dotTexture();
+
+    this.floorGlowMat = glow(TELEPORT_TEAL, dot, 0.45);
+    const floorGlow = new THREE.Mesh(new THREE.PlaneGeometry(radius * 4, radius * 4).rotateX(-Math.PI / 2), this.floorGlowMat);
+    floorGlow.position.y = 0.012;
+    floorGlow.renderOrder = 5;
+
+    this.runeMat = glow(TELEPORT_TEAL, this.runeTexture(), 0.95);
+    const runes = new THREE.Mesh(new THREE.PlaneGeometry(radius * 2, radius * 2).rotateX(-Math.PI / 2), this.runeMat);
+    runes.position.y = 0.02;
+    runes.renderOrder = 6;
+
+    this.innerRingMat = new THREE.MeshBasicMaterial({ color: TELEPORT_MINT, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+    const innerRing = new THREE.Mesh(new THREE.RingGeometry(radius * 0.52, radius * 0.6, 64).rotateX(-Math.PI / 2), this.innerRingMat);
+    innerRing.position.y = 0.026;
+    innerRing.renderOrder = 6;
+
+    const columnTex = this.columnTexture();
+    columnTex.wrapS = THREE.RepeatWrapping;
+    this.veilMat = glow(TELEPORT_TEAL, columnTex, 0.55, THREE.DoubleSide);
+    const veil = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.62, radius * 0.62, height, 40, 1, true), this.veilMat);
+    veil.position.y = height / 2;
+    veil.renderOrder = 7;
+
+    const coreTex = this.columnTexture();
+    this.coreMat = glow(TELEPORT_MINT, coreTex, 0.42, THREE.DoubleSide);
+    const core = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.24, radius * 0.34, height * 0.8, 28, 1, true), this.coreMat);
+    core.position.y = height * 0.4;
+    core.renderOrder = 7;
+
+    const sparks = Math.max(22, Math.round(height * 18));
+    this.sparkPos = new Float32Array(sparks * 3);
+    this.sparkSeed = Array.from({ length: sparks }, (_, i) => ({
+      a: (i * 2.399) % (Math.PI * 2),
+      r: radius * (0.22 + 0.78 * ((i * 0.618) % 1)),
+      speed: 0.22 + ((i * 0.41) % 1) * 0.28,
+      y: ((i * 0.53) % 1) * height,
+    }));
+    this.sparkGeo = new THREE.BufferGeometry();
+    this.sparkGeo.setAttribute('position', new THREE.BufferAttribute(this.sparkPos, 3));
+    this.sparkMat = new THREE.PointsMaterial({
+      color: TELEPORT_MINT, map: dot, size: Math.max(0.06, radius * 0.14), sizeAttenuation: true, transparent: true, opacity: 0.9,
+      blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
+    });
+    const sparkPoints = new THREE.Points(this.sparkGeo, this.sparkMat);
+    sparkPoints.renderOrder = 8;
+    sparkPoints.frustumCulled = false;
+
+    const wispMat = new THREE.SpriteMaterial({ color: TELEPORT_TEAL, map: dot, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+    this.wisps = [0, Math.PI].map((phase) => {
+      const sprite = new THREE.Sprite(wispMat);
+      sprite.scale.setScalar(radius * 0.9);
+      sprite.renderOrder = 8;
+      this.float.add(sprite);
+      return { sprite, phase };
+    });
+
+    this.light = new THREE.PointLight(TELEPORT_TEAL, 3.4, Math.max(3.2, height * 1.8), 1.6);
+    this.light.position.y = Math.min(0.9, height * 0.5);
+
+    const hit = new THREE.Mesh(
+      new THREE.CylinderGeometry(radius, radius, height, 16),
+      new THREE.MeshBasicMaterial({ visible: false }),
+    );
+    hit.position.y = height / 2;
+    this.hitTarget = interactive ? hit : veil;
+
+    this.float.add(floorGlow, runes, innerRing, veil, core, sparkPoints, this.light, hit);
+    this.placeSparks();
+    this.placeWisps(0);
+    this.group.visible = false;
+  }
+
+  setPosition(point: THREE.Vector3): void {
+    this.group.position.copy(point);
+  }
+
+  setVisible(visible: boolean): void {
+    this.group.visible = visible;
+  }
+
+  get visible(): boolean {
+    return this.group.visible;
+  }
+
+  update(t: number, dt: number): void {
+    if (!this.group.visible) return;
+    const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const pulse = still ? 1 : 1 + 0.12 * Math.sin(t * 2.0);
+    this.veilMat.opacity = 0.5 * pulse;
+    this.coreMat.opacity = 0.42 * (still ? 1 : 1 + 0.18 * Math.sin(t * 3.1 + 1));
+    this.floorGlowMat.opacity = 0.43 * pulse;
+    this.innerRingMat.opacity = 0.66 * pulse;
+    this.runeMat.opacity = 0.9 * pulse;
+    this.light.intensity = 3.4 * pulse;
+    if (still) return;
+    this.float.position.y = (1 + Math.sin(t * 1.3)) * 0.03;
+    const runes = this.float.children[1];
+    const innerRing = this.float.children[2];
+    runes.rotation.y += dt * 0.24;
+    innerRing.rotation.y -= dt * 0.55;
+    for (const s of this.sparkSeed) {
+      s.y += dt * s.speed;
+      s.a += dt * 0.3;
+      if (s.y > this.height) s.y -= this.height;
+    }
+    this.placeSparks();
+    this.sparkMat.opacity = 0.73 + 0.14 * Math.sin(t * 4);
+    this.placeWisps(t);
+  }
+
+  private placeSparks(): void {
+    for (let i = 0; i < this.sparkSeed.length; i++) {
+      const s = this.sparkSeed[i];
+      this.sparkPos[i * 3] = Math.cos(s.a) * s.r;
+      this.sparkPos[i * 3 + 1] = s.y;
+      this.sparkPos[i * 3 + 2] = Math.sin(s.a) * s.r;
+    }
+    this.sparkGeo.attributes.position.needsUpdate = true;
+  }
+
+  private placeWisps(t: number): void {
+    for (const w of this.wisps) {
+      const a = t * 0.7 + w.phase;
+      w.sprite.position.set(
+        Math.cos(a) * (this.radius * 0.9),
+        this.height * 0.54 + Math.sin(t * 1.1 + w.phase) * (this.height * 0.12),
+        Math.sin(a) * (this.radius * 0.9),
+      );
+    }
+  }
+
+  private canvasTexture(size: number, draw: (ctx: CanvasRenderingContext2D, size: number) => void): THREE.CanvasTexture {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    draw(canvas.getContext('2d')!, size);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }
+
+  private dotTexture(): THREE.CanvasTexture {
+    return this.canvasTexture(64, (ctx, s) => {
+      const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+      g.addColorStop(0, 'rgba(255,255,255,1)');
+      g.addColorStop(0.3, 'rgba(255,255,255,0.55)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, s, s);
+    });
+  }
+
+  private runeTexture(): THREE.CanvasTexture {
+    return this.canvasTexture(512, (ctx, s) => {
+      const c = s / 2;
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+      ctx.lineCap = 'round';
+      const ring = (r: number, w: number) => { ctx.lineWidth = w; ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2); ctx.stroke(); };
+      ring(s * 0.47, 6);
+      ring(s * 0.40, 3);
+      ring(s * 0.22, 3);
+      for (let i = 0; i < 24; i++) {
+        const a = (i / 24) * Math.PI * 2;
+        ctx.save();
+        ctx.translate(c + Math.cos(a) * s * 0.435, c + Math.sin(a) * s * 0.435);
+        ctx.rotate(a + Math.PI / 2);
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        if (i % 3 === 0) { ctx.arc(0, 0, 6, 0, Math.PI * 2); }
+        else if (i % 3 === 1) { ctx.moveTo(-7, -5); ctx.lineTo(0, 6); ctx.lineTo(7, -5); }
+        else { ctx.moveTo(-6, 0); ctx.lineTo(6, 0); ctx.moveTo(0, -6); ctx.lineTo(0, 6); }
+        ctx.stroke();
+        ctx.restore();
+      }
+    });
+  }
+
+  private columnTexture(): THREE.CanvasTexture {
+    return this.canvasTexture(128, (ctx, s) => {
+      const g = ctx.createLinearGradient(0, s, 0, 0);
+      g.addColorStop(0, 'rgba(255,255,255,0.9)');
+      g.addColorStop(0.35, 'rgba(255,255,255,0.35)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, s, s);
+      ctx.globalCompositeOperation = 'destination-out';
+      for (let i = 0; i < 9; i++) {
+        ctx.fillStyle = `rgba(0,0,0,${0.25 + (i % 3) * 0.15})`;
+        ctx.fillRect((i / 9) * s + 3, 0, 4 + (i % 2) * 4, s);
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    });
+  }
+}
 
 export class XrSession {
   readonly player = new THREE.Group();
@@ -18,12 +236,9 @@ export class XrSession {
   private raycaster = new THREE.Raycaster();
   private temp = new THREE.Matrix4();
   private controllers: THREE.Group[] = [];
-  private marker = new THREE.Mesh(
-    new THREE.RingGeometry(0.16, 0.24, 28),
-    new THREE.MeshBasicMaterial({ color: 0x9be39b, side: THREE.DoubleSide }),
-  );
+  private marker = new XrTeleportPillar(0.24, 1.45);
   private floors = new THREE.Group();
-  private loftBeacon: THREE.Mesh;
+  private loftBeacon = new XrTeleportPillar(0.34, 1.9, true);
   private panel: XrPanel;
   private hoverLabel = new XrHoverLabel();
   private objectMenu: XrObjectMenu;
@@ -50,16 +265,11 @@ export class XrSession {
     this.renderer.xr.setReferenceSpaceType('local-floor');
     this.player.name = 'xr-player';
     this.player.add(this.camera);
-    this.marker.rotation.x = -Math.PI / 2;
-    this.marker.visible = false;
-    this.loftBeacon = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.32, 0.32, 1.8, 16),
-      new THREE.MeshBasicMaterial({ color: 0x9be39b, transparent: true, opacity: 0.55 }),
-    );
-    this.loftBeacon.position.set(2.0, 3.2, 1.6);
-    this.loftBeacon.userData.walkable = true;
-    this.loftBeacon.visible = false;
-    this.scene.add(this.player, this.floors, this.marker, this.hoverLabel.group);
+    this.marker.setVisible(false);
+    this.loftBeacon.setPosition(new THREE.Vector3(2.0, 2.28, 1.6));
+    this.loftBeacon.group.userData.walkable = true;
+    this.loftBeacon.setVisible(false);
+    this.scene.add(this.player, this.floors, this.marker.group, this.hoverLabel.group);
     this.panel = new XrPanel(store, (result) => this.onPanel(result), rooms);
     this.objectMenu = new XrObjectMenu(store, (result) => this.onPanel(result));
     this.overlay = document.createElement('div');
@@ -107,7 +317,13 @@ export class XrSession {
     if (!this.renderer.xr.isPresenting) return null;
     const tutorial=(globalThis as unknown as {tutorial?:{state:OnboardingState}}).tutorial;
     if(tutorial) this.panel.setGuide(tutorial.state);
-    this.updateControllers();
+    const now = performance.now();
+    const dt = this.lastWalk > 0 ? Math.min(.05, (now - this.lastWalk) / 1000) : 1 / 60;
+    this.lastWalk = now;
+    this.updateControllers(now, dt);
+    const t = now / 1000;
+    this.marker.update(t, dt);
+    this.loftBeacon.update(t, dt);
     this.syncGuides();
     return this.camera;
   }
@@ -130,7 +346,7 @@ export class XrSession {
   private onEnd(): void {
     this.presenting = false;
     this.store.select(null);
-    this.marker.visible = false;
+    this.marker.setVisible(false);
     this.hoverPoint = null;
     this.panel.hide();
     this.hoverLabel.hide();
@@ -163,7 +379,7 @@ export class XrSession {
     stair.rotation.x = -Math.atan2(2.3, 2.8);
     stair.position.set(0.7, 1.15, 4.4);
     stair.userData.walkable = true;
-    this.floors.add(floor, loft, this.loftBeacon, stair);
+    this.floors.add(floor, loft, this.loftBeacon.group, stair);
     this.floors.visible = false;
   }
 
@@ -284,16 +500,13 @@ export class XrSession {
   private syncGuides(): void {
     const inVr = this.presenting;
     this.floors.visible = inVr;
-    this.loftBeacon.visible = loftBeaconVisible(inVr, this.player.position.y);
+    this.loftBeacon.setVisible(loftBeaconVisible(inVr, this.player.position.y));
   }
 
-  private updateControllers(): void {
-    const now = performance.now();
-    const dt = Math.min(.05, (now-this.lastWalk)/1000);
-    this.lastWalk = now;
+  private updateControllers(now: number, dt: number): void {
     const session = this.renderer.xr.getSession();
     this.hoverPoint = null;
-    this.marker.visible = false;
+    this.marker.setVisible(false);
     this.hoverLabel.hide();
     if (!this.store.selectedId) this.placing = false;
     let menuAt: THREE.Vector3 | null = null;
@@ -318,9 +531,8 @@ export class XrSession {
       }
       if (hit?.kind === 'floor' && !this.placing) {
         this.hoverPoint = hit.point;
-        this.marker.position.copy(hit.point);
-        this.marker.position.y += 0.02;
-        this.marker.visible = true;
+        this.marker.setPosition(new THREE.Vector3(hit.point.x, hit.point.y + 0.01, hit.point.z));
+        this.marker.setVisible(true);
       }
     }
     if (session) {
@@ -394,7 +606,7 @@ export class XrSession {
       return null;
     }
     if (this.loftBeacon.visible) {
-      const beacon = ray.intersectObject(this.loftBeacon, false)[0];
+      const beacon = ray.intersectObject(this.loftBeacon.hitTarget, false)[0];
       if (beacon) return { kind: 'floor', point: new THREE.Vector3(2.0, 2.3, 1.6) };
     }
     const object = ray.intersectObjects(this.objects.children, true)[0];
