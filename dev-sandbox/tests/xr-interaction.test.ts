@@ -190,14 +190,25 @@ test('Open link is offered for URLs and hands off after exiting VR', () => {
   const noteId = store.addItem({ title: 'Note', sourceRef: 'just a note', type: 'note', kind: 'notebook' });
   store.select(noteId);
   assert.ok(!panelButtons(store, 'home').some((b) => b.id === 'open:link'));
-  const linkId = store.addItem({ title: 'Docs', sourceRef: 'https://example.com/docs', type: 'link', kind: 'book' });
+  const linkId = store.addItem({ title: 'Docs', sourceRef: 'https://github.com/example/docs', type: 'link', kind: 'book' });
   store.select(linkId);
   assert.ok(panelButtons(store, 'home').some((b) => b.id === 'open:link'));
   const opened = runPanelAction(store, 'open:link');
-  assert.equal(opened.openUrl, 'https://example.com/docs');
+  assert.equal(opened.openUrl, 'https://github.com/example/docs');
   assert.equal(opened.exit, true);
   store.select(noteId);
   assert.equal(runPanelAction(store, 'open:link').openUrl, undefined);
+});
+
+test('Open link in VR uses embed overlay for iframe-safe URLs', () => {
+  const store = new Store(newRoom());
+  const ytId = store.addItem({ title: 'Video', sourceRef: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', type: 'link', kind: 'book' });
+  store.select(ytId);
+  const opened = runPanelAction(store, 'open:link');
+  assert.equal(opened.openUrl, undefined);
+  assert.equal(opened.exit, undefined);
+  assert.equal(opened.openEmbed?.fallbackUrl, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+  assert.match(opened.openEmbed?.src ?? '', /^https:\/\/www\.youtube-nocookie\.com\/embed\//);
 });
 
 test('selected objects grow Edit, Move, Put away, and Open buttons', () => {

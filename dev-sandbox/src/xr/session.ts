@@ -231,6 +231,28 @@ export class XrSession {
   }
 
   private onPanel(result: PanelActionResult): void {
+    if (result.openEmbed) {
+      if (this.overlayGranted) {
+        const rep = this.store.selectedId ? this.store.state.representations.find((r) => r.id === this.store.selectedId) : undefined;
+        const content = rep ? this.store.content(rep.contentItemId) : undefined;
+        if (content) {
+          const preview = buildPreview(content);
+          if (preview.kind === 'embed') {
+            this.overlayCard.show(preview, mediaArt(content), result.openEmbed.fallbackUrl);
+            this.overlay.hidden = false;
+          }
+        }
+      } else {
+        const a = document.createElement('a');
+        a.href = result.openEmbed.fallbackUrl;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.append(a);
+        a.click();
+        a.remove();
+        void this.exit();
+      }
+    }
     if (result.openUrl) {
       const a = document.createElement('a');
       a.href = result.openUrl;

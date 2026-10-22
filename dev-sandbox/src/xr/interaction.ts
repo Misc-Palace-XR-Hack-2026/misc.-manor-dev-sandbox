@@ -6,6 +6,7 @@ import { SURFACE_PRESETS, type SurfaceTarget } from '../core/surfaces';
 import { ROOMS_PICKER_ORDER, isDemoHomeAlias, isDemoSessionRoom, openRoom, seedRoom } from '../core/rooms';
 import { THEMES } from '../core/themes';
 import { safeUrl } from '../core/content';
+import { buildPreview } from '../core/preview';
 import { creationButtons, XrCreation } from './creation';
 import { currentStep, progressLabel, type OnboardingState } from '../core/onboarding';
 
@@ -208,6 +209,7 @@ export interface PanelActionResult {
   exit?: boolean;
   stairs?: boolean;
   openUrl?: string;
+  openEmbed?: { src: string; fallbackUrl: string };
   tutorialEvent?: string;
 }
 
@@ -215,14 +217,21 @@ export interface InspectPreview {
   title: string;
   detail: string;
   href: string | null;
+  embedSrc: string | null;
 }
 
 export function inspectPreview(store: Store, repId: string): InspectPreview {
   const rep = store.state.representations.find((r) => r.id === repId);
   const content = rep ? store.content(rep.contentItemId) : undefined;
-  if (!content) return { title: '', detail: '', href: null };
+  if (!content) return { title: '', detail: '', href: null, embedSrc: null };
   const href = content.sourceKind === 'url' ? safeUrl(content.sourceRef) : null;
-  return { title: content.title, detail: href ?? content.sourceRef, href };
+  const preview = buildPreview(content);
+  return {
+    title: content.title,
+    detail: href ?? content.sourceRef,
+    href,
+    embedSrc: preview.kind === 'embed' ? preview.src : null,
+  };
 }
 
 export interface NeighborhoodRoom {
@@ -500,8 +509,10 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
     return {};
   }
   if (id === 'open:link') {
-    const href = store.selectedId ? inspectPreview(store, store.selectedId).href : null;
-    return href ? { openUrl: href, exit: true } : {};
+    const preview = store.selectedId ? inspectPreview(store, store.selectedId) : null;
+    if (!preview?.href) return {};
+    if (preview.embedSrc) return { openEmbed: { src: preview.embedSrc, fallbackUrl: preview.href } };
+    return { openUrl: preview.href, exit: true };
   }
   if (id === 'move' && store.selectedId) {
     store.pickUp(store.selectedId);
