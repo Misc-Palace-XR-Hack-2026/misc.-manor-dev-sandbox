@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { LIGHTING_PRESETS } from '../src/core/appearance';
 import { ROOM_DIRECTORY, GUEST_ROOM_ID } from '../src/core/rooms';
 import { SHOW_PREVIEW_BUTTON, INTRO_PATH } from '../src/core/demo-flags';
+import { CAMERA_KEY, loadCamera, saveCamera } from '../src/demo/demo-hud';
 
 // Demo-day presentation changes: the landing room's name, the hidden Preview entry points,
 // the intro offered under Help, and brighter Cyber / Moody twilight lighting.
@@ -69,4 +70,15 @@ test('the other lighting presets are untouched', () => {
   const ids = Object.keys(LIGHTING_PRESETS);
   assert.ok(ids.includes('cyber') && ids.includes('twilight'));
   assert.ok(ids.length > 2, 'there are other presets to leave alone');
+});
+
+test('the demo remembers Tactile vs Dollhouse across visits', () => {
+  const data: Record<string, string> = {};
+  const s = { getItem: (k: string) => data[k] ?? null, setItem: (k: string, v: string) => { data[k] = v; } };
+  assert.equal(loadCamera(s), 'tactile');
+  saveCamera(s, 'dollhouse');
+  assert.equal(data[CAMERA_KEY], 'dollhouse');
+  assert.equal(loadCamera(s), 'dollhouse');
+  saveCamera(s, 'tactile');
+  assert.equal(loadCamera(s), 'tactile');
 });

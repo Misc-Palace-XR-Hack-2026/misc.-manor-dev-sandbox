@@ -18,6 +18,8 @@ export interface FormHost {
   inputGuard(): () => boolean;
   /** Prefix for element ids, so a second copy of a form on the page keeps its labels pointing at its own inputs. */
   idPrefix?: string;
+  /** A form finished its job (something was added or imported). */
+  done?(): void;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -62,6 +64,7 @@ export function buildAddForm(host: FormHost): HTMLElement {
     title.value = ref.value = '';
     host.flash('Added to the room.');
     host.close();
+    host.done?.();
     document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'created' }));
   };
   title.addEventListener('input', () => { if(title.value.trim()) notify('typed-title'); });
@@ -79,6 +82,7 @@ export function buildAddForm(host: FormHost): HTMLElement {
       host.store.addPhoto(title.value.trim() || file.name.replace(/\.[^.]+$/, ''), data);
       host.flash(host.store.saveError ? 'Photo added in memory only. Export your room before leaving.' : 'Photo added. Stored on this device and included in room exports.');
       host.close();
+      host.done?.();
     } catch(e) {host.flash(`Photo not added: ${e instanceof Error ? e.message : String(e)}`);}
     finally {photo.disabled=false;photo.value='';}
   });
@@ -102,7 +106,7 @@ export function buildImport(host: FormHost): HTMLElement {
   const entries = (files: File[]) => files
     .filter((f) => !f.name.startsWith('.'))
     .map((f) => ({ title: f.name.replace(/\.[^.]+$/, ''), ref: f.webkitRelativePath || f.name }));
-  const done = (msg: string) => { host.flash(msg); host.close(); };
+  const done = (msg: string) => { host.flash(msg); host.close(); host.done?.(); };
 
   const bookmarks = input('.html,text/html', false, false, async ([file]) => {
     const current = host.inputGuard();

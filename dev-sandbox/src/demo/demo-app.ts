@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { Store, roomKeys } from '../core/store';
 import type { ObjectKind, RoomState } from '../core/types';
 import {
-  BOX_POS, DOOR_POS, INTRO_DURATION, JUKEBOX_POS, SAVE_POINT_POS, SAVE_POINT_REACH, clampLook, introFrame, lookAround,
-  markIntroSeen, tutorialView, type View,
+  BOX_POS, DOOR_POS, INTRO_DURATION, JUKEBOX_POS, PHASE_STARTS, ROOM_EAST, SAVE_POINT_POS, SAVE_POINT_REACH, clampLook, introFrame, lookAround,
+  markIntroSeen, markSeq2Done, seq2Done, tutorialView, type View,
 } from '../core/intro-timeline';
 import { RoomView, type DemoHooks, type DemoTap } from '../views/room';
 import { REPO_ROOMS, REPO_ROOM_MAP } from '../core/repo-rooms';
@@ -14,11 +14,13 @@ import { disposeGroup } from '../views/resources';
 import { buildJukebox } from './jukebox';
 import { buildCardboardBox } from './cardboard-box';
 import { buildSavePoint } from './save-point';
-import { mountDemoHud, mountSavePointPanel, type DemoHud, type SavePointPanel } from './demo-hud';
+import { loadCamera, mountDemoHud, mountJukeboxPanel, mountSavePointPanel, saveCamera, type CameraChoice, type DemoHud, type SavePointPanel } from './demo-hud';
+import type { DemoEditor } from './room-app';
+import type { SoundtrackPlayer } from '../views/soundtrack';
 import { mountWalkMode, type WalkHandle } from './walk-mode';
 import {
   DEMO_ROOM_ID, SHELF_SLOTS, TUTORIAL_SLOTS, inBox, migrateDemoRoom, normalizeDemoOwner, prepareIntroReplayRoom,
-  seedDemoRoom, tutorialDone,
+  seedDemoRoom, tutorialDone, vacuumTargets,
 } from './demo-room';
 import { EYE_HEIGHT, poseFromLookAt, type WalkPose } from '../core/walk';
 
@@ -26,8 +28,10 @@ import { EYE_HEIGHT, poseFromLookAt, type WalkPose } from '../core/walk';
 // ends on a locked tutorial view of the shelf: the visitor unpacks the starter objects from a cardboard box, looks at
 // them and sets them on the shelf. Finishing (or skipping) lifts the lock: the camera drops to standing height and
 // they walk the room in first person ("tactile"). Their goal now is the save point across the room: they get there by
-// walking or by switching the Camera to "dollhouse" (the isometric room). The save point adds links, files and
-// bookmarks. Only Exit tutorial brings in the sandbox edit tools.
+// walking or by switching the Camera to "dollhouse" (the isometric room). The save point (the "portal") adds links,
+// files, bookmarks or a random drop from the devs' rooms. Objects can be picked up and moved anywhere. Using the portal
+// once ends sequence 2: Edit room, the jukebox, and free mode (Rooms, photo, mute while music plays).
+// Exit tutorial jumps straight to free mode. A later visit still walks through the door, then lands in free mode.
 
 type Mode = 'intro' | 'tutorial' | 'walk';
 
@@ -44,6 +48,16 @@ const POP_S = 0.45;
 const STAND: WalkPose = { x: 8.3, y: EYE_HEIGHT, z: 4.8, yaw: 0, pitch: -0.12 };
 /** The goal line shows this long after the tutorial ends even if the visitor never looks toward the save point. */
 const GOAL_AFTER_MS = 6000;
+/** The middle of the room's floor plan (x, z): a random drop turns the visitor toward it. */
+const ROOM_MIDDLE = [ROOM_EAST / 2, 3.6] as const;
+/** Same stand as after the tutorial, looking into the room (west) instead of at the shelf. */
+const RETURN_STAND: WalkPose = {
+  ...STAND,
+  yaw: poseFromLookAt([STAND.x, STAND.y, STAND.z], [ROOM_MIDDLE[0], STAND.y, ROOM_MIDDLE[1]]).yaw,
+};
+const JUKEBOX_SCALE = 0.6;
+const JUKEBOX_FADE_S = 3;
+const FLY_IN = { delay: 0.35, stagger: 0.18, duration: 0.95 };
 
 const DOOR_W = 2.2, DOOR_H = 3.3, POST = 0.2, DEPTH = 0.3;
 
@@ -125,9 +139,16 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     return;
   }
   let shouldPersist = normalizeDemoOwner(initial);
-  // `/` is always the demo and always plays the walk-in. Partial progress is kept (placed starters stay put, the rest
-  // wait in the box); a finished room gets its starters back in the box, keeping everything else the visitor added.
-  if (tutorialDone(initial)) {
+  if (initial.surfaces === undefined) {
+    initial = { ...initial, surfaces: { floor: { preset: 'stone' } } };
+    shouldPersist = true;
+  }
+  const returningFree = seq2Done(storage);
+  /** Return visits stop just inside the door (looking into the room) instead of turning to the shelf. */
+  const introEnd = returningFree ? PHASE_STARTS.setpiece : INTRO_DURATION;
+  // `/` always plays the walk-in. Sequence 2 unfinished: a finished shelf tutorial puts starters back in the box.
+  // Sequence 2 finished: keep the room as it was and skip the shelf after the door.
+  if (tutorialDone(initial) && !returningFree) {
     initial = prepareIntroReplayRoom(initial);
     shouldPersist = true;
   }
@@ -145,12 +166,12 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   const jukebox = buildJukebox();
   jukebox.group.position.set(...JUKEBOX_POS);
   jukebox.group.rotation.y = -Math.PI / 2; // outside the room, its face toward the room (west)
-  jukebox.group.scale.setScalar(0.6);
-  jukebox.setGlow(0.4);
-  jukebox.setOpacity(0.55); // a little see-through so it does not pull the eye
+  jukebox.group.scale.setScalar(JUKEBOX_SCALE);
+  jukebox.group.visible = false; // it appears when sequence 2 is done (free mode)
   const box = buildCardboardBox(inBox(seedDemoRoom()).length);
   box.group.position.set(...BOX_POS);
   box.setFill(inBox(store.state).length);
+  if (returningFree) box.group.visible = false;
   const door = buildDoor();
   const savePoint = buildSavePoint();
   savePoint.group.position.set(...SAVE_POINT_POS);
@@ -232,9 +253,11 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   }
 
   function syncHeld(t: number): void {
-    const id = mode === 'tutorial' ? holding() : null;
+    // Only the tutorial holds an object in front of the camera. Walking, things stay on their spots until moved.
+    const eye = mode === 'tutorial' ? camera : null;
+    const id = eye ? holding() : null;
     const rep = id ? store.state.representations.find((r) => r.id === id) : undefined;
-    if (!id || !rep) { dropHeld(); return; }
+    if (!eye || !id || !rep) { dropHeld(); return; }
     if (!held || held.repId !== id || held.kind !== rep.objectKind) {
       const popping = !held || held.repId !== id;
       dropHeld();
@@ -242,15 +265,15 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       view.addToScene(group);
       held = { repId: id, kind: rep.objectKind, group, from: boxTop.clone(), at: popping && !reduced ? t : -Infinity };
     }
-    camera.updateMatrixWorld();
-    handsPos.copy(HANDS).applyMatrix4(camera.matrixWorld);
+    eye.updateMatrixWorld();
+    handsPos.copy(HANDS).applyMatrix4(eye.matrixWorld);
     const k = Math.min(1, (t - held.at) / POP_S);
     const e = k * k * (3 - 2 * k);
     const g = held.group;
     g.position.lerpVectors(held.from, handsPos, e);
     g.position.y += Math.sin(Math.PI * e) * 0.5 + (reduced ? 0 : Math.sin(t * 2.2) * 0.012);
     g.scale.setScalar(1.6 * HELD_SCALE * (0.35 + 0.65 * e));
-    g.quaternion.copy(camera.quaternion);
+    g.quaternion.copy(eye.quaternion);
     if (!reduced) g.rotateY(Math.sin(t * 0.9) * 0.35);
   }
 
@@ -284,7 +307,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   const hooks: DemoHooks = {
     camera,
     slots: TUTORIAL_SLOTS,
-    yaw: 0, // objects face the tutorial camera, which looks north along -z
+    // Same facing as the dollhouse (π/4). A north-facing yaw here made return visits snap every object 45° when free mode started.
     dock,
     keepSelectionOnPlace: true,
     liftSelected: false,
@@ -295,13 +318,14 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
       jukebox.update(t, dt);
+      fadeJukebox(t);
       box.update(t, dt);
       savePoint.update(t, dt);
       if (mode === 'walk') { watchForSavePoint(); return; }
       if (skippingIntro) return;
       if (mode === 'intro') {
-        elapsed = Math.min(INTRO_DURATION, elapsed + dt);
-        const f = introFrame(elapsed, currentView());
+        elapsed = Math.min(introEnd, elapsed + dt);
+        const f = introFrame(elapsed, currentView(), framedAspect);
         const bob = f.walking && !reduced ? Math.sin(t * 7.5) * 0.022 : 0;
         const sway = f.walking && !reduced ? Math.sin(t * 3.75) * 0.025 : 0;
         aimAt(f.camera, f.lookAt, f.fov, bob, sway);
@@ -309,7 +333,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
         door.leaf.rotation.y = f.doorOpen * Math.PI * 0.52;
         door.light.opacity = f.doorLight;
         door.veil.opacity = f.darkness;
-        if (f.phase === 'done') beginTutorial();
+        if (elapsed >= introEnd) beginTutorial();
         return;
       }
       if (mode !== 'tutorial') return;
@@ -324,7 +348,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     },
   };
 
-  /** Skip the walk-in only: cut through black to the tutorial view, where the tutorial starts as usual. */
+  /** Skip the walk-in: cut through black to the tutorial (or, on a return visit, to free mode just inside the door). */
   let skippingIntro = false;
   function skipIntro(): void {
     if (mode !== 'intro' || skippingIntro) return;
@@ -332,7 +356,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     black.style.transition = 'opacity 0.45s ease';
     black.style.opacity = '1';
     window.setTimeout(() => {
-      elapsed = INTRO_DURATION;
+      elapsed = introEnd;
       skippingIntro = false;
     }, reduced ? 0 : 480);
   }
@@ -342,13 +366,20 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     mode = 'tutorial';
     door.group.visible = false;
     black.style.opacity = '0';
+    if (returningFree) {
+      skip.remove();
+      skipSeq.remove();
+      release();
+      goFree();
+      return;
+    }
     skip.textContent = 'Skip tutorial';
     checkDone();
   }
 
   // No instructions: the visitor drives. Once the last starter is on the shelf the box goes, then the lock lifts.
   let doneTimer = 0;
-  let boxGone = false;
+  let boxGone = returningFree;
   function checkDone(): void {
     if (mode !== 'tutorial') return;
     window.clearTimeout(doneTimer);
@@ -367,24 +398,180 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     }
   }
 
-  // ---- after the tutorial: the save point, the camera choice, Exit tutorial --------------------------------------
+  // ---- after the tutorial (sequence 2): the portal, moving things, the camera choice; then free mode ---------------
   let walk: WalkHandle | null = null;
   let hud: DemoHud | null = null;
-  let exited = false;
+  let free = false;
   let goalShown = false;
-  const savePanel: SavePointPanel = mountSavePointPanel(store, (text, ms) => showHint(text, ms), randomDrop);
+  const savePanel: SavePointPanel = mountSavePointPanel(store, (text, ms) => showHint(text, ms), randomDrop, portalUsed, setVacuumHold);
+  const jukeboxPanel: SavePointPanel = mountJukeboxPanel(store, () => jukebox.setMouthOpen(0), () => music?.startFromGesture());
+  let music: SoundtrackPlayer | null = null;
   const portalMouth = new THREE.Vector3();
+  let jukeboxFadeDelay = 0;
 
-  /** A handful of the devs' objects sprout out of the save point and fly to random free spots. */
+  /**
+   * A handful of the devs' objects sprout out of the save point and fly to random free spots. The visitor turns most
+   * of the way toward the middle of the room so they see them land.
+   */
   function randomDrop(): void {
     const picked = pickDrop(devRoomObjects(REPO_ROOM_MAP), store.state);
     const placed = store.dropIn(picked);
     if (!placed.length) {
-      showHint(picked.length ? 'No free spots left in the room' : 'Nothing new to drop in', 2200);
+      showHint(picked.length ? 'Room is full, visit portal for spring cleaning.' : 'Nothing new to drop in', 2200);
       return;
     }
-    view.flyIn(placed, portalMouth.copy(savePoint.center).setY(savePoint.center.y + 1.1));
+    walk?.lookToward(ROOM_MIDDLE[0], ROOM_MIDDLE[1], 1);
+    view.flyIn(placed, portalMouth.copy(savePoint.center).setY(savePoint.center.y + 1.1), FLY_IN);
+    // Fade the jukebox in after the last object has landed.
+    jukeboxFadeDelay = FLY_IN.delay + Math.max(0, placed.length - 1) * FLY_IN.stagger + FLY_IN.duration;
+    portalUsed();
   }
+
+  let vacuumHold = false;
+  let vacuuming: string | null = null;
+  let pointerVacuum = false;
+
+  function setVacuumHold(on: boolean): void {
+    if (on) {
+      pointerVacuum = true;
+      startVacuum();
+      return;
+    }
+    if (!pointerVacuum) return;
+    pointerVacuum = false;
+    vacuumHold = false;
+  }
+
+  function startVacuum(): void {
+    if (!free) return;
+    vacuumHold = true;
+    showHint('Hold to keep clearing…', 2800);
+    suckNext();
+  }
+
+  function nearestVacuum(): string | null {
+    const mouth = savePoint.center;
+    let best: string | null = null;
+    let bestD = Infinity;
+    for (const id of vacuumTargets(store.state)) {
+      if (id === vacuuming) continue;
+      const slotId = store.slotOf(id);
+      const pos = slotId ? store.layout.slots.find((s) => s.id === slotId)?.pos : undefined;
+      const d = pos ? Math.hypot(pos[0] - mouth.x, pos[2] - mouth.z) : 0;
+      if (d < bestD) { bestD = d; best = id; }
+    }
+    return best;
+  }
+
+  function suckNext(): void {
+    if (!vacuumHold || vacuuming) return;
+    const id = nearestVacuum();
+    if (!id) {
+      vacuumHold = false;
+      showHint('The first objects stay. The rest went back into the portal.', 2400);
+      return;
+    }
+    vacuuming = id;
+    store.select(null);
+    walk?.lookToward(SAVE_POINT_POS[0], SAVE_POINT_POS[2], 1);
+    const to = portalMouth.copy(savePoint.center).setY(savePoint.center.y + 1.1);
+    const finish = (): void => {
+      if (store.state.representations.some((r) => r.id === id)) store.stash(id);
+      vacuuming = null;
+      if (vacuumHold) suckNext();
+    };
+    if (reduced) {
+      finish();
+      return;
+    }
+    view.flyOut(id, to, 0.48, finish);
+  }
+
+  const typing = (e: Event): boolean => {
+    const t = e.target;
+    return t instanceof HTMLElement && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
+  };
+  window.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space' && e.key !== ' ') return;
+    if (e.repeat || typing(e) || !free) return;
+    e.preventDefault();
+    savePanel.close();
+    startVacuum();
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'Space' || e.key === ' ') vacuumHold = false;
+  });
+  window.addEventListener('pointerup', () => setVacuumHold(false));
+  window.addEventListener('pointercancel', () => setVacuumHold(false));
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const t = e.target;
+    if (t instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+    if (!moving && !store.selectedId && !store.holding) return;
+    dropPickup();
+  });
+
+  // ---- progression: the first portal use ends sequence 2 (Edit room, jukebox, free mode) ----
+  let editor: Promise<DemoEditor> | null = null;
+  const loadEditor = (): Promise<DemoEditor> => {
+    document.body.classList.add('demo-edit-tools');
+    return (editor ??= import('./room-app').then(({ mountEditor }) => mountEditor(store)));
+  };
+
+  function portalUsed(): void {
+    goFree();
+  }
+
+  function unlockEditRoom(): void {
+    void loadEditor();
+    hud?.showEditRoom(() => { void loadEditor().then((e) => e.openEditor()); });
+    showJukebox();
+    void import('./room-app').then(({ mountMusic }) => { music ??= mountMusic(store); });
+  }
+
+  /** Sequence 2 is done (first portal use, or Exit tutorial): Rooms, photo and mute come in. */
+  function goFree(): void {
+    if (free) return;
+    free = true;
+    markSeq2Done(storage);
+    unlockEditRoom();
+    hud?.free();
+    document.body.classList.add('demo-free');
+    savePanel.showClean();
+    void import('./room-app').then(({ mountMusic, mountMute, mountPhoto }) => {
+      music ??= mountMusic(store);
+      mountMute(music);
+      mountPhoto(view);
+    });
+  }
+
+  let jukeboxFadeAt = -1;
+  function showJukebox(): void {
+    if (jukeboxFadeAt !== -1 || jukebox.group.visible) return;
+    jukebox.group.scale.setScalar(JUKEBOX_SCALE);
+    if (returningFree || reduced) {
+      jukebox.group.visible = true;
+      jukebox.setGlow(0.6);
+      jukebox.setOpacity(1);
+      jukeboxFadeAt = -2;
+      return;
+    }
+    jukebox.group.visible = false;
+    jukebox.setGlow(0);
+    jukebox.setOpacity(0);
+    jukeboxFadeAt = NaN; // starts on the next frame, after jukeboxFadeDelay
+  }
+  function fadeJukebox(t: number): void {
+    if (jukeboxFadeAt === -2) return;
+    if (Number.isNaN(jukeboxFadeAt)) jukeboxFadeAt = t + jukeboxFadeDelay;
+    if (jukeboxFadeAt < 0 || t < jukeboxFadeAt) return;
+    jukebox.group.visible = true;
+    const k = Math.min(1, (t - jukeboxFadeAt) / JUKEBOX_FADE_S);
+    jukebox.setOpacity(k);
+    jukebox.setGlow(0.6 * k);
+    if (k >= 1) jukeboxFadeAt = -2;
+  }
+
   const seen = new THREE.Vector3();
 
   /** The goal shows the first time the save point comes into view while walking, or after GOAL_AFTER_MS anyway. */
@@ -400,47 +587,94 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     hud.showGoal();
   }
 
-  /** How far the walking visitor stands from the save point, on the floor plan. */
-  const savePointDistance = (): number => {
+  /**
+   * How far the walking visitor stands from a point, across the floor only: height never counts, and neither does the
+   * step back (and up) that zooming out adds.
+   */
+  const reachTo = (pos: readonly number[]): number => {
     const eye = walk!.camera.position;
-    return Math.hypot(eye.x - SAVE_POINT_POS[0], eye.z - SAVE_POINT_POS[2]);
+    return Math.max(0, Math.hypot(eye.x - pos[0], eye.z - pos[2]) - walk!.steppedBack);
   };
 
-  /** Did this tap land on the save point (and not on something in front of it)? */
-  function onSavePoint(tap: DemoTap): boolean {
+  /** Did this tap land on the thing (and not on something in front of it)? */
+  function tapped(tap: DemoTap, hit: (raycaster: THREE.Raycaster) => number | null): boolean {
     if (tap.repId) return false;
-    const d = savePoint.hit(tap.raycaster);
+    const d = hit(tap.raycaster);
     return d !== null && (!tap.room || tap.room.distance >= d);
   }
 
   /**
-   * A tap on the save point never walks the visitor there. Walking, it opens from within reach; from farther it says
-   * to come closer (that is how walking gets learned). From the dollhouse it opens from anywhere.
+   * Taps on the portal or the jukebox never walk the visitor there. Walking, they open from within reach; from farther
+   * a line says to come closer (that is how walking gets learned). From the dollhouse they open from anywhere.
    */
-  function onWalkTap(tap: DemoTap): boolean {
-    if (!walk || !onSavePoint(tap)) return false;
-    if (walk.mode === 'walk' && savePointDistance() > SAVE_POINT_REACH) {
-      showHint(exited ? 'Too far. Move closer to get to the portal.' : 'Too far. Move closer, or switch camera, to get to the portal.', 2400);
+  function openFromAfar(name: string, pos: readonly number[], open: () => void): true {
+    if (walk!.mode === 'walk' && reachTo(pos) > SAVE_POINT_REACH) {
+      showHint(free ? `Too far. Move closer to get to the ${name}.` : `Too far. Move closer, or switch camera, to get to the ${name}.`, 2400);
       return true;
     }
-    hud?.goalMet();
+    moving = false;
     store.select(null);
-    savePanel.open();
+    open();
     return true;
   }
 
-  /** Leave the tutorial: the sandbox edit tools and Rooms picker come in, still walking in first person. */
-  function exitTutorial(): void {
-    if (exited) return;
-    exited = true;
-    hud?.dispose();
-    hud = null;
-    if (walk?.mode === 'overview') walk.toWalk();
-    // The edit tools carry the Rooms picker: visiting a built room and choosing My room again keeps this room as is.
-    void import('./room-app').then(({ mountEditTools }) => {
-      mountEditTools(store, view);
-      dev.classList.add('demo-dev-raised');
-    });
+  /** Second tap on the same object: glowing pads, still on its spot. First tap is preview only. */
+  let moving = false;
+  /** First three objects tapped this visit get a "Double tap to pick up" line. */
+  const pickHinted = new Set<string>();
+
+  function dropPickup(): void {
+    moving = false;
+    if (store.holding || store.selectedId) store.select(null);
+    view.refresh();
+  }
+
+  /**
+   * Moving things: tap an object (card only), tap it again to move it (pads show, it stays put), then tap an empty
+   * glowing spot. Tapping another object only shows that object's card — it never swaps.
+   */
+  function onObjectTap(tap: DemoTap): boolean {
+    if (tap.repId) {
+      if (tap.repId === store.selectedId && store.slotOf(tap.repId)) {
+        moving = true;
+        view.refresh();
+        return true;
+      }
+      moving = false;
+      if (pickHinted.size < 3 && !pickHinted.has(tap.repId)) {
+        pickHinted.add(tap.repId);
+        showHint('Double tap to pick up', 1800);
+      }
+      return false;
+    }
+    const selected = store.selectedId;
+    const from = selected ? store.slotOf(selected) : undefined;
+    if (moving && selected && from && tap.slotId && tap.slotId !== from) {
+      if (store.repAt(tap.slotId)) return true;
+      store.place(selected, tap.slotId);
+      dropPickup();
+      return true;
+    }
+    if (moving) {
+      dropPickup();
+      return true;
+    }
+    return false;
+  }
+
+  function onWalkTap(tap: DemoTap): boolean {
+    if (!walk) return false;
+    if (!store.holding && tapped(tap, savePoint.hit)) {
+      return openFromAfar('portal', SAVE_POINT_POS, () => { hud?.goalMet(); savePanel.open(); });
+    }
+    if (!store.holding && tapped(tap, jukebox.hit)) {
+      return openFromAfar('jukebox', JUKEBOX_POS, () => {
+        jukebox.setMouthOpen(0.5);
+        jukeboxPanel.open();
+        if (music && music.soundState !== 'playing' && music.soundState !== 'paused') music.startFromGesture();
+      });
+    }
+    return onObjectTap(tap);
   }
 
   /** Walk the room from wherever the tutorial camera is: it glides down to standing height, then the visitor is free. */
@@ -452,20 +686,31 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     walk = mountWalkMode(view, store, {
       overview: false, // the Camera choice switches to the dollhouse; no Overview button or Esc
       overviewTapWalks: false,
-      start: { from, to: STAND, fov: camera.fov },
-      hooks: { frame: hooks.frame, yaw: 0, keepSelectionOnPlace: true, liftSelected: false, compactPreview: true, tap: onWalkTap },
+      start: { from, to: returningFree ? RETURN_STAND : STAND, fov: camera.fov },
+      hooks: {
+        frame: hooks.frame, keepSelectionOnPlace: false, liftSelected: false, compactPreview: true, tap: onWalkTap,
+        slotMarkers: () => moving,
+      },
       say: (text, ms) => showHint(text, ms),
+      afterFrame: syncHeld,
     });
+    const cameraChoice: CameraChoice = loadCamera(storage);
     hud = mountDemoHud({
       dev,
-      camera: 'tactile',
-      onCamera: (choice) => (choice === 'dollhouse' ? walk?.toOverview() : walk?.toWalk()),
-      onExit: exitTutorial,
+      camera: cameraChoice,
+      onCamera: (choice) => {
+        saveCamera(storage, choice);
+        dropPickup();
+        choice === 'dollhouse' ? walk?.toOverview() : walk?.toWalk();
+      },
+      onExit: goFree,
     });
-    window.setTimeout(showGoal, GOAL_AFTER_MS);
+    if (cameraChoice === 'dollhouse') walk.toOverview();
+    if (returningFree) goalShown = true;
+    else window.setTimeout(showGoal, GOAL_AFTER_MS);
   }
 
-  /** Lift the lock and walk in first person (tactile). The edit tools wait for Exit tutorial. */
+  /** Lift the lock and walk in first person (tactile): sequence 2. */
   function release(): void {
     if (mode !== 'tutorial') return;
     window.clearTimeout(doneTimer);
@@ -499,6 +744,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   }
 
   store.subscribe(() => {
+    if (!store.selectedId) moving = false;
     box.setFill(inBox(store.state).length - (holding() ? 1 : 0));
     checkDone();
     syncDock();
@@ -506,19 +752,21 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   skip.addEventListener('click', () => (mode === 'intro' ? skipIntro() : release()));
   skipSeq.addEventListener('click', () => {
     if (mode === 'intro') {
-      elapsed = INTRO_DURATION;
+      elapsed = introEnd;
       skippingIntro = false;
       beginTutorial();
-      const v = currentView();
-      aimAt(v.camera, lookAround(v, 0, 0), v.fov);
+      if (!returningFree) {
+        const v = currentView();
+        aimAt(v.camera, lookAround(v, 0, 0), v.fov);
+      }
     }
     release();
   });
 
   // ---- start ----------------------------------------------------------------
   view.setDemo(hooks);
-  const f = introFrame(0, currentView());
+  const f = introFrame(0, currentView(), framedAspect);
   aimAt(f.camera, f.lookAt, f.fov);
   black.style.opacity = '1';
-  if (reduced) elapsed = INTRO_DURATION;
+  if (reduced) elapsed = introEnd;
 }

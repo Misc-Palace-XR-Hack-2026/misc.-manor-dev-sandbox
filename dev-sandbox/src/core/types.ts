@@ -65,6 +65,8 @@ export interface ContentItem {
   createdAt: string;
   /** Link and text are fixed (the demo's starter objects). The object kind can still change and it can be stashed. */
   locked?: boolean;
+  /** The room (ROOM_DIRECTORY id) it was copied from, e.g. by the demo's Random drop. Shown as "from <owner>". */
+  fromRoom?: string;
 }
 
 /** The visible object standing in for a content item. */

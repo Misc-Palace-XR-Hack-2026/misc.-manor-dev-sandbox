@@ -30,6 +30,11 @@ export const ROOMS_PICKER_ORDER: readonly RoomSlot[] = [
   ...ROOM_DIRECTORY.filter((r) => r.id !== GUEST_ROOM_ID),
 ];
 
+/** Whose room it is, for credits: "Matt" for Matt's room. Undefined for unknown rooms. */
+export function roomOwnerName(id: string): string | undefined {
+  return ROOM_DIRECTORY.find((r) => r.id === id)?.defaultName.replace(/'s room$/i, '');
+}
+
 export const isRoomId = (id: string | null | undefined): id is string =>
   Boolean(id) && ROOM_DIRECTORY.some((r) => r.id === id);
 

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DROP_MAX, DROP_MIN, devRoomObjects, dropKey, pickDrop } from '../src/core/random-drop';
-import { GUEST_ROOM_ID, ROOM_DIRECTORY } from '../src/core/rooms';
+import { GUEST_ROOM_ID, ROOM_DIRECTORY, roomOwnerName } from '../src/core/rooms';
 import { randomSlot } from '../src/core/placement';
 import { getLayout } from '../src/core/layout';
 import { Store } from '../src/core/store';
@@ -63,7 +63,9 @@ test('dropIn copies the objects onto free slots as one undo step, and stops when
   const placed = store.dropIn(picked, rng(8));
   assert.equal(placed.length, picked.length);
   assert.equal(new Set(placed.map((id) => store.slotOf(id))).size, placed.length, 'each on its own slot');
-  assert.ok(picked.every((p, i) => store.content(store.state.representations.find((r) => r.id === placed[i])!.contentItemId)!.title === p.content.title));
+  const copies = placed.map((id) => store.content(store.state.representations.find((r) => r.id === id)!.contentItemId)!);
+  assert.ok(picked.every((p, i) => copies[i].title === p.content.title));
+  assert.ok(copies.every((c, i) => c.fromRoom === picked[i].room), 'each copy remembers whose room it came from');
   store.undo();
   assert.equal(store.state.contentItems.length, before);
 
@@ -71,4 +73,49 @@ test('dropIn copies the objects onto free slots as one undo step, and stops when
   const many = [...devRoomObjects(repo).values()].flat();
   assert.equal(store.dropIn(many, rng(9)).length, Math.min(free, many.length));
   assert.equal(store.freeSlotIds().length, Math.max(0, free - many.length));
+});
+
+test('a drop keeps the other persons content but picks a random object kind', () => {
+  const byRoom = devRoomObjects(repo);
+  const originals = new Map([...byRoom.values()].flat().map((i) => [dropKey(i.content), i.kind]));
+  let differed = 0;
+  for (let seed = 1; seed <= 40; seed++) {
+    for (const item of pickDrop(byRoom, seedDemoRoom(), rng(seed))) {
+      if (item.kind !== originals.get(dropKey(item.content))) differed++;
+    }
+  }
+  assert.ok(differed > 0, 'at least some drops should not keep the original object');
+});
+
+test('a drop skips object kinds the room already has', () => {
+  const room = seedDemoRoom();
+  const had = new Set(room.representations.map((r) => r.objectKind));
+  for (let seed = 1; seed <= 40; seed++) {
+    const kinds = pickDrop(devRoomObjects(repo), room, rng(seed)).map((p) => p.kind);
+    assert.ok(kinds.every((k) => !had.has(k) || k === 'spoon'), `seed ${seed}: ${kinds.join()}`);
+    const others = kinds.filter((k) => k !== 'spoon');
+    assert.equal(new Set(others).size, others.length, 'no duplicate non-spoon kinds in one drop');
+  }
+});
+
+test('spoons stay spoons when dropped', () => {
+  const originals = new Map([...devRoomObjects(repo).values()].flat().map((i) => [dropKey(i.content), i.kind]));
+  let spoons = 0;
+  for (let seed = 1; seed <= 50; seed++) {
+    for (const item of pickDrop(devRoomObjects(repo), seedDemoRoom(), rng(seed))) {
+      if (originals.get(dropKey(item.content)) !== 'spoon') continue;
+      assert.equal(item.kind, 'spoon');
+      spoons++;
+    }
+  }
+  assert.ok(spoons > 0, 'Omari spoons should show up in some drops');
+});
+
+test('a dropped object is credited to the person whose room it came from', () => {
+  assert.equal(roomOwnerName('matt'), 'Matt');
+  assert.equal(roomOwnerName('jawan'), 'Jawan');
+  assert.equal(roomOwnerName('nobody'), undefined);
+  for (const items of devRoomObjects(repo).values()) {
+    for (const item of items) assert.ok(roomOwnerName(item.room), item.room);
+  }
 });

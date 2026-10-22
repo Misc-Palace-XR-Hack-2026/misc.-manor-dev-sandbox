@@ -9,6 +9,7 @@ import {
   EYE_HEIGHT,
   FLAT_FOV,
   overviewExitEnd,
+  poseFromLookAt,
   floorRegionsFromBoxes,
   glidePose,
   horizontalYaw,
@@ -232,4 +233,10 @@ test('the dolly runs from the walk lens at the overview pullback to a long lens 
     prev = l;
   }
   assert.deepEqual(dollyLens(cam, target, ortho, 2), end);
+});
+
+test('from the stand by the shelf, looking at the middle of the room faces into it (west), not at the shelf', () => {
+  const look = poseFromLookAt([STAND.x, STAND.y, STAND.z], [10.3 / 2, STAND.y, 3.6]);
+  assert.ok(Math.abs(shortestYawDelta(0, look.yaw)) > 0.5, 'not still facing the shelf');
+  assert.ok(look.yaw > 0.5 && look.yaw < Math.PI, 'turns toward -x, into the room');
 });

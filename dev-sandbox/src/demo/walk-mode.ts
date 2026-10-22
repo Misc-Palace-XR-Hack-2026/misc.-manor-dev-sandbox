@@ -16,6 +16,7 @@ import {
   GLIDE_MOVE_S,
   glidePose,
   horizontalYaw,
+  shortestYawDelta,
   overviewEntryStart,
   overviewExitEnd,
   poseFromLookAt,
@@ -70,6 +71,8 @@ export interface WalkOptions {
   start?: { from: WalkPose; to: WalkPose; fov?: number };
   /** Show a short line of text to the visitor. */
   say?: (text: string, ms?: number) => void;
+  /** Runs at the end of every frame, once the walking eye has its pose for the frame. */
+  afterFrame?: (t: number) => void;
 }
 
 /** Keep zooming out under a slab this long (seconds) and the visitor pops up through it. */
@@ -84,10 +87,14 @@ export interface WalkHandle {
   readonly camera: THREE.PerspectiveCamera;
   /** Where the visitor is headed: 'overview' as soon as a glide up starts, 'walk' as soon as one down starts. */
   readonly mode: Mode;
+  /** How far zooming out has slid the eye back (metres, along the floor) from where the visitor stands. */
+  readonly steppedBack: number;
   /** Glide up to the isometric overview, remembering where the visitor stood. */
   toOverview(): void;
   /** Glide back down to where the visitor stood before the overview. */
   toWalk(): void;
+  /** While walking, ease the view part of the way (0..1, shortest turn) toward facing a point on the floor plan. */
+  lookToward(x: number, z: number, amount: number): void;
   dispose(): void;
 }
 
@@ -216,9 +223,9 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
     view.setDemo({ ...base, camera: mode === 'walk' ? camera : undefined, frame: onFrame, tap: onTap });
   };
 
-  // Objects face the isometric camera in the overview, as in the sandbox.
+  // Same object facing as walking: they must not spin when the camera switches.
   const setOverviewHooks = () => {
-    view.setDemo({ ...base, yaw: undefined, frame: onFrame, tap: onTap });
+    view.setDemo({ ...base, frame: onFrame, tap: onTap });
   };
 
   const enterWalkUi = () => {
@@ -471,6 +478,7 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
 
     if (mode === 'walk' && !glide) stepZoom(dt);
     place();
+    options.afterFrame?.(t);
   }
 
   const pinchSpan = () => {
@@ -490,9 +498,9 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
       return;
     }
     if (glide || touches.size > 2) return;
-    dragging = true;
     dragPointer = e.pointerId;
     lastDrag = { x: e.clientX, y: e.clientY };
+    dragging = false;
     canvas.setPointerCapture(e.pointerId);
   };
 
@@ -504,9 +512,15 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
       pinchDist = span;
       return;
     }
-    if (!dragging || e.pointerId !== dragPointer || glide) return;
+    if (e.pointerId !== dragPointer || glide) return;
     const dx = e.clientX - lastDrag.x;
     const dy = e.clientY - lastDrag.y;
+    if (!dragging) {
+      if (Math.hypot(dx, dy) < 12) return;
+      dragging = true;
+      lastDrag = { x: e.clientX, y: e.clientY };
+      return;
+    }
     lastDrag = { x: e.clientX, y: e.clientY };
     if (Math.abs(dx) + Math.abs(dy) < 0.5) return;
     const next = dragLook(lookTargetYaw, lookTargetPitch, dx, dy);
@@ -582,11 +596,20 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
   return {
     camera,
     get mode() { return leaving ? 'overview' : mode; },
+    get steppedBack() { return mode === 'walk' ? backed : 0; },
     toOverview() {
       if (mode === 'walk' && !leaving) returnToOverview(frameTime);
     },
     toWalk() {
       if (mode === 'overview' || leaving) walkBack(frameTime);
+    },
+    lookToward(x, z, amount) {
+      if (mode !== 'walk' || leaving || glide || dragging) return;
+      const yaw = horizontalYaw([pose.x, pose.y, pose.z], [x, pose.y, z]);
+      const d = shortestYawDelta(lookYaw, yaw) * amount;
+      // A small nudge the short way, so the portal (and the objects flying out of it) stay on screen.
+      const cap = 0.32; // ~18°
+      lookTargetYaw = lookYaw + Math.sign(d) * Math.min(Math.abs(d), cap);
     },
     dispose() {
       canvas.removeEventListener('pointerdown', onPointerDown);

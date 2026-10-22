@@ -81,21 +81,35 @@ export class SoundtrackPlayer {
       this.notify();
       return;
     }
+    this.playFromGesture();
+  }
+
+  /** Start following the room's track (the jukebox pick). No-op when music is off or already playing. */
+  startFromGesture(): void {
+    if (!currentTrack(this.store.state) || this.soundState === 'playing') return;
+    this.playFromGesture();
+  }
+
+  private playFromGesture(): void {
+    const track = currentTrack(this.store.state);
+    if (!track) return;
     this.muted = false;
     this.enabled = true;
     if (this.away || this.embedPlaying) { this.notify(); return; }
     this.wanted = track;
     if (this.last !== track) this.audio.src = trackUrl(track);
     this.last = track;
-    this.playFromGesture();
-  }
-
-  private playFromGesture(): void {
     const version = ++this.gestureVersion;
     this.blocked = false;
-    this.audio.volume = 1;
+    this.audio.volume = 0;
     // Keep play() on the trusted click/tap stack, before any promise or fade.
-    void this.audio.play().then(() => this.notify(), () => {
+    void this.audio.play().then(() => {
+      this.notify();
+      void this.fade(0, 1, 1800, (value) => {
+        if (version !== this.gestureVersion) return;
+        this.audio.volume = Math.min(1, Math.max(0, value));
+      });
+    }, () => {
       if (version !== this.gestureVersion) return;
       this.blocked = true;
       this.notify();
@@ -168,11 +182,10 @@ export class SoundtrackPlayer {
       else { this.return('hidden'); if (document.hasFocus()) this.return('outbound'); }
     };
     document.addEventListener('visibilitychange', visibility);
-    window.addEventListener('blur', () => this.leave('blur'));
-    window.addEventListener('focus', () => { this.return('blur'); this.return('outbound'); });
+    // Do not pause on window blur: focusing a <select>, an iframe preview, or mobile chrome fires blur
+    // and was leaving the room music stuck muted.
     window.addEventListener('pagehide', () => this.leave('page'));
     window.addEventListener('pageshow', () => { this.return('page'); visibility(); });
-    if (!document.hasFocus()) this.leave('blur');
     visibility();
     subscribeEmbedAudio(playing => this.setEmbedPlaying(playing));
     document.addEventListener('click', (event) => {

@@ -12,6 +12,7 @@ import { LIGHTING_PRESETS } from '../core/appearance';
 import { buildPreview, previewOpenUrl, type Preview } from '../core/preview';
 import { PreviewCardView } from './preview-card';
 import { mediaArt, type MediaArt } from '../core/media-art';
+import { roomOwnerName } from '../core/rooms';
 import { canEnterVr, enterReason, type NeighborhoodRoom } from '../xr/interaction';
 import { XrSession } from '../xr/session';
 
@@ -42,6 +43,8 @@ export interface DemoHooks {
   liftSelected?: boolean;
   /** Small preview card with one short status line (the demo on phones). */
   compactPreview?: boolean;
+  /** Demo walk: glowing pads only while moving an object, not on the first tap that opens its card. */
+  slotMarkers?: boolean | (() => boolean);
 }
 
 /** What a tap landed on, as seen through the active camera. */
@@ -53,7 +56,7 @@ export interface DemoTap {
   slotId: string | null;
   /** First hit on the room shell (walls, floors, built-ins). Floor meshes have `userData.surface === 'floor'`. */
   room: THREE.Intersection | null;
-  event: PointerEvent;
+  event: { clientX: number; clientY: number };
 }
 
 interface Entry {
@@ -66,8 +69,12 @@ interface Entry {
 
 interface Flight {
   from: THREE.Vector3;
+  /** When set, the object flies here (portal suck) instead of to its slot. */
+  to?: THREE.Vector3;
+  outbound?: boolean;
   start: number;
   duration: number;
+  onLand?: () => void;
 }
 
 export class RoomView {
@@ -161,6 +168,11 @@ export class RoomView {
       // can otherwise be hit-tested against buttons that appeared during pointerup.
       if (at) this.activateAt(at);
     });
+    el.addEventListener('dblclick', (e) => {
+      if (!this.demo) return;
+      e.preventDefault();
+      this.activateAt(e);
+    });
     el.addEventListener('pointermove', (e) => this.onHover(e));
     el.addEventListener('pointerleave', () => this.hideTooltip());
     // Esc backs out of whatever is in hand; a held object returns to where it came from.
@@ -226,25 +238,52 @@ export class RoomView {
    * Fly freshly placed objects in from a point (the demo's Random drop): each arcs out to its slot, one after another,
    * then rests as usual. Instant under reduced motion.
    */
-  flyIn(repIds: readonly string[], from: THREE.Vector3, stagger = 0.18, duration = 0.95): void {
+  flyIn(repIds: readonly string[], from: THREE.Vector3, { delay = 0, stagger = 0.18, duration = 0.95 } = {}): void {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     for (const id of this.flights.keys()) if (!this.objects.has(id)) this.flights.delete(id);
-    const start = performance.now() / 1000;
+    const start = performance.now() / 1000 + delay;
     repIds.forEach((id, i) => this.flights.set(id, { from: from.clone(), start: start + i * stagger, duration }));
   }
 
-  /** One frame of a fly-in; false once it has landed. */
+  /**
+   * Pull one object into a point (the demo portal). `onLand` runs once it disappears into the mouth. Instant under
+   * reduced motion.
+   */
+  flyOut(repId: string, to: THREE.Vector3, duration = 0.5, onLand?: () => void): void {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      onLand?.();
+      return;
+    }
+    const entry = this.objects.get(repId);
+    this.flights.set(repId, {
+      from: (entry?.group.position ?? to).clone(),
+      to: to.clone(),
+      outbound: true,
+      start: performance.now() / 1000,
+      duration,
+      onLand,
+    });
+  }
+
+  /** One frame of a fly-in or fly-out; false once it has landed. */
   private fly(e: Entry, f: Flight, t: number): boolean {
+    const dest = f.to ?? e.target;
     const k = (t - f.start) / f.duration;
     if (k >= 1) {
-      e.group.position.copy(e.target);
+      e.group.position.copy(f.outbound ? dest : e.target);
+      if (f.outbound) e.group.scale.setScalar(0.001);
       return false;
     }
     const s = k <= 0 ? 0 : 1 - (1 - k) ** 3;
-    e.group.position.lerpVectors(f.from, e.target, s);
-    e.group.position.y += Math.sin(Math.PI * Math.max(0, k)) * (1 + 0.15 * f.from.distanceTo(e.target));
-    e.group.scale.setScalar(k <= 0 ? 0.001 : 1.6 * (0.2 + 0.8 * Math.min(1, k * 2)));
-    e.group.rotation.y = this.yaw + (1 - s) * Math.PI * 2;
+    e.group.position.lerpVectors(f.from, dest, s);
+    e.group.position.y += Math.sin(Math.PI * Math.max(0, k)) * (1 + 0.15 * f.from.distanceTo(dest));
+    if (f.outbound) {
+      e.group.scale.setScalar(1.6 * Math.max(0.001, 1 - s));
+      e.group.rotation.y = this.yaw + s * Math.PI * 4;
+    } else {
+      e.group.scale.setScalar(k <= 0 ? 0.001 : 1.6 * (0.2 + 0.8 * Math.min(1, k * 2)));
+      e.group.rotation.y = this.yaw + (1 - s) * Math.PI * 2;
+    }
     return true;
   }
 
@@ -400,6 +439,16 @@ export class RoomView {
     if (cam) { cam.aspect = aspect; cam.updateProjectionMatrix(); }
   }
 
+  /** Redraw from the store (demo uses this when move-mode turns on without a store change). */
+  refresh(): void {
+    this.sync();
+  }
+
+  private slotMarkersOn(): boolean {
+    const v = this.demo?.slotMarkers;
+    return typeof v === 'function' ? v() : Boolean(v);
+  }
+
   // ---- state -> scene ---------------------------------------------------
   private sync(): void {
     const surfaceKey = JSON.stringify(this.store.state.surfaces ?? {});
@@ -421,7 +470,12 @@ export class RoomView {
     for (const rep of state.representations) {
       const slotId = this.store.slotOf(rep.id);
       const slot = layout.slots.find((s) => s.id === slotId);
-      if (!slot) continue; // unplaced: lives in the menu until it is put down
+      // Demo pickup must not vanish: keep drawing a held object on the spot it left.
+      if (!slot) {
+        const keep = this.demo?.liftSelected === false && (rep.id === this.store.holding || (this.slotMarkersOn() && rep.id === this.store.selectedId));
+        if (keep && this.objects.has(rep.id)) live.add(rep.id);
+        continue;
+      }
       live.add(rep.id);
       const content=this.store.content(rep.contentItemId);
       const contentKey=JSON.stringify([content?.title,content?.imageData]);
@@ -456,7 +510,8 @@ export class RoomView {
     const restricted = this.demo?.slots;
     this.markerGroup.visible = restricted
       ? held || this.store.selectedId !== null
-      : held || (this.store.selectedId !== null && !this.objects.has(this.store.selectedId));
+      : held || (this.store.selectedId !== null && !this.objects.has(this.store.selectedId))
+        || this.slotMarkersOn();
     for (const [slotId, m] of this.markers) {
       m.visible = !restricted || restricted.has(slotId);
       const occupant = this.store.repAt(slotId);
@@ -493,6 +548,8 @@ export class RoomView {
       if (flight) {
         if (this.fly(e, flight, t)) continue;
         this.flights.delete(id);
+        const land = flight.onLand;
+        if (land) queueMicrotask(land);
       }
       const presenting = Boolean(this.xr?.presenting);
       const bob = presenting || id !== selected ? 0 : 0.2 + Math.sin(t * 4) * 0.05;
@@ -616,6 +673,8 @@ export class RoomView {
       this.cardPreview = buildPreview(content);
       this.cardArt = mediaArt(content);
     }
+    const owner = content.fromRoom ? roomOwnerName(content.fromRoom) : undefined;
+    this.card.setByline(owner ? `from ${owner}` : null);
     this.card.show(this.cardPreview, this.cardArt, content.sourceKind === 'url' ? previewOpenUrl(content.sourceRef) : null);
     if (sheet) {
       // Position the card with its bottom-right corner 10px above and aligned with the sheet's top-right.
@@ -693,13 +752,13 @@ export class RoomView {
     }
   }
 
-  private ray(e: PointerEvent): void {
+  private ray(e: { clientX: number; clientY: number }): void {
     const r = this.renderer.domElement.getBoundingClientRect();
     const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     this.raycaster.setFromCamera(ndc, this.activeCamera);
   }
 
-  private repIdAt(e: PointerEvent): string | null {
+  private repIdAt(e: { clientX: number; clientY: number }): string | null {
     this.ray(e);
     const hit = this.raycaster.intersectObjects(this.objectsGroup.children, true)[0];
     let o: THREE.Object3D | null = hit?.object ?? null;
@@ -707,7 +766,8 @@ export class RoomView {
     return (o?.userData.repId as string | undefined) ?? null;
   }
 
-  private slotIdAt(e: PointerEvent): string | null {
+  private slotIdAt(e: { clientX: number; clientY: number }): string | null {
+    if (!this.markerGroup.visible) return null;
     this.ray(e);
     const allowed = this.demo?.slots;
     const hit = this.raycaster.intersectObjects(this.markerGroup.children, false).find((h) => !allowed || allowed.has(h.object.userData.slotId as string));
@@ -717,10 +777,13 @@ export class RoomView {
   private onPointerUp(e: PointerEvent): void {
     const d = this.downAt;
     this.downAt = null;
-    this.clickAt = d && d.pointerId === e.pointerId && Math.hypot(e.clientX - d.x, e.clientY - d.y) <= 5 ? e : null;
+    if (!d || d.pointerId !== e.pointerId) return;
+    const dist = Math.hypot(e.clientX - d.x, e.clientY - d.y);
+    const same = Boolean(this.demo && this.store.selectedId && this.store.selectedId === this.repIdAt(e));
+    this.clickAt = dist <= 5 || (same && dist <= 24) ? e : null;
   }
 
-  private activateAt(e: PointerEvent): void {
+  private activateAt(e: { clientX: number; clientY: number }): void {
     const selected = this.store.selectedId;
     const repId = this.repIdAt(e); // What object did we click on?
 
