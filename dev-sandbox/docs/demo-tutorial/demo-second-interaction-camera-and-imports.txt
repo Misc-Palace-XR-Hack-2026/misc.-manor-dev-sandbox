@@ -1,2 +1,30 @@
 - the interaction after the intro, will be drawn by the users curiosity to a "save point" looking thing off to the side of the other side of the room
 similar to the jukebox, but this object is off the ground floor not on the room but near the stairs side, and the user will see it
+
+- this save point will now be where we go for importing files and the random drop, no more + button in the bottom right, also we are stil lin demo mode not free demo, so the only thing we should be able to do after interactio n1 is see Help in the bottom for those that need help on how to move thus far and interact, may need tweaking
+
+the user will be curious and walk to the save point and that wil lteach them how to move, for now just make the save point animation, do the ui hud changes i mentioned, and dont exit the tutorial yet, maybe have a exit tutorial button next to "dev" lowere left form now on so you dont do i t automatically now, 
+
+and for the random drop dont impolement that yet, jut move the ui to the save point, when you click the save point whatehr in front of it or like near enough to click the save point, it should show the option "Add link or file" "import from bookmarks (file)" and the "random drop" option but dont let random drop do anythibg yet, add bject or file is the same as what dev has, and then idk we can discuss
+
+- ofirst add a "skip sequcne 1" button lower left near "dev" so i can auto organize the shelf stuff wihtout exiting tutorial and okay now add rndom drop mechanic, shosoe 4-8 items randomly to add to the rooms, they should come from the colelctiv total of the objects in all of the devs rooms, objects shouldnt repeat, and 4-8 random amoutn and pick rnadomly from thedevs, they should all land randomly in the room by magically organizing themselves, for now doit simple and just have theobjects fly to their positions, no need to anticipate the motion just have them sprout out of the "save point" 
+alos make sure the "too far" when clicking on the save point dialogue does not overalp w the "Move closer to ge tot the portal" change wording in that text box to "portal" , also move the portal lsightly closer to the edge of the room it s abit far, similar to jukebox, also the bikinig bue ring around Camrea (Tactile) should go away if they dont click it after some time, it shouldnt always stay 
+fix the simplest stuff first, also make save point same lvel asthe "ground floor" its abit high up rn
+
+choose your camera line shoyuld show after a few seconds even if the visotr nevers turns around
+
+do simplest things first and consult if eneeded
+
+-- also when we click random object drop, our camera shoud face back towards teh room a bit, idk figure out closest direction to center of room and move the persons camera slightly to look towarsd center a bit for ease
+, also the items shoud fly out of the portal into their spots in the room, also we should add a little text over the preveiw of the objects that belong to others the name of htat dev or in italics from <dev name> in the corner somewhere of the preveiw card,
+
+now when a user interacts with the portal in any way like iport or random or files, after that we show the edit room button to the left of help, no indicator on it just show that that buttn aooears, and now the jukebox should be visiable and allow for ourmusic slection (no feeding music yet) so update the jukebox to not appear until the 2nd interaction w portal completes
+and exit tutorial button now skops to seq 2 being done, w camera selctor help and edit rooms button on the bottom,  that is now "free mode" free mode is after sequence 2 is done all those options and what we have now
+
+does that make sense? lets disucss 
+
+before you do all that this is great, pushing this for now and you work on the stuff you can that i mentioned in the next commit and push and plam stuff for discussion as neeed 
+
+
+
+
