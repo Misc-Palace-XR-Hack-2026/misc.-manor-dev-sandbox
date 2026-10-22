@@ -38,6 +38,10 @@ export const SHOWCASE_ROOM_IDS: readonly string[] = ROOM_DIRECTORY
 export const isShowcaseRoom = (id: string | null | undefined): boolean =>
   Boolean(id) && SHOWCASE_ROOM_IDS.includes(id!);
 
+/** In the public demo, selecting 'My room' should return to demo-visit rather than switching to sandbox guest. */
+export const isDemoHomeAlias = (currentRoomId: string | null | undefined, targetRoomId: string): boolean =>
+  targetRoomId === GUEST_ROOM_ID && Boolean(currentRoomId?.startsWith('demo-'));
+
 /** The committed JSON a room seeds from, or undefined for rooms that start empty. */
 function seedSource(id: string, repo: Record<string, unknown>): unknown {
   const slot = ROOM_DIRECTORY.find((r) => r.id === id);

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { Store, roomKeys, normalizeRoom, validateRoom } from '../src/core/store';
 import { seedRevision, canonicalJson } from '../src/core/seed-revision';
 import {
-  GUEST_ROOM_ID, SHOWCASE_ROOM_IDS, isShowcaseRoom, openRoom, seedRoom, seedRevisionFor,
+  GUEST_ROOM_ID, SHOWCASE_ROOM_IDS, isDemoHomeAlias, isShowcaseRoom, openRoom, seedRoom, seedRevisionFor,
 } from '../src/core/rooms';
 
 // Defect: a localStorage save always beat the committed rooms/*.json, so returning visitors never saw
@@ -61,6 +61,13 @@ test('showcase rooms are exactly the five seeded dev rooms; My room is never one
   assert.equal(isShowcaseRoom(GUEST_ROOM_ID), false);
   assert.equal(isShowcaseRoom('matt'), true);
   assert.equal(isShowcaseRoom('nope'), false);
+});
+
+test('demo treats guest as an alias for demo-visit home, not a room switch target', () => {
+  assert.equal(isDemoHomeAlias('demo-visit', 'guest'), true);
+  assert.equal(isDemoHomeAlias('demo-visit', 'matt'), false);
+  assert.equal(isDemoHomeAlias('guest', 'guest'), false);
+  assert.equal(isDemoHomeAlias(undefined, 'guest'), false);
 });
 
 test('a freshly seeded showcase room records the revision it came from', () => {

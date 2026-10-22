@@ -83,3 +83,16 @@ test('repo room labels are derived from the filename', () => {
   assert.equal(repoRoomLabel('greenhouse-conservatory'), 'Greenhouse Conservatory');
   assert.equal(repoRoomLabel('matt'), 'Matt');
 });
+
+
+test('in demo mode, selecting My room returns home instead of switching to sandbox guest', () => {
+  const store = new Store(newRoom('My room'), 'demo-visit');
+  const before = JSON.stringify(store.state);
+  runPanelAction(store, 'visit-room:omari', repoRooms);
+  assert.equal(store.visiting, 'omari');
+  const result = runPanelAction(store, 'room:guest', repoRooms);
+  assert.equal(result.tutorialEvent, 'returned');
+  assert.equal(store.visiting, null);
+  assert.equal(store.roomId, 'demo-visit');
+  assert.equal(JSON.stringify(store.state), before);
+});
