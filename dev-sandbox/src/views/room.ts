@@ -145,7 +145,7 @@ export class RoomView {
     this.controls.maxZoom = 3;
     this.controls.maxPolarAngle = Math.PI * 0.49;
     this.controls.dampingFactor = 0.15; // Higher damping = stops faster after drag
-    this.controls.mouseButtons.RIGHT = -1;
+    this.controls.mouseButtons.RIGHT = null;
     this.controls.update();
 
     this.practicePad.dataset.tutorial='place-pad';
