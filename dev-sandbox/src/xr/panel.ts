@@ -37,6 +37,7 @@ export class XrPanel {
   private scroll = 0;
   private shown: Hit[] = [];
   private guideShown: Array<{ id: string; y: number }> = [];
+  status = '';
   draft = new XrCreation();
   guide: OnboardingState | null = null;
 
@@ -51,10 +52,11 @@ export class XrPanel {
     this.texture.colorSpace = THREE.SRGBColorSpace;
     this.mesh = new THREE.Mesh(
       new THREE.PlaneGeometry(0.84, 1.16),
-      new THREE.MeshBasicMaterial({ map: this.texture, transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }),
+      new THREE.MeshBasicMaterial({ map: this.texture, transparent: true, depthWrite: false, depthTest: false, toneMapped: false, side: THREE.DoubleSide }),
     );
     this.mesh.position.set(0, 1.28, -1.15);
     this.mesh.name = 'xr-menu';
+    this.mesh.renderOrder = 30; // Reachable controller UI must not be cut by the loft/stair shell.
     this.guideCanvas.width = GW;
     this.guideCanvas.height = GH;
     this.guideTexture = new THREE.CanvasTexture(this.guideCanvas);
@@ -75,6 +77,8 @@ export class XrPanel {
     this.redraw();
     this.redrawGuide();
   }
+
+  get currentPage(): PanelPage { return this.page; }
 
   get visible(): boolean {
     return this.open;
@@ -149,6 +153,12 @@ export class XrPanel {
     const y = (1 - uv.y) * H;
     return this.shown.findIndex((b) => Math.abs(b.x - x) <= b.w / 2 && Math.abs(b.y - y) <= b.h / 2);
   }
+
+  actionAt(uv: { x: number; y: number }): string | undefined {
+    return this.open ? this.shown[this.hitIndex(uv)]?.id : undefined;
+  }
+
+  setStatus(text: string): void { this.status = text; this.redraw(); }
 
   activate(uv: { x: number; y: number }, mesh?: THREE.Mesh): void {
     if (mesh === this.guideMesh) {
@@ -257,7 +267,7 @@ export class XrPanel {
     c.fillText(section, 48, 122);
     const detail = this.page === 'create' && this.draft.error
       ? this.draft.error
-      : preview?.href || preview?.detail || 'Point at an object to see its name and link.';
+      : this.status || (this.page === 'portal' ? 'No overlay? Browser import exits VR; your room stays saved.' : this.page === 'jukebox' || this.page === 'music' ? 'Pick a track, then Play. Own music uploads are not supported yet.' : preview?.href || preview?.detail || 'Point at an object to see its name and link.');
     c.fillStyle = this.page === 'create' && this.draft.error ? HUD.danger : HUD.muted;
     const description = this.page === 'create' && this.draft.error ? detail : preview?.title ? preview.title + ' · ' + detail : detail;
     c.fillText(this.clip(c, description, 928), 48, 158);

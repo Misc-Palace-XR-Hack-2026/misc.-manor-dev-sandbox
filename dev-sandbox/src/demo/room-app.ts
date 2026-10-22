@@ -1,7 +1,7 @@
 import { Store } from '../core/store';
 import { MenuView, type RepoRoom } from '../views/menu';
 import type { RoomView } from '../views/room';
-import { SoundtrackPlayer } from '../views/soundtrack';
+import { roomSoundtrack, type SoundtrackPlayer } from '../views/soundtrack';
 import { createRoomCapture } from '../views/room-capture';
 import { createSoundtrackControl } from '../views/soundtrack-control';
 import { REPO_ROOMS } from '../core/repo-rooms';
@@ -29,7 +29,7 @@ export function mountEditor(store: Store): DemoEditor {
 }
 
 export function mountMusic(store: Store): SoundtrackPlayer {
-  return new SoundtrackPlayer(store);
+  return roomSoundtrack(store);
 }
 
 export function mountMute(player: SoundtrackPlayer): void {

@@ -38,6 +38,12 @@ async function defaultFade(from: number, to: number, ms: number, set: (value: nu
   });
 }
 
+const players = new WeakMap<Store, SoundtrackPlayer>();
+/** One audio owner per Store, shared by desktop, demo and XR. */
+export function roomSoundtrack(store: Store): SoundtrackPlayer {
+  return players.get(store) ?? new SoundtrackPlayer(store);
+}
+
 export class SoundtrackPlayer {
   private audio: AudioLike;
   private fade: FadeFn;
@@ -90,7 +96,17 @@ export class SoundtrackPlayer {
     this.playFromGesture();
   }
 
+  pauseFromGesture(): void { this.leave('user'); }
+
+  muteFromGesture(): void {
+    this.gestureVersion++;
+    this.muted = true;
+    this.audio.pause();
+    this.notify();
+  }
+
   private playFromGesture(): void {
+    this.pauseReasons.delete('user');
     const track = currentTrack(this.store.state);
     if (!track) return;
     this.muted = false;
@@ -122,6 +138,7 @@ export class SoundtrackPlayer {
     private store: Store,
     options: { audio?: AudioLike; fade?: FadeFn; listen?: boolean } = {},
   ) {
+    players.set(store, this);
     this.audio = options.audio ?? new Audio();
     this.fade = options.fade ?? defaultFade;
     this.audio.loop = true;

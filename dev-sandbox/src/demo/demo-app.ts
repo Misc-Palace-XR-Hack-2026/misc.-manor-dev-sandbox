@@ -7,7 +7,8 @@ import {
 } from '../core/intro-timeline';
 import { RoomView, type DemoHooks, type DemoTap } from '../views/room';
 import { REPO_ROOMS, REPO_ROOM_MAP } from '../core/repo-rooms';
-import { devRoomObjects, pickDrop } from '../core/random-drop';
+import { devRoomObjects } from '../core/random-drop';
+import { randomPortalDrop } from '../core/room-amenities';
 import { buildKindInventory } from '../views/kind-picker';
 import { buildObject } from '../views/objects';
 import { disposeGroup } from '../views/resources';
@@ -175,7 +176,10 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   const door = buildDoor();
   const savePoint = buildSavePoint();
   savePoint.group.position.set(...SAVE_POINT_POS);
-  view.addToScene(jukebox.group, box.group, door.group, savePoint.group);
+  const desktopScenery = new THREE.Group();
+  desktopScenery.userData.xrDesktopOnly = true;
+  desktopScenery.add(jukebox.group, box.group, door.group, savePoint.group);
+  view.addToScene(desktopScenery);
 
   // ---- overlay --------------------------------------------------------------
   const black = el('div', 'demo-black');
@@ -415,8 +419,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
    * of the way toward the middle of the room so they see them land.
    */
   function randomDrop(): void {
-    const picked = pickDrop(dropPool, store.state);
-    const placed = store.dropIn(picked);
+    const { picked, placed } = randomPortalDrop(store, dropPool);
     if (!placed.length) {
       showHint(picked.length ? 'Room is full, visit portal for spring cleaning.' : 'Nothing new to drop in', 2200);
       return;

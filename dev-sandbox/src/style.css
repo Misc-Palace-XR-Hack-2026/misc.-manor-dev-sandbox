@@ -124,6 +124,17 @@ button:disabled { opacity: 0.4; cursor: default; }
 }
 .xr-dom-overlay[hidden] { display: none; }
 .xr-dom-overlay .preview-card { pointer-events: auto; }
+.xr-import-sheet {
+  position: fixed; inset: 6vh max(16px, calc((100vw - 760px) / 2)); z-index: 10000;
+  overflow: auto; pointer-events: auto; padding: 24px; border-radius: 28px;
+  color: #fff; background: rgba(23, 25, 30, .9); border: 1px solid rgba(255,255,255,.25);
+  backdrop-filter: blur(18px); font: 15px/1.5 system-ui, sans-serif;
+}
+.xr-import-sheet button, .xr-import-sheet input, .xr-import-sheet select {
+  min-height: 44px; margin: 4px; max-width: 100%; border-radius: 22px;
+}
+.xr-import-sheet .add, .xr-import-sheet .neighborhood-actions { display: grid; gap: 8px; }
+.xr-import-sheet .kind-inventory { max-height: 210px; overflow: auto; }
 .preview-body {
   display: grid;
   gap: 6px;
@@ -192,6 +203,21 @@ button:disabled { opacity: 0.4; cursor: default; }
   pointer-events: none;
 }
 .mode-note[hidden], .chrome button[hidden], .fab[hidden] { display: none; }
+
+/* Mirror of the public build's `.demo-dev` shortcut, lifted clear of the chrome bar. */
+.app-prod {
+  position: fixed;
+  left: max(16px, env(safe-area-inset-left));
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 72px);
+  z-index: 13;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(20, 16, 28, 0.45);
+  color: color-mix(in srgb, var(--text) 60%, transparent);
+  font: 11px/1.4 ui-monospace, monospace;
+  text-decoration: none;
+}
+.app-prod:hover, .app-prod:focus-visible { color: var(--text); outline: none; }
 
 .chrome {
   display: flex;

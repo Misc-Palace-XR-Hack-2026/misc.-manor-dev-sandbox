@@ -207,7 +207,7 @@ export class RoomView {
     this.sync();
     this.xr = new XrSession(this.renderer, this.scene, this.store, this.objectsGroup, this.markerGroup, this.roomGroup, rooms, (event) => {
       document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: event }));
-    });
+    }, (ids, from) => this.flyIn(ids, from, { delay: .1, stagger: .1, duration: .85 }));
     this.vrButton.type = 'button';
     this.vrButton.className = 'vr-enter';
     this.vrButton.textContent = 'Enter VR';
@@ -681,7 +681,7 @@ export class RoomView {
       const pulse = 0.4 + Math.sin(t * 5) * 0.12;
       for (const m of this.markers.values()) (m.material as THREE.MeshBasicMaterial).opacity = pulse;
     }
-    this.demo?.frame?.(t);
+    if (!this.xr?.presenting) this.demo?.frame?.(t);
     const xrCamera = this.xr?.tick() ?? null;
     if (xrCamera) {
       this.controls.enabled = false;

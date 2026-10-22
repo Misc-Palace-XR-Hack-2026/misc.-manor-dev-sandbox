@@ -1,0 +1,23 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { Store, newRoom } from '../src/core/store';
+import { roomSoundtrack, SoundtrackPlayer } from '../src/views/soundtrack';
+globalThis.localStorage = { getItem: () => null, setItem() {} } as unknown as Storage;
+test('desktop and XR resolve the same soundtrack player; pause/mute are synchronous and embed still wins', async () => {
+  const store = new Store(newRoom());
+  const audio = { src: '', volume: 1, loop: false, preload: '', paused: true, plays: 0, addEventListener() {}, removeAttribute() {}, async play() { this.plays++; this.paused = false; }, pause() { this.paused = true; } };
+  const player = new SoundtrackPlayer(store, { audio, listen: false, fade: async (_a,b,_ms,set) => set(b) });
+  assert.equal(roomSoundtrack(store), player);
+  player.startFromGesture();
+  await player.idle();
+  assert.equal(audio.plays, 1);
+  player.pauseFromGesture();
+  assert.equal(audio.paused, true);
+  player.startFromGesture();
+  assert.equal(audio.paused, false);
+  player.muteFromGesture();
+  assert.equal(audio.paused, true);
+  player.setEmbedPlaying(true);
+  player.startFromGesture();
+  assert.equal(audio.paused, true);
+});

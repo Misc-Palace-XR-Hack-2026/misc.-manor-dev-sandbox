@@ -183,6 +183,8 @@ export type PanelPage =
   | 'home'
   | 'lighting'
   | 'music'
+  | 'portal'
+  | 'jukebox'
   | 'surfaces'
   | 'object'
   | 'inbox'
@@ -204,6 +206,9 @@ export interface PanelButton {
 }
 
 export interface PanelActionResult {
+  portalFiles?: boolean;
+  portalDrop?: boolean;
+  musicAction?: 'play' | 'pause' | 'mute';
   page?: PanelPage;
   teleport?: { x: number; y: number; z: number };
   exit?: boolean;
@@ -310,12 +315,22 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
       ...Object.entries(LIGHTING_PRESETS).map(([id, preset]) => ({ id: 'light:' + id, label: preset.label })),
     ];
   }
-  if (page === 'music') {
+  if (page === 'portal') return [
+    { id: 'page:home', label: 'Back' },
+    { id: 'page:create', label: 'Add link or text (VR keyboard)' },
+    { id: 'portal:drop', label: '⭐ Random drop' },
+    { id: 'portal:files', label: 'Files, photos & bookmarks (browser form)' },
+    { id: 'portal:clean', label: 'Hold trigger to spring clean' },
+  ];
+  if (page === 'music' || page === 'jukebox') {
     return [
       { id: 'page:home', label: 'Back' },
+      { id: 'player:play', label: 'Play / resume song' },
+      { id: 'player:pause', label: 'Pause song' },
+      { id: 'player:mute', label: 'Mute song' },
       { id: 'music:follow', label: 'Follow lighting' },
       { id: 'music:off', label: 'No music' },
-      ...ROOM_TRACKS.map((track) => ({ id: 'music:' + track, label: TRACK_LABELS[track] })),
+      ...ROOM_TRACKS.map((track) => ({ id: 'music:' + track, label: (store.state.soundtrack?.mode === 'track' && store.state.soundtrack.track === track ? '• ' : '') + TRACK_LABELS[track] })),
     ];
   }
   if (page === 'surfaces') {
@@ -429,6 +444,8 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
     { id: 'page:themes', label: 'Theme' },
     { id: 'page:object', label: 'Change object' },
     { id: 'page:rooms', label: 'Rooms' },
+    { id: 'page:portal', label: 'New-item portal' },
+    { id: 'page:jukebox', label: 'Jukebox' },
     { id: 'page:create', label: 'Add object' },
     { id: 'page:howto', label: 'How-to' },
     { id: 'undo', label: store.canUndo ? 'Undo' : 'Undo (nothing yet)' },
@@ -441,6 +458,11 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
 }
 
 export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom[] = [], draft?: XrCreation): PanelActionResult {
+  if (id === 'page:portal') return { page: 'portal' };
+  if (id === 'page:jukebox') return { page: 'jukebox' };
+  if (id === 'portal:drop') return { portalDrop: true };
+  if (id === 'portal:files') return { portalFiles: true };
+  if (id === 'player:play' || id === 'player:pause' || id === 'player:mute') return { musicAction: id.slice(7) as 'play' | 'pause' | 'mute' };
   if (id === 'page:home') return { page: 'home' };
   if (id === 'page:lighting') return { page: 'lighting', tutorialEvent: 'open-style' };
   if (id === 'page:music') return { page: 'music' };

@@ -19,6 +19,8 @@ globalThis.localStorage = { getItem: () => null, setItem() {} } as unknown as St
 test('VR panel keeps the existing title while the final name is unresolved', () => {
   painted.length = 0;
   const store = new Store(newRoom());
-  new XrPanel(store, () => {});
+  const panel = new XrPanel(store, () => {});
+  const menu = panel.group.children.find(o => o.name === 'xr-menu') as import('three').Mesh;
+  assert.equal((menu.material as import('three').MeshBasicMaterial).depthTest, false, 'reachable menu must not clip behind loft geometry');
   assert.equal(painted[0], 'Misc. Manor');
 });
