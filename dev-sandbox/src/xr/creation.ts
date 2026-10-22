@@ -61,8 +61,22 @@ export class XrCreation {
   message = '';
   created = false;
   caps = false;
+  editingContentId: string | null = null;
 
   get keys(): string[] { return keyboardKeys(this.caps); }
+  get editing(): boolean { return this.editingContentId !== null; }
+
+  beginEdit(contentId: string, title: string, sourceRef: string, mode: DraftMode): void {
+    this.editingContentId = contentId;
+    this.title = title;
+    this.text = sourceRef;
+    this.mode = mode;
+    this.kind = '';
+    this.field = 'title';
+    this.error = '';
+    this.message = '';
+    this.created = false;
+  }
 
   key(token: string): void {
     if (this.created) return;
@@ -92,6 +106,15 @@ export class XrCreation {
       if (url) sourceRef = url;
       else { this.error='Enter a valid http or https URL.'; return null; }
     }
+
+    if (this.editingContentId) {
+      store.updateContent(this.editingContentId, { title, sourceRef });
+      this.created = true;
+      this.error = '';
+      this.message = 'Saved changes.';
+      return null;
+    }
+
     const kind = this.kind && OBJECT_KINDS.includes(this.kind) ? this.kind : undefined;
     const before = store.state.contentItems.length;
     const id = store.addItem({ title, sourceRef, type, kind, place: store.freeSlotIds().length > 0 });
@@ -120,15 +143,16 @@ export function creationFormButtons(draft: XrCreation): Array<{id:string;label:s
 }
 
 export function creationKindButtons(draft: XrCreation): Array<{id:string;label:string}> {
+  if (draft.editing) return [];
   return [
     { id: 'create-kind:', label: (draft.kind ? '' : '• ') + 'Automatic object' },
     ...OBJECT_KINDS.map((kind) => ({ id: 'create-kind:' + kind, label: (draft.kind === kind ? '• ' : '') + OBJECT_LABELS[kind] })),
   ];
 }
 
-export function creationActionButtons(_draft: XrCreation): Array<{id:string;label:string}> {
+export function creationActionButtons(draft: XrCreation): Array<{id:string;label:string}> {
   return [
-    { id: 'create:submit', label: 'Create object' },
+    { id: 'create:submit', label: draft.editing ? 'Save changes' : 'Create object' },
     { id: 'create:cancel', label: 'Cancel' },
   ];
 }

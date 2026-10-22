@@ -79,7 +79,7 @@ export class XrPanel {
     return this.open;
   }
 
-  show(page: PanelPage = 'home'): void {
+  show(page: PanelPage = 'home', preserveDraft = false): void {
     if (page === 'guide') {
       this.redrawGuide();
       this.syncVisible();
@@ -88,7 +88,7 @@ export class XrPanel {
     this.open = true;
     this.page = page;
     this.scroll = 0;
-    if (page === 'create') this.draft = new XrCreation();
+    if (page === 'create' && !preserveDraft) this.draft = new XrCreation();
     this.redraw();
     this.syncVisible();
   }
