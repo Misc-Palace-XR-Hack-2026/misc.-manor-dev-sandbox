@@ -25,7 +25,7 @@ export const JUKEBOX_POS: Vec3 = [E + 1.1, 0, 1.3];
  */
 export const SAVE_POINT_POS: Vec3 = [2.6, 0, 8.45];
 /** Walking, the save point opens from this close (metres, measured on the floor plan); farther taps say walk closer. */
-export const SAVE_POINT_REACH = 3;
+export const SAVE_POINT_REACH = 6;
 /** The cardboard box of starter objects, on the floor in front of the bench and wall shelf. */
 export const BOX_POS: Vec3 = [8.3, 0, 2.2];
 /** What the camera looks at while the starter objects are introduced. */

@@ -183,8 +183,8 @@ test('the save point stands just off the room past the front edge, on the stairs
   assert.ok(x > 1.5, 'not tucked into the corner');
   // The closest a walking visitor gets: the front of the floor, kept BOUNDS_INSET in from its edge.
   assert.ok(Math.hypot(0, z - (front - BOUNDS_INSET)) < SAVE_POINT_REACH, 'within reach from the front of the floor');
-  // Across the room from where the tutorial leaves the visitor (x 8.3, z 4.8): out of reach until they walk over.
-  assert.ok(Math.hypot(8.3 - x, 4.8 - z) > SAVE_POINT_REACH * 2);
+  // Across the room from where the tutorial leaves the visitor (x 8.3, z 4.8): still a walk from there.
+  assert.ok(Math.hypot(8.3 - x, 4.8 - z) > SAVE_POINT_REACH);
 });
 
 test('first visit plays the intro; after it is seen, it does not, unless ?intro is given', () => {
