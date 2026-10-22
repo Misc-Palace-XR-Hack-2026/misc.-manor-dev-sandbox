@@ -18,6 +18,14 @@ const E = ROOM_EAST;
 export const DOOR_POS: Vec3 = [E + 1.6, 0, 3.3];
 /** Stands on the ground level beside the east end of the back-right wall, outside the room, facing into it. */
 export const JUKEBOX_POS: Vec3 = [E + 1.1, 0, 1.3];
+/**
+ * The save point (the "portal" to visitors) stands off the room like the jukebox, but on the other side: just past
+ * the open front edge on the stairs half (the west side itself is walled, which would hide it from the dollhouse), at
+ * ground-floor level. Across the room from where the tutorial leaves the visitor, within reach from the floor's edge.
+ */
+export const SAVE_POINT_POS: Vec3 = [2.6, 0, 8.45];
+/** Walking, the save point opens from this close (metres, measured on the floor plan); farther taps say walk closer. */
+export const SAVE_POINT_REACH = 3;
 /** The cardboard box of starter objects, on the floor in front of the bench and wall shelf. */
 export const BOX_POS: Vec3 = [8.3, 0, 2.2];
 /** What the camera looks at while the starter objects are introduced. */
@@ -35,8 +43,13 @@ export const DESIGN_ASPECT = 0.46;
 export const TUTORIAL_FOV = 55;
 /** How far the tutorial camera looks down, degrees. Steep enough that the top shelf faces the visitor. */
 export const TUTORIAL_PITCH = 32;
-/** Share of the frustum the framed points may use; the rest is breathing room at the edges. */
+/** Share of the frustum width the framed points may use; the rest is breathing room at the edges. */
 const FILL = 0.9;
+/**
+ * Screen bands the framed points stay out of, as shares of the screen height. The bottom band holds the visitor's
+ * hands, the dock and the preview card, so a slot or the box is never under them; the top band holds Skip.
+ */
+export const FRAME_BANDS = { top: 0.07, bottom: 0.4 };
 
 const corners = (min: Vec3, max: Vec3): Vec3[] =>
   [0, 1, 2, 3, 4, 5, 6, 7].map((i) => [i & 1 ? max[0] : min[0], i & 2 ? max[1] : min[1], i & 4 ? max[2] : min[2]]);
@@ -54,22 +67,46 @@ const FRAME_CENTER: Vec3 = [0, 1, 2].map((c) => {
 
 const rad = (deg: number) => (deg * Math.PI) / 180;
 
-/** The locked tutorial camera for a screen aspect (width / height): looks north and down at the frame points. */
+/**
+ * The locked tutorial camera for a screen aspect (width / height): looks north and down at the frame points, which
+ * sit between the screen bands (`FRAME_BANDS`), so on a phone the bench, shelf and box fill the upper part of the
+ * screen and the UI below never covers them.
+ */
 export function tutorialView(aspect: number): View {
   const a = Number.isFinite(aspect) && aspect > 0 ? Math.min(aspect, DESIGN_ASPECT) : DESIGN_ASPECT;
-  const tanV = Math.tan(rad(TUTORIAL_FOV) / 2) * FILL;
-  const tanH = tanV * a;
+  const tan = Math.tan(rad(TUTORIAL_FOV) / 2);
+  const tanH = tan * FILL * a;
+  // Allowed vertical screen range in normalized device coordinates (-1 bottom, 1 top).
+  const lo = (-1 + 2 * FRAME_BANDS.bottom) * tan, hi = (1 - 2 * FRAME_BANDS.top) * tan;
   const s = Math.sin(rad(TUTORIAL_PITCH)), c = Math.cos(rad(TUTORIAL_PITCH));
-  // Camera basis: forward (0, -s, -c), up (0, c, -s), right (1, 0, 0). Back off until every point is inside.
-  let d = 0;
-  for (const p of FRAME_POINTS) {
+  // Camera basis: forward (0, -s, -c), up (0, c, -s), right (1, 0, 0). The camera sits `d` back from the frame centre
+  // along the view and `e` along its up axis (same look direction). Each point (up offset v, depth z + d) needs
+  // lo * (z + d) <= v - e <= hi * (z + d).
+  const pts = FRAME_POINTS.map((p) => {
     const ry = p[1] - FRAME_CENTER[1], rz = p[2] - FRAME_CENTER[2];
-    const depth = -ry * s - rz * c;
-    d = Math.max(d, Math.abs(p[0] - FRAME_CENTER[0]) / tanH - depth, Math.abs(ry * c - rz * s) / tanV - depth);
+    return { x: Math.abs(p[0] - FRAME_CENTER[0]), v: ry * c - rz * s, z: -ry * s - rz * c };
+  });
+  /** The range of `e` that fits every point at distance `d` (empty when min > max). */
+  const shift = (d: number) => ({
+    min: Math.max(...pts.map((p) => p.v - hi * (p.z + d))),
+    max: Math.min(...pts.map((p) => p.v - lo * (p.z + d))),
+  });
+  let d = Math.max(0, ...pts.map((p) => p.x / tanH - p.z));
+  if (shift(d).min > shift(d).max) {
+    let far = d + 1;
+    while (shift(far).min > shift(far).max) far *= 2;
+    for (let i = 0; i < 50; i++) {
+      const mid = (d + far) / 2;
+      if (shift(mid).min > shift(mid).max) d = mid; else far = mid;
+    }
+    d = far;
   }
+  const range = shift(d);
+  const e = (range.min + range.max) / 2;
+  const center: Vec3 = [FRAME_CENTER[0], FRAME_CENTER[1] + c * e, FRAME_CENTER[2] - s * e];
   return {
-    camera: [FRAME_CENTER[0], FRAME_CENTER[1] + s * d, FRAME_CENTER[2] + c * d],
-    lookAt: [...FRAME_CENTER],
+    camera: [center[0], center[1] + s * d, center[2] + c * d],
+    lookAt: center,
     fov: TUTORIAL_FOV,
   };
 }

@@ -2,17 +2,20 @@ import * as THREE from 'three';
 import { Store, roomKeys } from '../core/store';
 import type { ObjectKind, RoomState } from '../core/types';
 import {
-  BOX_POS, DOOR_POS, INTRO_DURATION, JUKEBOX_POS, clampLook, introFrame, lookAround, markIntroSeen, tutorialView,
-  type View,
+  BOX_POS, DOOR_POS, INTRO_DURATION, JUKEBOX_POS, SAVE_POINT_POS, SAVE_POINT_REACH, clampLook, introFrame, lookAround,
+  markIntroSeen, tutorialView, type View,
 } from '../core/intro-timeline';
 import { RoomView, type DemoHooks, type DemoTap } from '../views/room';
-import { REPO_ROOMS } from '../core/repo-rooms';
+import { REPO_ROOMS, REPO_ROOM_MAP } from '../core/repo-rooms';
+import { devRoomObjects, pickDrop } from '../core/random-drop';
 import { buildKindInventory } from '../views/kind-picker';
 import { buildObject } from '../views/objects';
 import { disposeGroup } from '../views/resources';
 import { buildJukebox } from './jukebox';
 import { buildCardboardBox } from './cardboard-box';
-import { mountWalkMode } from './walk-mode';
+import { buildSavePoint } from './save-point';
+import { mountDemoHud, mountSavePointPanel, type DemoHud, type SavePointPanel } from './demo-hud';
+import { mountWalkMode, type WalkHandle } from './walk-mode';
 import {
   DEMO_ROOM_ID, SHELF_SLOTS, TUTORIAL_SLOTS, inBox, migrateDemoRoom, normalizeDemoOwner, prepareIntroReplayRoom,
   seedDemoRoom, tutorialDone,
@@ -22,7 +25,9 @@ import { EYE_HEIGHT, poseFromLookAt, type WalkPose } from '../core/walk';
 // The demo is one real room (the same RoomView the sandbox uses). Every visit, a scripted walk-in plays inside it and
 // ends on a locked tutorial view of the shelf: the visitor unpacks the starter objects from a cardboard box, looks at
 // them and sets them on the shelf. Finishing (or skipping) lifts the lock: the camera drops to standing height and
-// they walk the room in first person. The isometric room with edit tools ("free demo mode") is not reachable yet.
+// they walk the room in first person ("tactile"). Their goal now is the save point across the room: they get there by
+// walking or by switching the Camera to "dollhouse" (the isometric room). The save point adds links, files and
+// bookmarks. Only Exit tutorial brings in the sandbox edit tools.
 
 type Mode = 'intro' | 'tutorial' | 'walk';
 
@@ -37,6 +42,8 @@ const HELD_SCALE = 0.4;
 const POP_S = 0.45;
 /** Where the visitor stands once the tutorial is over: back from the bench, facing the shelf. */
 const STAND: WalkPose = { x: 8.3, y: EYE_HEIGHT, z: 4.8, yaw: 0, pitch: -0.12 };
+/** The goal line shows this long after the tutorial ends even if the visitor never looks toward the save point. */
+const GOAL_AFTER_MS = 6000;
 
 const DOOR_W = 2.2, DOOR_H = 3.3, POST = 0.2, DEPTH = 0.3;
 
@@ -145,7 +152,9 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   box.group.position.set(...BOX_POS);
   box.setFill(inBox(store.state).length);
   const door = buildDoor();
-  view.addToScene(jukebox.group, box.group, door.group);
+  const savePoint = buildSavePoint();
+  savePoint.group.position.set(...SAVE_POINT_POS);
+  view.addToScene(jukebox.group, box.group, door.group, savePoint.group);
 
   // ---- overlay --------------------------------------------------------------
   const black = el('div', 'demo-black');
@@ -159,7 +168,11 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   const dev = el('a', 'demo-dev', 'dev');
   dev.href = `${import.meta.env.BASE_URL}dev/`;
   dev.title = 'Dev sandbox';
-  document.body.append(black, skip, dock, hint, dev);
+  // Dev shortcut: straight to the save point part with the starters already on the shelf (still in the tutorial).
+  const skipSeq = el('button', 'demo-skip-seq', 'skip seq 1');
+  skipSeq.type = 'button';
+  skipSeq.title = 'Skip the walk-in and unpacking (starters go on the shelf)';
+  document.body.append(black, skip, dock, hint, dev, skipSeq);
   document.body.classList.add('demo-locked');
 
   let mode: Mode = 'intro';
@@ -243,6 +256,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
 
   let hintTimer = 0;
   function showHint(text = 'Place the object down', ms = 1600): void {
+    hud?.hideGoal(); // both sit at the top of the screen
     hint.textContent = text;
     hint.classList.add('demo-hint-on');
     window.clearTimeout(hintTimer);
@@ -274,6 +288,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     dock,
     keepSelectionOnPlace: true,
     liftSelected: false,
+    compactPreview: true,
     tap: onTap,
     frame: (t: number) => {
       const now = performance.now();
@@ -281,6 +296,9 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       last = now;
       jukebox.update(t, dt);
       box.update(t, dt);
+      savePoint.update(t, dt);
+      if (mode === 'walk') { watchForSavePoint(); return; }
+      if (skippingIntro) return;
       if (mode === 'intro') {
         elapsed = Math.min(INTRO_DURATION, elapsed + dt);
         const f = introFrame(elapsed, currentView());
@@ -305,6 +323,19 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       syncHeld(t);
     },
   };
+
+  /** Skip the walk-in only: cut through black to the tutorial view, where the tutorial starts as usual. */
+  let skippingIntro = false;
+  function skipIntro(): void {
+    if (mode !== 'intro' || skippingIntro) return;
+    skippingIntro = true;
+    black.style.transition = 'opacity 0.45s ease';
+    black.style.opacity = '1';
+    window.setTimeout(() => {
+      elapsed = INTRO_DURATION;
+      skippingIntro = false;
+    }, reduced ? 0 : 480);
+  }
 
   function beginTutorial(): void {
     if (mode !== 'intro') return;
@@ -336,18 +367,75 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     }
   }
 
-  /** Walk the room from wherever the tutorial camera is: it glides down to standing height, then the visitor is free. */
-  function startWalking(): void {
-    camera.updateMatrixWorld();
-    const p = camera.position;
-    const dir = camera.getWorldDirection(new THREE.Vector3());
-    const from = poseFromLookAt([p.x, p.y, p.z], [p.x + dir.x, p.y + dir.y, p.z + dir.z]);
-    mountWalkMode(view, store, {
-      overview: false,
-      start: { from, to: STAND, fov: camera.fov },
-      hooks: { frame: hooks.frame, yaw: 0, keepSelectionOnPlace: true, liftSelected: false },
-      say: (text, ms) => showHint(text, ms),
-    });
+  // ---- after the tutorial: the save point, the camera choice, Exit tutorial --------------------------------------
+  let walk: WalkHandle | null = null;
+  let hud: DemoHud | null = null;
+  let exited = false;
+  let goalShown = false;
+  const savePanel: SavePointPanel = mountSavePointPanel(store, (text, ms) => showHint(text, ms), randomDrop);
+  const portalMouth = new THREE.Vector3();
+
+  /** A handful of the devs' objects sprout out of the save point and fly to random free spots. */
+  function randomDrop(): void {
+    const picked = pickDrop(devRoomObjects(REPO_ROOM_MAP), store.state);
+    const placed = store.dropIn(picked);
+    if (!placed.length) {
+      showHint(picked.length ? 'No free spots left in the room' : 'Nothing new to drop in', 2200);
+      return;
+    }
+    view.flyIn(placed, portalMouth.copy(savePoint.center).setY(savePoint.center.y + 1.1));
+  }
+  const seen = new THREE.Vector3();
+
+  /** The goal shows the first time the save point comes into view while walking, or after GOAL_AFTER_MS anyway. */
+  function watchForSavePoint(): void {
+    if (goalShown || !walk || !hud || walk.mode !== 'walk') return;
+    const ndc = seen.copy(savePoint.center).project(walk.camera);
+    if (ndc.z < -1 || ndc.z > 1 || Math.abs(ndc.x) > 0.8 || Math.abs(ndc.y) > 0.9) return;
+    showGoal();
+  }
+  function showGoal(): void {
+    if (goalShown || !hud) return;
+    goalShown = true;
+    hud.showGoal();
+  }
+
+  /** How far the walking visitor stands from the save point, on the floor plan. */
+  const savePointDistance = (): number => {
+    const eye = walk!.camera.position;
+    return Math.hypot(eye.x - SAVE_POINT_POS[0], eye.z - SAVE_POINT_POS[2]);
+  };
+
+  /** Did this tap land on the save point (and not on something in front of it)? */
+  function onSavePoint(tap: DemoTap): boolean {
+    if (tap.repId) return false;
+    const d = savePoint.hit(tap.raycaster);
+    return d !== null && (!tap.room || tap.room.distance >= d);
+  }
+
+  /**
+   * A tap on the save point never walks the visitor there. Walking, it opens from within reach; from farther it says
+   * to come closer (that is how walking gets learned). From the dollhouse it opens from anywhere.
+   */
+  function onWalkTap(tap: DemoTap): boolean {
+    if (!walk || !onSavePoint(tap)) return false;
+    if (walk.mode === 'walk' && savePointDistance() > SAVE_POINT_REACH) {
+      showHint(exited ? 'Too far. Move closer to get to the portal.' : 'Too far. Move closer, or switch camera, to get to the portal.', 2400);
+      return true;
+    }
+    hud?.goalMet();
+    store.select(null);
+    savePanel.open();
+    return true;
+  }
+
+  /** Leave the tutorial: the sandbox edit tools and Rooms picker come in, still walking in first person. */
+  function exitTutorial(): void {
+    if (exited) return;
+    exited = true;
+    hud?.dispose();
+    hud = null;
+    if (walk?.mode === 'overview') walk.toWalk();
     // The edit tools carry the Rooms picker: visiting a built room and choosing My room again keeps this room as is.
     void import('./room-app').then(({ mountEditTools }) => {
       mountEditTools(store, view);
@@ -355,10 +443,31 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     });
   }
 
-  /** Lift the lock, stay in first person and bring in the edit tools. The iso overview is not in the demo yet. */
+  /** Walk the room from wherever the tutorial camera is: it glides down to standing height, then the visitor is free. */
+  function startWalking(): void {
+    camera.updateMatrixWorld();
+    const p = camera.position;
+    const dir = camera.getWorldDirection(new THREE.Vector3());
+    const from = poseFromLookAt([p.x, p.y, p.z], [p.x + dir.x, p.y + dir.y, p.z + dir.z]);
+    walk = mountWalkMode(view, store, {
+      overview: false, // the Camera choice switches to the dollhouse; no Overview button or Esc
+      overviewTapWalks: false,
+      start: { from, to: STAND, fov: camera.fov },
+      hooks: { frame: hooks.frame, yaw: 0, keepSelectionOnPlace: true, liftSelected: false, compactPreview: true, tap: onWalkTap },
+      say: (text, ms) => showHint(text, ms),
+    });
+    hud = mountDemoHud({
+      dev,
+      camera: 'tactile',
+      onCamera: (choice) => (choice === 'dollhouse' ? walk?.toOverview() : walk?.toWalk()),
+      onExit: exitTutorial,
+    });
+    window.setTimeout(showGoal, GOAL_AFTER_MS);
+  }
+
+  /** Lift the lock and walk in first person (tactile). The edit tools wait for Exit tutorial. */
   function release(): void {
-    if (mode === 'walk') return;
-    const fromIntro = mode === 'intro';
+    if (mode !== 'tutorial') return;
     window.clearTimeout(doneTimer);
     mode = 'walk';
     markIntroSeen(storage);
@@ -366,29 +475,16 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     unpackRest();
     store.select(null);
     skip.remove();
+    skipSeq.remove();
     dock.remove();
     hint.classList.remove('demo-hint-on');
     door.group.visible = false;
-    if (fromIntro) box.group.visible = false;
-    else if (!boxGone) box.vanish();
+    if (!boxGone) box.vanish();
     boxGone = true;
-    if (!fromIntro) {
-      startWalking();
-      return;
-    }
-    // Skipped mid walk-in: cut through black to the tutorial view, then walk from there.
-    black.style.transition = 'opacity 0.45s ease';
-    black.style.opacity = '1';
-    window.setTimeout(() => {
-      const v = currentView();
-      aimAt(v.camera, lookAround(v, 0, 0), v.fov);
-      door.veil.opacity = 0;
-      startWalking();
-      black.style.opacity = '0';
-    }, reduced ? 0 : 480);
+    startWalking();
   }
 
-  // The dock shows the selected object's name and lets the visitor swap its object kind (the link and text stay fixed).
+  // The dock lets the visitor swap the selected object's kind (the link and text stay fixed); its name is on the card.
   let dockKey = '';
   function syncDock(): void {
     const rep = mode === 'tutorial' && store.selectedId
@@ -399,10 +495,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     const key = `${rep.id}:${rep.objectKind}`;
     if (key === dockKey) return;
     dockKey = key;
-    dock.replaceChildren(
-      el('div', 'demo-dock-title', content.title),
-      buildKindInventory({ value: rep.objectKind, onChange: (kind) => store.setKind(rep.id, kind) }),
-    );
+    dock.replaceChildren(buildKindInventory({ value: rep.objectKind, onChange: (kind) => store.setKind(rep.id, kind) }));
   }
 
   store.subscribe(() => {
@@ -410,7 +503,17 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     checkDone();
     syncDock();
   });
-  skip.addEventListener('click', release);
+  skip.addEventListener('click', () => (mode === 'intro' ? skipIntro() : release()));
+  skipSeq.addEventListener('click', () => {
+    if (mode === 'intro') {
+      elapsed = INTRO_DURATION;
+      skippingIntro = false;
+      beginTutorial();
+      const v = currentView();
+      aimAt(v.camera, lookAround(v, 0, 0), v.fov);
+    }
+    release();
+  });
 
   // ---- start ----------------------------------------------------------------
   view.setDemo(hooks);

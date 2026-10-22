@@ -1,6 +1,6 @@
 # Misc. Manor demo and tutorial: plan (living doc)
 
-Sources: `demo-idea-dump-1.txt`, `demo-tutorial-follow-up.txt`. Branch: `feature/demo-landing`. Update decisions and the checklist as work lands.
+Sources: `demo-idea-dump-1.txt`, `demo-tutorial-follow-up.txt`, `demo-second-interaction-camera-and-imports.txt`. Branches: `feature/demo-landing` (interaction 1), `feature/demo-pt.2` (interaction 2). Update decisions and the checklist as work lands.
 
 ## Routes
 
@@ -13,9 +13,12 @@ One Vite multi-page app, one codebase.
 
 ## Modes
 
-- **Demo** (`/`): intro walk-in -> locked tutorial at the shelf -> first-person walk around the room. Never leaves first person. After the tutorial the edit tools (`src/demo/room-app.ts`, `mountEditTools`) mount around the walking view: their `+` adds objects, and the Rooms picker visits built rooms while My room stays as the visitor left it (Matt's "one space" fixes). A small `dev` link to `/dev/` sits bottom left the whole time (raised above the edit tools' bar once they show).
-- **Free demo mode**: the isometric overview on top of that. **Not reachable for now**; the visitor earns it through more interactions, to be designed next. The edit tools themselves still need curating for the demo.
-- **Dev sandbox** (`/dev/`): the team's tool, five named rooms, orbit camera.
+- **Demo** (`/`): intro walk-in -> locked tutorial at the shelf (interaction 1) -> still the tutorial, now free to move: the goal is the save point (interaction 2). The demo never leaves the tutorial by itself; only **Exit tutorial** does.
+  - **Camera / motion choice** (bottom HUD select): **Tactile** (first-person walk, the default) or **Dollhouse** (the isometric room with orbit, walk mode's overview). Switching glides between them; Tactile returns to where the visitor stood.
+  - **Exit tutorial** (bottom left, beside `dev`): takes the HUD away, glides back to Tactile if needed and mounts the sandbox edit tools (`src/demo/room-app.ts`, `mountEditTools`: Edit room / Rooms bar, `+`, Take photo, mute). The Rooms picker visits built rooms while My room stays as the visitor left it (Matt's "one space" fixes); it is **only reachable after Exit tutorial** now.
+  - A small `dev` link to `/dev/` sits bottom left the whole time (raised above the edit tools' bar once they show).
+- **Free demo mode**: Dollhouse is its camera, reachable now from the Camera choice. The rest (curated edit tools, earning it) is still to design.
+- **Dev sandbox** (`/dev/`): the team's tool, five named rooms, orbit camera. Its + sheets use the same Add object / Import forms as the save point (`src/views/add-forms.ts`); it looks and behaves as before.
 
 ## How the demo works
 
@@ -29,12 +32,14 @@ One Vite multi-page app, one codebase.
   - `tap`: sees every tap before select/place, gets `{ raycaster, repId, slotId, room hit, event }`, returns true to consume.
   - `keepSelectionOnPlace`: placed objects stay selected, so the preview stays up.
   - `liftSelected: false`: a selected object stays at rest on its slot instead of lifting toward the iso camera (that lift read as "picked back up and moved aside" in first person).
+  - `compactPreview`: the small preview card (see Previews).
   - Getters: `view.canvas`, `view.overview` (iso camera and orbit target).
-- **Flow.** Every visit -> black -> a wooden door at the open east side swings open on bright light, everything else dark -> about 5.4s first-person spline walk through it (`core/intro-timeline.ts`, pure, tested) -> locked tutorial facing the bench and shelf -> visitor unpacks the starter objects onto the shelf, no instructions -> about 1.4s after the last one (or on Skip) the camera glides down to standing height at `STAND` [8.3, 1.6, 4.8] facing the shelf -> walk the room in first person.
+- **Flow.** Every visit -> black -> a wooden door at the open east side swings open on bright light, everything else dark -> about 5.4s first-person spline walk through it (`core/intro-timeline.ts`, pure, tested) -> locked tutorial facing the bench and shelf -> visitor unpacks the starter objects onto the shelf, no instructions -> about 1.4s after the last one (or on Skip) the camera glides down to standing height at `STAND` [8.3, 1.6, 4.8] facing the shelf -> walk the room in first person (Tactile) with Help, Camera and Exit tutorial; the save point across the room is the goal (interaction 2).
 - **Starter objects** (`src/demo/intro-objects.ts`, hardcoded, `locked` content: link and text fixed, kind can change, can be stashed): rocket = Unpacking (unpackinggame.com), drum = about page, cassette = lofi YouTube.
-- **Previews.** The card docks by its bottom-right corner above `.demo-dock` (tutorial) or `.item-sheet` (after release), grows upward, never covers the panel. Link cards are clickable with Open in browser. What embeds follows main's public preview blocklist (`docs/public-preview-policy.md`): any public HTTPS page not on the list tries a sandboxed iframe, so rocket and drum may preview live; the cassette uses the YouTube player. `show(preview, art, openUrl)` takes an optional open-URL override; otherwise cards use the policy's `openHref`.
+- **Previews.** The card docks by its bottom-right corner above `.demo-dock` (tutorial) or `.item-sheet` (after Exit tutorial), grows upward, never covers the panel. The demo uses the **compact card** (`compactPreview`): 200px wide on phones (260 on desktop), title and `Open ↗` on one row, one short status line (`Loading…`, then `Blank? Use Open.`; never claims the page loaded), no audio-coordination notice (the demo has no room music until the visitor turns it on). The dock shows only the kind picker; the title is on the card. `/dev/` keeps the full card and main's policy copy. Link cards are clickable with Open in browser. What embeds follows main's public preview blocklist (`docs/public-preview-policy.md`): any public HTTPS page not on the list tries a sandboxed iframe, so rocket and drum may preview live; the cassette uses the YouTube player. `show(preview, art, openUrl)` takes an optional open-URL override; otherwise cards use the policy's `openHref`.
 - **Persistence.** Autosave to `localStorage` `mp-demo:rooms:demo-visit` (`roomKeys` routes `demo-*` rooms to the `mp-demo:` prefix). Intro-seen flag `mp-demo:intro-seen`. An unreadable save is never overwritten; an error shows instead. Return visits replay the demo from a full box.
 - **Jukebox.** Scenery outside the room by the east wall end (`JUKEBOX_POS`), scale 0.6, about 55% opaque, not interactive yet.
+- **Save point.** `src/demo/save-point.ts` (`buildSavePoint`, `update(t, dt)`, `hit(raycaster)`), standing just off the room at `SAVE_POINT_POS` [2.6, 0, 8.45]. Visitors see it called the **portal**. See Interaction 2.
 - **Web first.** VR is Matt's area; demo work must not touch XR code. The VR button stays hidden while locked.
 
 ## Current stage (decided 2026-10-21)
@@ -45,6 +50,7 @@ Principle: **lead from mobile.** One framing for every screen; desktop just sees
 - Cause of today's bug: `TUTORIAL_VIEW` fixed a 46° vertical FOV, about 22° wide in portrait, so only the middle object fit and the top shelf was edge-on.
 - New rule: `tutorialView(aspect)` (pure, tested). A fixed set of world points (bench, shelf with room for objects, the box) must always fit. Fixed look direction, higher and tilted down more so the top shelf faces the visitor; fixed vertical FOV; the camera backs off along the view direction until everything fits with margin.
 - The walk-in ends exactly on that view. Re-aimed on resize.
+- **Screen bands** (`FRAME_BANDS`, fixed after the phone bug where the preview card covered the shelf): the framed points stay out of the bottom 40% of the screen (hands, dock, preview card) and the top 7% (Skip). The camera slides along its own up axis (same look direction) and backs off only if the points no longer fit. On a 390x660 phone: shelf about y 135, bench about y 237, box bottom about y 366; everything under y 396 is UI room.
 
 ### 2. Cardboard box replaces the tray (Unpacking reference)
 - One open cardboard box with packing stuffing in front of the bench; contents hidden (`src/demo/cardboard-box.ts`). Idle wiggle invites a tap; no text.
@@ -71,7 +77,20 @@ Principle: **lead from mobile.** One framing for every screen; desktop just sees
 - With `overview` on (kept for free demo mode): the isometric view is home base; tapping the floor glides down to eye level there; the Overview button (and Esc when nothing is selected) glides back up.
 - Making `/dev/` work this way later: opt in through the same hooks, keeping the orbit as default; discuss before changing.
 
-### 5. Jukebox and music (later, not now)
+### 5. Interaction 2: get to the save point, choose your camera (built on `feature/demo-pt.2`)
+- **Goal.** After the starters are placed the visitor has somewhere to go: a glowing save point across the room. Getting there teaches moving, and the Camera choice lets them pick the motion that suits them.
+- **Save point** (`src/demo/save-point.ts`): Kingdom Hearts save-point vibe (`khsavepoint.png`). Teal rune circle (turning), a soft column of light (about 0.75m wide, 2.4m tall) with a brighter core, sparkles drifting up, two wisps circling, the whole thing bobbing gently upward from floor level (never below it). A teal point light reaches the front edge of the room's floor so it shows at the edge of the view. Reduced motion: still, no pulse.
+- **Spot**: `SAVE_POINT_POS` [2.6, 0, 8.45]: off the room like the jukebox, but on the other side: at ground-floor level, about 0.85m past the open front edge (the jukebox sits about 0.8m off its edge), on the stairs half, not in the corner. The west side itself is walled (it would hide the save point from the dollhouse and mostly from inside). It's behind the visitor's left shoulder at `STAND`, so they have to look around; from the front of the floor it's well inside reach. Tested in `intro-timeline.test.ts`.
+- **Tapping it** never walks the visitor there. Tactile: opens within `SAVE_POINT_REACH` (3m on the floor plan); from farther it says "Too far. Walk closer, or switch camera." Dollhouse: opens from anywhere. Something in front of it (an object, a wall) takes the tap instead.
+- **Save point panel** (`mountSavePointPanel` in `src/demo/demo-hud.ts`), titled **Add objects to room**: **Add link or file** (the sandbox's Add object form), **Import from bookmarks (file)** (the sandbox's Import form: bookmarks .html, files, folder), **Random drop** (see below). The forms come from `src/views/add-forms.ts`, shared with `MenuView`; ids are prefixed `sp-` so they never clash once the sandbox menu mounts. Messages show as the demo hint. It keeps working after Exit tutorial.
+- **Goal line**: "Choose your camera / motion to get to the portal" shows at the top for 6s the first time the save point comes into view while walking (Tactile), or 6s after the tutorial ends if the visitor never turns around. The Camera choice pulses for 8s (or until it is used or the portal opens). Any hint line (for example "Too far. Move closer, or switch camera, to get to the portal.") hides the goal line so the two never overlap.
+- **Random drop** (`core/random-drop.ts`, `Store.dropIn`, `RoomView.flyIn`): 4 to 8 objects (random amount) from the devs' rooms: German, Matt, Levi, Jawan and Omari, from their committed starter content. Each draw picks a dev at random, then one of their placed objects. Nothing repeats and nothing the room already has comes in again (same link, or same title when there's no link). Copies land on random free slots (big things and rugs on the floor while there's floor left) as one undo step, and fly out of the portal one after another in an arc to their spots. Reduced motion: they just appear. If the room is full it says so.
+- **skip seq 1** (dev shortcut, bottom left beside `dev`, intro and tutorial only): skips the walk-in and the unpacking (starters go on the shelf) straight to interaction 2, still in the tutorial. Exit tutorial takes its place.
+- **HUD** (`mountDemoHud`): bottom (centre on desktop, right on narrow screens): **Help** and **Camera** (Tactile / Dollhouse). Help is a small panel with five lines (tap to walk, drag to look, pinch/scroll to step back, the two cameras, tap the save point); it closes with Close, a tap outside or Esc. Bottom left beside `dev`: **Exit tutorial**. On phones (440px and narrower) `dev` and Exit tutorial sit just above the HUD. No sandbox edit tools before Exit tutorial: no Edit room / Rooms bar, no `+`, no Take photo, no mute.
+- **Walk mode API** (`mountWalkMode` returns a `WalkHandle`): `camera`, `mode`, `toOverview()` (remembers where the visitor stood), `toWalk()` (glides back down there, or turns around mid-way). Option `overviewTapWalks: false`: in the dollhouse a floor tap does not drop into Tactile. In the overview objects face the isometric camera.
+- **Tactile <-> Dollhouse blend** (no jump at the perspective switch): going up, the eye glides to the overview pullback, then a 0.55s **dolly zoom** (`dollyLens` in `core/walk.ts`, tested) backs the camera off along the isometric line while the lens narrows from 65° to 3°, framing the orthographic view's height and clipping where it clips, then hands over to the isometric camera, which by then looks the same. Coming down runs it in reverse (dolly in, then glide to where the visitor stood). Either way can turn around mid-way.
+
+### 6. Jukebox and music (later, not now)
 - Usable only after the tutorial, once the room is free to explore. Tapping it opens the music choice, which moves out of the demo's edit tools. Music is off until the visitor uses the jukebox; the mute button only shows while jukebox music plays. `/dev/` gets a jukebox later.
 - Code map:
   - Tracks and the saved `RoomState.soundtrack` are in `core/soundtrack.ts` (11 mp3s in `public/audio/`).
@@ -82,8 +101,10 @@ Principle: **lead from mobile.** One framing for every screen; desktop just sees
 
 ## Open questions
 
-- Next interaction (owner to describe): what `+` does, and how the visitor earns free demo mode.
-- Random drops / imports: 5-10 objects from other rooms arriving in a box to sort through (reuses the cardboard box). Not yet.
+- Interaction 2 defaults to confirm (picked while the owner's answers were lost): save point look as above; Help as a small panel; Exit tutorial = the old post-release state; tap reach 3m (Tactile) with a "walk closer" line beyond it.
+- Imported items that don't fit a slot go to the inbox, which only the sandbox menu lists (after Exit tutorial).
+- Random drop, later: anticipate the motion or have the objects magically organize themselves (now they simply fly out of the portal to random spots). Maybe a box to sort through (reuses the cardboard box).
+- How the visitor earns the rest of free demo mode; what Exit tutorial should eventually offer instead of the raw sandbox tools.
 - Bigger slot tap targets on touch, if the new framing still feels small.
 - Drum links to the about page: once hosted on that same origin, the preview policy refuses to iframe it ("Preview unavailable"). Point it elsewhere or special-case it.
 - Making editing the room easy and fun from the demo (curate the edit tools).
@@ -95,7 +116,7 @@ Principle: **lead from mobile.** One framing for every screen; desktop just sees
 - [x] Multi-page routes, demo room, walk-in, locked tutorial, release, dock, locked links, persistence
 - [x] Merge `origin/main` (toys, glow, icons and rename, preview blocklist, practice tutorials, VR button gating). Browser harnesses that need the sandbox point at `/dev/`.
 - [x] `RoomView` hooks for this stage: `tap`, `keepSelectionOnPlace`, `canvas`, `overview`, floor tagging
-- [x] Mobile-first framing (`tutorialView`: 55° FOV, 32° down, solved for aspect 0.46; camera about [8.3, 5.0, 7.5])
+- [x] Mobile-first framing (`tutorialView`: 55° FOV, 32° down, solved for aspect 0.46; camera about [8.3, 5.0, 7.5]; with the screen bands about [8.3, 3.8, 8.2])
 - [x] Cardboard box (`src/demo/cardboard-box.ts`, at `BOX_POS` [8.3, 0, 2.2]), hands, hint, vanish, old-save migration
 - [x] Drag to look in the tutorial (±25° turn, ±12° tilt, eases back)
 - [x] Walk mode (`src/demo/walk-mode.ts`, `src/core/walk.ts`: 65° FOV, eye 1.6m, WASD/arrows on desktop)
@@ -103,9 +124,14 @@ Principle: **lead from mobile.** One framing for every screen; desktop just sees
 - [x] Fixes: held object no longer covers the bench spots; a placed object no longer lifts away (`liftSelected: false`)
 - [x] Grab-the-world drag (tutorial and walking); zoom as step back and up with wall and loft clamping
 - [x] tsc clean, 289 tests pass, `vite build` green
-- [ ] Teach the camera (drag, tap to walk, pinch) in the next interaction
-- [ ] Owner visual check on phone and desktop: `/`, Skip during walk-in and during tutorial, `/dev/`
-- [ ] `+` behaviour and earning free demo mode (next)
+- [x] Phone fix: tutorial framing keeps slots and box above the UI band; compact preview card; dock without the repeated title
+- [x] Save point object and idle animation at `SAVE_POINT_POS`
+- [x] HUD after the tutorial: Help, Camera (Tactile / Dollhouse), Exit tutorial; no edit tools until Exit tutorial; goal line on first sight of the save point
+- [x] Save point panel: Add link or file, Import from bookmarks (file), Random drop; forms shared with `/dev/` via `src/views/add-forms.ts`
+- [x] tsc clean, 372 tests pass, `vite build` green
+- [ ] Owner visual check on phone and desktop: tutorial with the compact card, save point look and spot, goal line, Help, Camera switching, save point panel and forms, Exit tutorial, `/dev/` + sheets unchanged
+- [x] Random drop: 4-8 unique objects from the devs' rooms fly out of the portal to random free spots
+- [x] skip seq 1 dev shortcut; goal line after 6s regardless; Camera pulse stops after 8s; portal at floor level, closer to the edge
 - [ ] Jukebox music (later)
 
 ## Trying it

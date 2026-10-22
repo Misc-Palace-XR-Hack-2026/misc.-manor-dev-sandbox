@@ -5,7 +5,10 @@ import {
   BOUNDS_INSET,
   clampInRegion,
   clampPitch,
+  dollyLens,
   EYE_HEIGHT,
+  FLAT_FOV,
+  overviewExitEnd,
   floorRegionsFromBoxes,
   glidePose,
   horizontalYaw,
@@ -206,4 +209,27 @@ test('keyboard step stays inside the loft footprint', () => {
 
 test('exported camera constants match the walk spec', () => {
   assert.equal(WALK_FOV, 65);
+});
+
+test('the dolly runs from the walk lens at the overview pullback to a long lens framing the isometric view', () => {
+  const cam: [number, number, number] = [17.8, 15.4, 17.6], target: [number, number, number] = [3.8, 1.4, 3.6];
+  const ortho = { height: 14, near: 0.1, far: 120 };
+  const start = dollyLens(cam, target, ortho, 0);
+  const exit = overviewExitEnd(cam, target);
+  for (let c = 0; c < 3; c++) assert.ok(Math.abs(start.pos[c] - exit.pos[c]) < 1e-9, 'starts where the exit glide ends');
+  assert.ok(Math.abs(start.fov - WALK_FOV) < 1e-9);
+  const end = dollyLens(cam, target, ortho, 1);
+  assert.ok(Math.abs(end.fov - FLAT_FOV) < 1e-9);
+  const dist = (l: { pos: number[] }) => Math.hypot(...l.pos.map((p, i) => p - target[i]));
+  const height = (l: { pos: number[]; fov: number }) => 2 * dist(l) * Math.tan((l.fov * Math.PI) / 360);
+  assert.ok(Math.abs(height(end) - ortho.height) < 1e-6, 'frames what the orthographic camera frames');
+  const camDist = Math.hypot(...cam.map((p, i) => p - target[i]));
+  assert.ok(Math.abs(end.near - (dist(end) - camDist + ortho.near)) < 1e-6, 'clips where the orthographic camera clips');
+  let prev = start;
+  for (let i = 1; i <= 20; i++) {
+    const l = dollyLens(cam, target, ortho, i / 20);
+    assert.ok(dist(l) > dist(prev) && l.fov < prev.fov, 'backs off while the lens narrows');
+    prev = l;
+  }
+  assert.deepEqual(dollyLens(cam, target, ortho, 2), end);
 });

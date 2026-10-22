@@ -1,11 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  BOX_POS, DESIGN_ASPECT, DOOR_POS, FRAME_POINTS, INTRO_DURATION, INTRO_SEEN_KEY, JUKEBOX_POS, LOOK_LIMITS, PHASE_STARTS,
-  ROOM_EAST, TUTORIAL_PITCH, TUTORIAL_VIEW, clampLook, introFrame, lookAround, markIntroSeen, phaseAt, shouldPlayIntro,
+  BOX_POS, DESIGN_ASPECT, DOOR_POS, FRAME_BANDS, FRAME_POINTS, INTRO_DURATION, INTRO_SEEN_KEY, JUKEBOX_POS, LOOK_LIMITS, PHASE_STARTS,
+  ROOM_EAST, SAVE_POINT_POS, SAVE_POINT_REACH, TUTORIAL_PITCH, TUTORIAL_VIEW, clampLook, introFrame, lookAround, markIntroSeen, phaseAt, shouldPlayIntro,
   tutorialView, type Vec3, type View,
 } from '../src/core/intro-timeline';
 import { getLayout } from '../src/core/layout';
+import { BOUNDS_INSET } from '../src/core/walk';
 
 const fake = (initial: Record<string, string> = {}) => {
   const data = { ...initial };
@@ -93,6 +94,15 @@ test('the tutorial view keeps the bench, shelf and box fully on screen for phone
   }
 });
 
+test('the framed points stay above the bottom band (hands, dock, preview) and below the top band (Skip)', () => {
+  const bottom = -1 + 2 * FRAME_BANDS.bottom, top = 1 - 2 * FRAME_BANDS.top;
+  for (const aspect of [0.4, DESIGN_ASPECT, 0.56, 0.75, 1, 1.6]) {
+    const view = tutorialView(aspect);
+    const ys = FRAME_POINTS.map((p) => project(view, aspect, p).y);
+    for (const y of ys) assert.ok(y >= bottom - 1e-6 && y <= top + 1e-6, `aspect ${aspect}: y ${y.toFixed(3)}`);
+  }
+});
+
 test('lead from mobile: screens wider than a phone keep the phone framing, narrower ones back off', () => {
   assert.deepEqual(tutorialView(1.8), tutorialView(DESIGN_ASPECT));
   assert.deepEqual(tutorialView(NaN), tutorialView(DESIGN_ASPECT));
@@ -151,6 +161,23 @@ test('scene anchors line up with the real room layout', () => {
   assert.ok(JUKEBOX_POS[0] < ROOM_EAST + 2, 'jukebox sits right beside the end of the wall');
   assert.equal(JUKEBOX_POS[1], 0, 'jukebox stands at ground level');
   assert.ok(JUKEBOX_POS[2] < 3, 'jukebox is by the back-right wall, not out front');
+});
+
+test('the save point stands just off the room past the front edge, on the stairs half, within reach of the floor', () => {
+  const layout = getLayout('cozy-loft')!;
+  const floor = layout.boxes.find((b) => b.id === 'floor')!;
+  const front = floor.min[2] + floor.size[2];
+  const [x, y, z] = SAVE_POINT_POS;
+  const ringR = 0.55;
+  assert.equal(y, 0, 'ground-floor level');
+  assert.ok(z - ringR > front + 0.2, 'off the room, past the open front edge');
+  assert.ok(z - front < 1.2, 'close to the edge, like the jukebox');
+  assert.ok(x < ROOM_EAST / 2, 'on the other side from the jukebox (the stairs half)');
+  assert.ok(x > 1.5, 'not tucked into the corner');
+  // The closest a walking visitor gets: the front of the floor, kept BOUNDS_INSET in from its edge.
+  assert.ok(Math.hypot(0, z - (front - BOUNDS_INSET)) < SAVE_POINT_REACH, 'within reach from the front of the floor');
+  // Across the room from where the tutorial leaves the visitor (x 8.3, z 4.8): out of reach until they walk over.
+  assert.ok(Math.hypot(8.3 - x, 4.8 - z) > SAVE_POINT_REACH * 2);
 });
 
 test('first visit plays the intro; after it is seen, it does not, unless ?intro is given', () => {

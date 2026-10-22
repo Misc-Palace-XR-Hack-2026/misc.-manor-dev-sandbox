@@ -1,17 +1,16 @@
 import { SURFACE_PRESETS, type SurfaceTarget } from '../core/surfaces';
 import { ROOM_TRACKS, TRACK_LABELS, type RoomTrack, type Soundtrack } from '../core/soundtrack';
 import { LIGHTING_PRESETS, type Lighting } from '../core/appearance';
-import { parseBookmarksHtml } from '../core/bookmarks';
 import { openContentEditor } from './content-editor';
 import { preparePhoto } from './photo-upload';
 import { previewOpenUrl } from '../core/preview';
 import { SHOW_PREVIEW_BUTTON } from '../core/demo-flags';
-import { safeUrl } from '../core/content';
 import { Store } from '../core/store';
 import { ROOMS_PICKER_ORDER, displayRoomName, isDemoHomeAlias, isDemoSessionRoom, openRoom, seedRoom } from '../core/rooms';
 import { THEMES } from '../core/themes';
-import { CONTENT_TYPES, OBJECT_KINDS, OBJECT_LABELS, type ContentType, type ObjectKind } from '../core/types';
+import { OBJECT_KINDS, OBJECT_LABELS, type ObjectKind } from '../core/types';
 import { buildKindInventory } from './kind-picker';
+import { buildAddForm, buildImport, type FormHost } from './add-forms';
 
 // 2D fallback view: always works, even if the 3D room is broken. Built with DOM nodes + textContent only,
 // so imported titles and URLs can never inject markup.
@@ -125,8 +124,9 @@ export class MenuView {
     this.fillDialog(this.roomsSheet, 'Rooms',
       el('p', { class: 'sheet-copy', textContent: 'Each room saves on its own in this browser. My room starts empty.' }),
       this.roomList);
-    this.fillDialog(this.addSheet, 'Add object', this.buildAddForm());
-    this.fillDialog(this.importSheet, 'Import', this.buildImport());
+    const host: FormHost = { store, flash: (msg) => this.flash(msg), close: () => this.closeSheets(), inputGuard: () => this.inputGuard() };
+    this.fillDialog(this.addSheet, 'Add object', buildAddForm(host));
+    this.fillDialog(this.importSheet, 'Import', buildImport(host));
     this.buildFab();
 
     const previewFromEditor = el('button', { type: 'button', textContent: 'Preview room' });
@@ -298,57 +298,6 @@ export class MenuView {
     });
   }
 
-  private buildImport(): HTMLElement {
-    const input = (accept: string, multiple: boolean, folder: boolean, onFiles: (files: File[]) => void) => {
-      const i = el('input', { type: 'file', accept, multiple, hidden: true });
-      if (folder) i.setAttribute('webkitdirectory', '');
-      i.addEventListener('change', () => {
-        const files = Array.from(i.files ?? []);
-        i.value = '';
-        if (files.length) onFiles(files);
-      });
-      return i;
-    };
-    const entries = (files: File[]) => files
-      .filter((f) => !f.name.startsWith('.'))
-      .map((f) => ({ title: f.name.replace(/\.[^.]+$/, ''), ref: f.webkitRelativePath || f.name }));
-    const done = (msg: string) => { this.flash(msg); this.closeSheets(); };
-
-    const bookmarks = input('.html,text/html', false, false, async ([file]) => {
-      const current = this.inputGuard();
-      try {
-        const text = await file.text();
-        if (!current()) return;
-        const entries = parseBookmarksHtml(text);
-        const { added, placed } = this.store.importBookmarks(entries);
-        done(`Imported ${added} bookmarks (${placed} placed, ${added - placed} in inbox).`);
-        document.dispatchEvent(new CustomEvent('palace-import', {detail:{entries, added, placed}}));
-      } catch (e) {
-        this.flash(`Could not import bookmarks: ${e instanceof Error ? e.message : String(e)}`);
-      }
-    });
-    const files = input('', true, false, (list) => {
-      const { added, placed } = this.store.importFiles(entries(list));
-      done(`Added ${added} files by name (${placed} placed in the room, the rest are in the inbox).`);
-    });
-    const folder = input('', true, true, (list) => {
-      const { added, placed } = this.store.importFiles(entries(list));
-      done(`Added ${added} files from the folder by name (${placed} placed, the rest in the inbox).`);
-    });
-    const button = (label: string, target: HTMLInputElement) => {
-      const b = el('button', { type: 'button', textContent: label });
-      if (target === bookmarks) b.dataset.tutorial = 'bookmark-file';
-      b.addEventListener('click', () => target.click());
-      return b;
-    };
-    return el('div', { class: 'neighborhood-actions' },
-      button('Bookmarks file (.html)', bookmarks),
-      button('Files…', files),
-      button('Folder…', folder),
-      el('small', { class: 'sheet-copy', textContent: 'Files and folders are saved by name only (browsers hide real paths), up to 200 at a time, and nothing is uploaded. Opening the original file is a later step.' }),
-      bookmarks, files, folder);
-  }
-
   private flash(msg: string): void {
     this.flashMsg = msg;
     this.renderStatus();
@@ -424,62 +373,6 @@ export class MenuView {
     }
     section.append(el('small',{textContent:'PNG / JPEG · up to 12 MB and 32 megapixels · resized to 1024 px; max 1.5 MB encoded per image. Local only, included in room exports. Floor/wall images repeat every 2 room units; backgrounds fill the view with centered cropping, not panoramic mapping. Original removes a custom image; Undo restores it.'}));
     return section;
-  }
-
-  private buildAddForm(): HTMLElement {
-    const title = el('input', { placeholder: 'Title (required)', id: 'new-object-title' });
-    const ref = el('input', { placeholder: 'Paste a link, or a file name', id: 'new-object-ref' });
-    const type = el('select', {id:'new-object-type', ariaLabel:'Content type'});
-    type.append(el('option', { value: 'link', textContent: 'type: link' }));
-    for (const t of CONTENT_TYPES.filter((value) => value !== 'link')) type.append(el('option', { value: t, textContent: t }));
-    type.append(el('option', { value: 'auto', textContent: 'type: auto' }));
-    const kind = el('select', { id: 'new-object-kind', class: 'kind-select' });
-    kind.append(el('option', {value:'',textContent:'Automatic by content type'}));
-    for (const k of OBJECT_KINDS) kind.append(el('option', {value:k,textContent:OBJECT_LABELS[k]}));
-    const picker = buildKindInventory({
-      value: '',
-      allowEmpty: true,
-      onChange: (next) => {
-        kind.value = next;
-        kind.dispatchEvent(new Event('change', { bubbles: true }));
-      },
-    });
-    const add = el('button', { textContent: 'Add to room' });
-    add.dataset.tutorial = 'add-submit';
-    const notify = (detail:string) => document.dispatchEvent(new CustomEvent('palace-tutorial',{detail}));
-    kind.addEventListener('change',()=>notify('kind-chosen'));
-    const valid = () => Boolean(title.value.trim() && ref.value.trim() && (type.value !== 'link' || safeUrl(ref.value.trim())));
-    const submit = () => {
-      if (!valid()) { this.flash('Enter a title and content; links require a valid http or https URL.'); notify('create-invalid'); return; }
-      const id = this.store.addItem({ title: title.value, sourceRef: ref.value, type: type.value as ContentType | 'auto', kind: (kind.value || undefined) as ObjectKind | undefined });
-      if (this.store.practicing && this.store.slotOf(id)) this.store.pickUp(id);
-      title.value = ref.value = '';
-      this.flash('Added to the room.');
-      this.closeSheets();
-      document.dispatchEvent(new CustomEvent('palace-tutorial', { detail: 'created' }));
-    };
-    title.addEventListener('input', () => { if(title.value.trim()) notify('typed-title'); });
-    ref.addEventListener('input', () => { if(valid()) notify('typed-content'); });
-    add.addEventListener('click', submit);
-    for (const i of [title, ref]) i.addEventListener('keydown', (e) => e.key === 'Enter' && submit());
-    const photo = el('input', {type:'file',accept:'image/png,image/jpeg',id:'local-photo'});
-    photo.addEventListener('change',async()=>{
-      const file=photo.files?.[0];if(!file)return;
-      const current = this.inputGuard();
-      photo.disabled=true;this.flash('Preparing photo locally…');
-      try {
-        const data=await preparePhoto(file);
-        if (!current()) return;
-        this.store.addPhoto(title.value.trim() || file.name.replace(/\.[^.]+$/, ''), data);
-        this.flash(this.store.saveError ? 'Photo added in memory only. Export your room before leaving.' : 'Photo added. Stored on this device and included in room exports.');
-        this.closeSheets();
-      } catch(e) {this.flash(`Photo not added: ${e instanceof Error ? e.message : String(e)}`);}
-      finally {photo.disabled=false;photo.value='';}
-    });
-    const cancel = el('button',{type:'button',textContent:'Cancel'}); cancel.dataset.tutorial='create-cancel'; cancel.addEventListener('click',()=>this.closeSheets());
-    return el('div', { class: 'add' }, cancel, ref, title, el('label', {htmlFor:'new-object-kind',textContent:'Object representation'}), kind, picker, el('div', { class: 'row-inline' }, type, add),
-      el('label',{htmlFor:'local-photo',textContent:'Upload local photo'}),photo,
-      el('small',{textContent:'PNG / JPEG · up to 12 MB · resized to 1024 px. No upload to a server.'}));
   }
 
   private buildToolbar(repoRooms: RepoRoom[]): HTMLElement {

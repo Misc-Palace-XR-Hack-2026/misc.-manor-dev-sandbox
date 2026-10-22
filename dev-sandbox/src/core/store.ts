@@ -5,7 +5,7 @@ import { lightingFromUnknown, validLighting, type Lighting } from './appearance'
 import { guessType, normalizeRef, safeUrl } from './content';
 import type { BookmarkEntry } from './bookmarks';
 import { DEFAULT_LAYOUT_ID, getLayout, type RoomLayout } from './layout';
-import { chooseSlot } from './placement';
+import { chooseSlot, randomSlot } from './placement';
 import {
   CONTENT_TYPES, DEFAULT_OBJECT, OBJECT_KINDS, SCHEMA_VERSION,
   type ContentItem, type ContentType, type ObjectKind, type Representation, type RoomState,
@@ -308,6 +308,28 @@ export class Store {
       if (input.place !== false) this.placeInFreeSlot(s, repId);
     });
     return repId;
+  }
+
+  /**
+   * Copies of objects from elsewhere (Random drop), each set down on a random free slot, as one undo step. Stops when
+   * the room is full. Returns the new representation ids, in order.
+   */
+  dropIn(items: readonly { content: ContentItem; kind: ObjectKind }[], random: () => number = Math.random): string[] {
+    this.lastCommand = 'dropIn';
+    const placed: string[] = [];
+    this.commit((s) => {
+      const layout = getLayout(s.layoutId) ?? this.layout;
+      for (const { content, kind } of items) {
+        const slotId = randomSlot(kind, layout, new Set(s.placements.map((p) => p.slotId)), random);
+        if (!slotId) break;
+        const c: ContentItem = { ...content, id: uid('ci'), tags: [...content.tags], createdAt: new Date().toISOString() };
+        s.contentItems.push(c);
+        const rep = this.createRep(s, c, kind);
+        s.placements.push({ representationId: rep.id, slotId });
+        placed.push(rep.id);
+      }
+    });
+    return placed;
   }
 
   addPhoto(title: string, imageData: string): string {

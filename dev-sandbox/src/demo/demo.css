@@ -18,11 +18,29 @@ html, body { margin: 0; height: 100dvh; overflow: hidden; background: #000; font
   border-radius: 12px; border: 1px solid rgba(241, 233, 220, 0.2); background: rgba(30, 26, 38, 0.92);
 }
 .demo-dock[hidden] { display: none; }
+@media (max-width: 720px) { .demo-dock { width: min(200px, calc(100vw - 24px)); padding: 8px; } }
+
+/* Compact preview card (DemoHooks.compactPreview): small, one short line, title and Open on one row. */
+.preview-card.preview-compact,
+.preview-card.preview-compact.preview-interactive { width: min(260px, calc(100vw - 24px)); }
+.preview-compact .preview-body { gap: 4px; padding: 6px; border-radius: 10px; }
+.preview-compact .preview-iframe { height: auto; aspect-ratio: 16 / 10; }
+.preview-compact .preview-frame { aspect-ratio: 16 / 9; }
+.preview-compact .preview-glyph { font-size: 30px; }
+.preview-compact .preview-text { font-size: 11px; -webkit-line-clamp: 1; }
+.preview-title-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.preview-title-row .preview-title { flex: 1; min-width: 0; -webkit-line-clamp: 1; }
+.preview-title-row .preview-open { flex: none; min-height: 32px; font-size: 12px; }
+@media (max-width: 720px) {
+  .preview-card.preview-compact,
+  .preview-card.preview-compact.preview-interactive { width: min(200px, calc(100vw - 24px)); }
+}
 
 .demo-hint {
   position: fixed; z-index: 22; left: 50%; top: max(64px, calc(env(safe-area-inset-top) + 56px)); margin: 0;
-  transform: translate(-50%, -6px); padding: 8px 14px; border-radius: 999px; pointer-events: none;
-  background: rgba(20, 16, 28, 0.78); color: #f1e9dc; font-size: 14px; white-space: nowrap;
+  transform: translate(-50%, -6px); padding: 8px 14px; border-radius: 18px; pointer-events: none;
+  width: max-content; max-width: min(88vw, 420px); box-sizing: border-box; text-align: center;
+  background: rgba(20, 16, 28, 0.78); color: #f1e9dc; font-size: 14px;
   opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease;
 }
 .demo-hint-on { opacity: 1; transform: translate(-50%, 0); }
@@ -35,4 +53,69 @@ html, body { margin: 0; height: 100dvh; overflow: hidden; background: #000; font
 .demo-dev:hover, .demo-dev:focus-visible { color: #f1e9dc; outline: none; }
 /* Clear of the edit tools' bottom bar. */
 .demo-dev-raised { bottom: calc(92px + env(safe-area-inset-bottom)); }
-.demo-dock-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---- after the tutorial: HUD, help, goal, Exit tutorial, save point ---- */
+.demo-exit, .demo-skip-seq {
+  position: fixed; z-index: 51; left: calc(max(12px, env(safe-area-inset-left)) + 44px); bottom: max(12px, env(safe-area-inset-bottom));
+  padding: 3px 9px; border-radius: 6px; border: 1px solid rgba(241, 233, 220, 0.25); background: rgba(20, 16, 28, 0.55);
+  color: rgba(241, 233, 220, 0.85); font: 600 11px/1.4 system-ui, sans-serif; cursor: pointer;
+}
+.demo-exit:hover, .demo-exit:focus-visible,
+.demo-skip-seq:hover, .demo-skip-seq:focus-visible { color: #fff; background: rgba(241, 233, 220, 0.18); outline: none; }
+.demo-skip-seq { font: 11px/1.4 ui-monospace, monospace; color: rgba(241, 233, 220, 0.6); }
+
+.demo-hud {
+  position: fixed; z-index: 14; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 6px; padding: 5px; border-radius: 999px;
+  border: 1px solid rgba(241, 233, 220, 0.2); background: rgba(20, 16, 28, 0.62); backdrop-filter: blur(8px);
+}
+.demo-hud-btn, .demo-camera {
+  min-height: 38px; box-sizing: border-box; padding: 0 14px; border-radius: 999px; border: 0;
+  background: rgba(241, 233, 220, 0.1); color: #f1e9dc; font: 600 13px/1 system-ui, sans-serif; cursor: pointer;
+}
+.demo-hud-btn:hover, .demo-hud-btn:focus-visible { background: rgba(241, 233, 220, 0.2); outline: none; }
+.demo-camera { display: flex; align-items: center; gap: 6px; padding-right: 6px; }
+.demo-camera-label { color: rgba(241, 233, 220, 0.6); font-weight: 500; }
+.demo-camera-select {
+  min-height: 30px; padding: 0 8px; border-radius: 999px; border: 1px solid rgba(241, 233, 220, 0.25);
+  /* 16px: smaller makes iOS zoom the page when the select opens. */
+  background: rgba(20, 16, 28, 0.7); color: #f1e9dc; font: 600 16px/1 system-ui, sans-serif;
+}
+.demo-pulse { animation: demo-pulse 1.6s ease-in-out infinite; }
+@keyframes demo-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(77, 255, 210, 0); }
+  50% { box-shadow: 0 0 0 3px rgba(77, 255, 210, 0.55), 0 0 18px rgba(77, 255, 210, 0.45); }
+}
+@media (prefers-reduced-motion: reduce) { .demo-pulse { animation: none; box-shadow: 0 0 0 2px rgba(77, 255, 210, 0.6); } }
+/* Narrow screens: HUD on the right so it clears dev and Exit tutorial; phones lift those two above it. */
+@media (max-width: 600px) {
+  .demo-hud { left: auto; right: max(12px, env(safe-area-inset-right)); transform: none; }
+}
+@media (max-width: 440px) {
+  body:has(.demo-exit) .demo-dev:not(.demo-dev-raised), .demo-exit { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 56px); }
+}
+
+.demo-goal {
+  position: fixed; z-index: 22; left: 50%; top: max(16px, env(safe-area-inset-top)); margin: 0;
+  width: max-content; max-width: min(88vw, 420px); box-sizing: border-box; transform: translate(-50%, -6px);
+  padding: 9px 16px; border-radius: 16px; border: 1px solid rgba(77, 255, 210, 0.45); pointer-events: none;
+  background: rgba(14, 30, 30, 0.82); color: #dffff6; font-size: 14px; font-weight: 600; text-align: center;
+  opacity: 0; transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.demo-goal-on { opacity: 1; transform: translate(-50%, 0); }
+
+.demo-panel {
+  position: fixed; z-index: 21; left: 50%; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 60px); transform: translateX(-50%);
+  width: min(300px, calc(100vw - 24px)); box-sizing: border-box; display: grid; gap: 8px; padding: 12px;
+  border-radius: 14px; border: 1px solid rgba(241, 233, 220, 0.2); background: rgba(30, 26, 38, 0.94);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
+}
+.demo-panel[hidden] { display: none; }
+.demo-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.demo-panel-head h2 { margin: 0; font-size: 15px; }
+.demo-panel-close { min-height: 32px; padding: 0 12px; border-radius: 999px; font-size: 12px; }
+.demo-help-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; line-height: 1.35; }
+.demo-sp { border-color: rgba(77, 255, 210, 0.45); }
+.demo-sp > button { min-height: 44px; text-align: left; border-radius: 10px; }
+/* Phones: panels sit above dev and Exit tutorial, which are lifted above the HUD. */
+@media (max-width: 440px) { .demo-panel { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 92px); } }
