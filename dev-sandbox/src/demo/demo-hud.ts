@@ -235,7 +235,7 @@ const MUSIC_FOLLOW = 'follow';
  * The jukebox's panel: pick the room's music (the same choice as Room music in the room editor). Feeding it your own
  * music comes later.
  */
-export function mountJukeboxPanel(store: Store, onClose: () => void): SavePointPanel {
+export function mountJukeboxPanel(store: Store, onClose: () => void, onPick?: () => void): SavePointPanel {
   const backdrop = el('button', 'sheet-backdrop');
   backdrop.type = 'button';
   backdrop.setAttribute('aria-label', 'Close');
@@ -260,6 +260,7 @@ export function mountJukeboxPanel(store: Store, onClose: () => void): SavePointP
     const v = select.value;
     const soundtrack: Soundtrack = v === MUSIC_OFF ? { mode: 'off' } : validTrack(v) ? { mode: 'track', track: v } : { mode: 'follow' };
     store.setSoundtrack(soundtrack);
+    onPick?.();
   });
   const label = el('label', 'demo-jukebox-label', 'Room music');
   label.htmlFor = select.id;

@@ -249,6 +249,8 @@ export function introFrame(time: number, view: View = TUTORIAL_VIEW): IntroFrame
 // ---- first-visit flag --------------------------------------------------------
 
 export const INTRO_SEEN_KEY = 'mp-demo:intro-seen';
+/** The visitor finished sequence 2 (used the portal twice, or skipped with Exit tutorial). */
+export const SEQ2_DONE_KEY = 'mp-demo:seq2-done';
 
 interface KeyValueStore { getItem(key: string): string | null; setItem(key: string, value: string): void }
 
@@ -281,4 +283,12 @@ export function shouldPlayIntro(
 
 export function markIntroSeen(storage: KeyValueStore | null): void {
   try { storage?.setItem(INTRO_SEEN_KEY, '1'); } catch { /* storage may be blocked; the intro just replays */ }
+}
+
+export function seq2Done(storage: KeyValueStore | null): boolean {
+  try { return storage?.getItem(SEQ2_DONE_KEY) === '1'; } catch { return false; }
+}
+
+export function markSeq2Done(storage: KeyValueStore | null): void {
+  try { storage?.setItem(SEQ2_DONE_KEY, '1'); } catch { /* storage may be blocked; sequence 2 just replays */ }
 }

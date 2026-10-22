@@ -6,11 +6,9 @@ import { createRoomCapture } from '../views/room-capture';
 import { createSoundtrackControl } from '../views/soundtrack-control';
 import { REPO_ROOMS } from '../core/repo-rooms';
 
-// The room's edit tools (theme, lighting, add and import objects, rooms, photo, soundtrack) for the demo, loaded lazily.
-// The editor comes first (the HUD's Edit room, once the portal has been used); photo and room music join it when the
-// demo reaches free mode. Which of the menu's own controls show is up to the demo's CSS (body classes).
-// The sandbox's guided tutorial (Welcome card, Help replay) is left out: the demo's own tutorial is the welcome.
-// TODO(demo): curate these for the demo instead of reusing the sandbox menu as is.
+// The room's edit tools for the demo, loaded lazily. The HUD's Edit room (once the portal has been used) opens a
+// trimmed look-and-feel sheet; photo and mute join it in free mode. Which of the menu's own controls show is up to
+// the demo's CSS (body classes). The sandbox's guided tutorial is left out: the demo's own tutorial is the welcome.
 
 const repoRooms: RepoRoom[] = REPO_ROOMS;
 
@@ -30,9 +28,16 @@ export function mountEditor(store: Store): DemoEditor {
   return { openEditor: () => editButton?.click() };
 }
 
-/** Take photo and room music (with its mute button). */
-export function mountRoomExtras(store: Store, view: RoomView): void {
+export function mountMusic(store: Store): SoundtrackPlayer {
+  return new SoundtrackPlayer(store);
+}
+
+export function mountMute(player: SoundtrackPlayer): void {
+  if (document.querySelector('.soundtrack-control')) return;
+  document.body.append(createSoundtrackControl(player));
+}
+
+export function mountPhoto(view: RoomView): void {
+  if (document.querySelector('.room-capture')) return;
   document.body.append(createRoomCapture(() => view.capturePhoto()));
-  const soundtrack = new SoundtrackPlayer(store);
-  document.body.append(createSoundtrackControl(soundtrack));
 }

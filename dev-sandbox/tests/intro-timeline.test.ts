@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   BOX_POS, DESIGN_ASPECT, DOOR_POS, FRAME_BANDS, FRAME_POINTS, INTRO_DURATION, INTRO_SEEN_KEY, JUKEBOX_POS, LOOK_LIMITS, PHASE_STARTS,
-  ROOM_EAST, SAVE_POINT_POS, SAVE_POINT_REACH, TUTORIAL_PITCH, TUTORIAL_VIEW, clampLook, introFrame, lookAround, markIntroSeen, phaseAt, shouldPlayIntro,
+  ROOM_EAST, SAVE_POINT_POS, SAVE_POINT_REACH, TUTORIAL_PITCH, TUTORIAL_VIEW, clampLook, introFrame, lookAround, markIntroSeen, markSeq2Done, phaseAt, seq2Done, shouldPlayIntro,
   tutorialView, type Vec3, type View,
 } from '../src/core/intro-timeline';
 import { getLayout } from '../src/core/layout';
@@ -195,5 +195,14 @@ test('blocked storage never throws', () => {
   const broken = { getItem: () => { throw new Error('denied'); }, setItem: () => { throw new Error('denied'); } };
   assert.equal(shouldPlayIntro(broken, ''), true);
   assert.doesNotThrow(() => markIntroSeen(broken));
+  assert.doesNotThrow(() => markSeq2Done(broken));
   assert.equal(shouldPlayIntro(null, ''), true);
+  assert.equal(seq2Done(null), false);
+});
+
+test('sequence 2 done is stored on its own, so a later visit can skip the shelf tutorial', () => {
+  const s = fake();
+  assert.equal(seq2Done(s), false);
+  markSeq2Done(s);
+  assert.equal(seq2Done(s), true);
 });

@@ -3,7 +3,7 @@ import { Store, roomKeys } from '../core/store';
 import type { ObjectKind, RoomState } from '../core/types';
 import {
   BOX_POS, DOOR_POS, INTRO_DURATION, JUKEBOX_POS, ROOM_EAST, SAVE_POINT_POS, SAVE_POINT_REACH, clampLook, introFrame, lookAround,
-  markIntroSeen, tutorialView, type View,
+  markIntroSeen, markSeq2Done, seq2Done, tutorialView, type View,
 } from '../core/intro-timeline';
 import { RoomView, type DemoHooks, type DemoTap } from '../views/room';
 import { REPO_ROOMS, REPO_ROOM_MAP } from '../core/repo-rooms';
@@ -16,6 +16,7 @@ import { buildCardboardBox } from './cardboard-box';
 import { buildSavePoint } from './save-point';
 import { mountDemoHud, mountJukeboxPanel, mountSavePointPanel, type DemoHud, type SavePointPanel } from './demo-hud';
 import type { DemoEditor } from './room-app';
+import type { SoundtrackPlayer } from '../views/soundtrack';
 import { mountWalkMode, type WalkHandle } from './walk-mode';
 import {
   DEMO_ROOM_ID, SHELF_SLOTS, TUTORIAL_SLOTS, inBox, migrateDemoRoom, normalizeDemoOwner, prepareIntroReplayRoom,
@@ -29,8 +30,8 @@ import { EYE_HEIGHT, poseFromLookAt, type WalkPose } from '../core/walk';
 // they walk the room in first person ("tactile"). Their goal now is the save point across the room: they get there by
 // walking or by switching the Camera to "dollhouse" (the isometric room). The save point (the "portal") adds links,
 // files, bookmarks or a random drop from the devs' rooms. Objects can be picked up and moved anywhere. Using the portal
-// once brings in Edit room; twice ends sequence 2: the jukebox appears and the demo is in free mode (Rooms, photo, room
-// music). Exit tutorial jumps straight to free mode.
+// once brings in Edit room and the jukebox; twice ends sequence 2: free mode (Rooms, photo, mute while music plays).
+// Exit tutorial jumps straight to free mode. A later visit still walks through the door, then lands in free mode.
 
 type Mode = 'intro' | 'tutorial' | 'walk';
 
@@ -134,9 +135,10 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     return;
   }
   let shouldPersist = normalizeDemoOwner(initial);
-  // `/` is always the demo and always plays the walk-in. Partial progress is kept (placed starters stay put, the rest
-  // wait in the box); a finished room gets its starters back in the box, keeping everything else the visitor added.
-  if (tutorialDone(initial)) {
+  const returningFree = seq2Done(storage);
+  // `/` always plays the walk-in. Sequence 2 unfinished: a finished shelf tutorial puts starters back in the box.
+  // Sequence 2 finished: keep the room as it was and skip the shelf after the door.
+  if (tutorialDone(initial) && !returningFree) {
     initial = prepareIntroReplayRoom(initial);
     shouldPersist = true;
   }
@@ -358,6 +360,13 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     mode = 'tutorial';
     door.group.visible = false;
     black.style.opacity = '0';
+    if (returningFree) {
+      skip.remove();
+      skipSeq.remove();
+      release();
+      goFree();
+      return;
+    }
     skip.textContent = 'Skip tutorial';
     checkDone();
   }
@@ -390,7 +399,8 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   let goalShown = false;
   let portalUses = 0;
   const savePanel: SavePointPanel = mountSavePointPanel(store, (text, ms) => showHint(text, ms), randomDrop, portalUsed);
-  const jukeboxPanel: SavePointPanel = mountJukeboxPanel(store, () => jukebox.setMouthOpen(0));
+  const jukeboxPanel: SavePointPanel = mountJukeboxPanel(store, () => jukebox.setMouthOpen(0), () => music?.startFromGesture());
+  let music: SoundtrackPlayer | null = null;
   const portalMouth = new THREE.Vector3();
 
   /**
@@ -425,17 +435,23 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   function unlockEditRoom(): void {
     void loadEditor();
     hud?.showEditRoom(() => { void loadEditor().then((e) => e.openEditor()); });
+    showJukebox();
+    void import('./room-app').then(({ mountMusic }) => { music ??= mountMusic(store); });
   }
 
-  /** Sequence 2 is done (or skipped with Exit tutorial): the jukebox appears; Rooms, photo and room music come in. */
+  /** Sequence 2 is done (or skipped with Exit tutorial): Rooms, photo and mute come in. */
   function goFree(): void {
     if (free) return;
     free = true;
+    markSeq2Done(storage);
     unlockEditRoom();
     hud?.free();
     document.body.classList.add('demo-free');
-    showJukebox();
-    void import('./room-app').then(({ mountRoomExtras }) => mountRoomExtras(store, view));
+    void import('./room-app').then(({ mountMusic, mountMute, mountPhoto }) => {
+      music ??= mountMusic(store);
+      mountMute(music);
+      mountPhoto(view);
+    });
   }
 
   let jukeboxPopAt = -1;
@@ -561,7 +577,8 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       onCamera: (choice) => (choice === 'dollhouse' ? walk?.toOverview() : walk?.toWalk()),
       onExit: goFree,
     });
-    window.setTimeout(showGoal, GOAL_AFTER_MS);
+    if (returningFree) goalShown = true;
+    else window.setTimeout(showGoal, GOAL_AFTER_MS);
   }
 
   /** Lift the lock and walk in first person (tactile): sequence 2. */

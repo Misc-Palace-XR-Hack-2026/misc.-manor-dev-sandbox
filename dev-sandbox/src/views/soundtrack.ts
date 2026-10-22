@@ -81,16 +81,24 @@ export class SoundtrackPlayer {
       this.notify();
       return;
     }
+    this.playFromGesture();
+  }
+
+  /** Start following the room's track (the jukebox pick). No-op when music is off. */
+  startFromGesture(): void {
+    if (!currentTrack(this.store.state)) return;
+    this.playFromGesture();
+  }
+
+  private playFromGesture(): void {
+    const track = currentTrack(this.store.state);
+    if (!track) return;
     this.muted = false;
     this.enabled = true;
     if (this.away || this.embedPlaying) { this.notify(); return; }
     this.wanted = track;
     if (this.last !== track) this.audio.src = trackUrl(track);
     this.last = track;
-    this.playFromGesture();
-  }
-
-  private playFromGesture(): void {
     const version = ++this.gestureVersion;
     this.blocked = false;
     this.audio.volume = 1;

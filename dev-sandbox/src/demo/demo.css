@@ -125,9 +125,20 @@ html, body { margin: 0; height: 100dvh; overflow: hidden; background: #000; font
 .demo-jukebox-note { margin: 0; font-size: 12px; color: rgba(241, 233, 220, 0.55); }
 
 /* The sandbox edit tools in the demo (src/demo/room-app.ts). The portal replaces +, and Edit room lives in the HUD.
-   Before free mode only the editor sheet shows; in free mode the sandbox bar shrinks to a Rooms pill beside dev. */
+   Before free mode only the editor sheet shows; in free mode the sandbox bar shrinks to a Rooms pill beside dev.
+   The editor itself is look-and-feel (theme, lighting, surfaces) with the item list at the bottom; no music, name or export. */
 body.demo-edit-tools .fab, body.demo-edit-tools .fab-menu,
 body.demo-edit-tools .chrome button[data-tutorial="style"] { display: none; }
+body.demo-edit-tools #menu > button:not(.sheet-close),
+body.demo-edit-tools #menu h1,
+body.demo-edit-tools #menu .owner,
+body.demo-edit-tools #menu .toolbar button:not([data-tutorial="undo"]),
+body.demo-edit-tools #menu .toolbar select,
+body.demo-edit-tools #menu .toolbar input,
+body.demo-edit-tools #menu label[for="room-soundtrack"],
+body.demo-edit-tools #menu #room-soundtrack,
+body.demo-edit-tools #menu .appearance:not(.surfaces) > small { display: none; }
+body.demo-edit-tools .soundtrack-control[data-sound-state="off"] { display: none; }
 body.demo-edit-tools:not(.demo-free) .chrome { display: none; }
 body.demo-free .chrome {
   left: calc(max(12px, env(safe-area-inset-left)) + 44px); right: auto; bottom: max(12px, env(safe-area-inset-bottom));
