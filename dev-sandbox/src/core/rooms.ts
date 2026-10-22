@@ -24,6 +24,12 @@ export const ROOM_DIRECTORY: readonly RoomSlot[] = [
   { id: 'omari', defaultName: "Omari's room", seed: 'omari' },
 ];
 
+/** Rooms picker order: keep My room first, then every other room in directory order. */
+export const ROOMS_PICKER_ORDER: readonly RoomSlot[] = [
+  ...ROOM_DIRECTORY.filter((r) => r.id === GUEST_ROOM_ID),
+  ...ROOM_DIRECTORY.filter((r) => r.id !== GUEST_ROOM_ID),
+];
+
 export const isRoomId = (id: string | null | undefined): id is string =>
   Boolean(id) && ROOM_DIRECTORY.some((r) => r.id === id);
 

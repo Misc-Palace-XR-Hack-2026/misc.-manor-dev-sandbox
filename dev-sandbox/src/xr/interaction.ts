@@ -3,7 +3,7 @@ import { OBJECT_KINDS, OBJECT_LABELS, type ObjectKind } from '../core/types';
 import { LIGHTING_PRESETS, type Lighting } from '../core/appearance';
 import { ROOM_TRACKS, TRACK_LABELS, type RoomTrack } from '../core/soundtrack';
 import { SURFACE_PRESETS, type SurfaceTarget } from '../core/surfaces';
-import { ROOM_DIRECTORY, isDemoHomeAlias, openRoom } from '../core/rooms';
+import { ROOMS_PICKER_ORDER, isDemoHomeAlias, openRoom } from '../core/rooms';
 import { THEMES } from '../core/themes';
 import { safeUrl } from '../core/content';
 import { creationButtons, XrCreation } from './creation';
@@ -232,7 +232,7 @@ export interface NeighborhoodRoom {
 }
 
 export function dedicatedRooms(): Array<{ id: string; label: string }> {
-  return ROOM_DIRECTORY.map((slot) => ({ id: slot.id, label: slot.defaultName }));
+  return ROOMS_PICKER_ORDER.map((slot) => ({ id: slot.id, label: slot.defaultName }));
 }
 
 /** rooms/*.json filenames are kebab-case; headset labels read as words. */
@@ -326,7 +326,7 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
   if (page === 'rooms') {
     return [
       { id: 'page:home', label: 'Back' },
-      ...ROOM_DIRECTORY.map((slot) => ({
+      ...ROOMS_PICKER_ORDER.map((slot) => ({
         id: 'room:' + slot.id,
         label: (store.roomId === slot.id ? '• ' : '') + slot.defaultName,
       })),

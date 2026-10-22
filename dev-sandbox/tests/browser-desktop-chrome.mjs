@@ -37,6 +37,7 @@ try {
   const rooms = page.getByTitle('Switch room');
   assert.equal(await edit.isVisible(), true);
   assert.equal(await rooms.isVisible(), true);
+  assert.equal(await rooms.textContent(), 'Rooms');
   assert.equal(await page.getByRole('button', { name: 'Visit neighborhood', exact: true }).count(), 0);
 
   await edit.click();
@@ -47,6 +48,8 @@ try {
 
   await rooms.click();
   await page.getByRole('dialog', { name: 'Rooms' }).waitFor({ state: 'visible' });
+  const firstRoomName = await page.evaluate(() => document.querySelector('.neighborhood-actions button')?.textContent?.trim() ?? null);
+  assert.equal(firstRoomName, 'My room');
   await page.getByRole('button', { name: /Matt's room/i }).waitFor({ state: 'visible' });
   await page.getByRole('dialog', { name: 'Rooms' }).getByRole('button', { name: 'Close', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('[aria-label="Rooms"]')?.hidden === true);
