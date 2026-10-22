@@ -132,7 +132,37 @@ const cozyLoft: RoomLayout = {
   ],
 };
 
-const LAYOUTS: Record<string, RoomLayout> = { [cozyLoft.id]: cozyLoft };
+/**
+ * Curio hall: the cozy loft with display furniture added, for rooms that set out a whole collection.
+ * Same shell and footprint (so stairs, loft and the VR walk area are unchanged) plus a case run, a
+ * second wall shelf tier and the floor rows the base layout leaves empty — enough slots for every
+ * object kind at once.
+ */
+const curioCases: Box[] = [
+  // Low glass-case run along the open front edge, and a plinth row down the middle of the east floor.
+  box('case-front', [2.0, 0, 6.75], [8.0, 0.55, 0.8], 'accent'),
+  box('shelf-high', [6.6, 2.25, 0], [3.4, 0.12, 0.5], 'accent'),
+];
+const curioSlots: Slot[] = [
+  // Front case: six pieces facing whoever walks in.
+  ...[2.6, 4.0, 5.4, 6.8, 8.2, 9.6].map((x, i) => ({ id: `case-${i + 1}`, label: `Front case ${i + 1}`, pos: [x, 0.55, 7.15] as Vec3 })),
+  // Back row of the east floor grid, which the base layout leaves open.
+  ...[6.8, 8.2, 9.6].map((x, i) => ({ id: `floor-east-back-${i + 1}`, label: `Floor, east side back ${i + 1}`, pos: [x, 0, 1.0] as Vec3 })),
+  // Upper wall shelf, below the window rail.
+  ...[7.2, 8.3, 9.4].map((x, i) => ({ id: `shelf-high-${i + 1}`, label: `Upper shelf ${i + 1}`, pos: [x, 2.37, 0.28] as Vec3 })),
+  // The rest of the loft deck.
+  { id: 'loft-5', label: 'Loft, back middle', pos: [2.0, 2.3, 1.15] },
+  { id: 'loft-6', label: 'Loft, back right', pos: [3.3, 2.3, 1.15] },
+];
+const curioHall: RoomLayout = {
+  ...cozyLoft,
+  id: 'curio-hall',
+  name: 'Curio hall',
+  boxes: [...cozyLoft.boxes, ...curioCases],
+  slots: [...cozyLoft.slots, ...curioSlots],
+};
+
+const LAYOUTS: Record<string, RoomLayout> = { [cozyLoft.id]: cozyLoft, [curioHall.id]: curioHall };
 
 export const DEFAULT_LAYOUT_ID = cozyLoft.id;
 export const getLayout = (id: string): RoomLayout | undefined => LAYOUTS[id];

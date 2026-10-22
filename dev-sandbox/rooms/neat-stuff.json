@@ -1,0 +1,942 @@
+{
+ "schemaVersion": 1,
+ "id": "room_neat_stuff",
+ "owner": "Neat stuff",
+ "layoutId": "curio-hall",
+ "lighting": "daylight",
+ "surfaces": {
+  "floor": {
+   "preset": "gallery-limestone"
+  },
+  "wall": {
+   "preset": "chalk-limewash"
+  },
+  "background": {
+   "preset": "cumulus-sky"
+  }
+ },
+ "contentItems": [
+  {
+   "id": "c1",
+   "type": "article",
+   "title": "Ignite AR glasses",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Smartglasses",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c2",
+   "type": "article",
+   "title": "Ignite VR headset",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Virtual_reality_headset",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c3",
+   "type": "article",
+   "title": "Ignite flame",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Fire",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c4",
+   "type": "article",
+   "title": "Cozy fireplace",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Fireplace",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c5",
+   "type": "article",
+   "title": "Book",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Book",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c6",
+   "type": "article",
+   "title": "Photo frame",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Picture_frame",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c7",
+   "type": "article",
+   "title": "Record player (classic)",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Phonograph",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c8",
+   "type": "article",
+   "title": "TV",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Television",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c9",
+   "type": "article",
+   "title": "Boombox",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Boombox",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c10",
+   "type": "article",
+   "title": "Storage box",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Box",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c11",
+   "type": "article",
+   "title": "Leafy plant",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Houseplant",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c12",
+   "type": "article",
+   "title": "Mug",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Mug",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c13",
+   "type": "article",
+   "title": "Notebook",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Notebook",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c14",
+   "type": "article",
+   "title": "Trophy",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Trophy",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c15",
+   "type": "article",
+   "title": "Armchair",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Chair",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c16",
+   "type": "article",
+   "title": "Side table",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Table_(furniture)",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c17",
+   "type": "article",
+   "title": "Turntable cabinet",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Direct-drive_turntable",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c18",
+   "type": "article",
+   "title": "Patterned rug",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Carpet",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c19",
+   "type": "article",
+   "title": "Mantel clock",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Mantel_clock",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c20",
+   "type": "article",
+   "title": "Acoustic guitar",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Acoustic_guitar",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c21",
+   "type": "article",
+   "title": "Synthesizer",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Synthesizer",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c22",
+   "type": "article",
+   "title": "Drum",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Drum",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c23",
+   "type": "article",
+   "title": "Table lamp",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Light_fixture",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c24",
+   "type": "article",
+   "title": "Coffee maker",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Coffeemaker",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c25",
+   "type": "article",
+   "title": "Sleeping cat",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Cat",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c26",
+   "type": "article",
+   "title": "Teapot",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Teapot",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c27",
+   "type": "article",
+   "title": "Paper lantern",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Paper_lantern",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c28",
+   "type": "article",
+   "title": "Headphones",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Headphones",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c29",
+   "type": "article",
+   "title": "Cassette tape",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Cassette_tape",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c30",
+   "type": "article",
+   "title": "Floor cushion",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Cushion",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c31",
+   "type": "article",
+   "title": "Retro console",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Video_game_console",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c32",
+   "type": "article",
+   "title": "Game cartridge",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/ROM_cartridge",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c33",
+   "type": "article",
+   "title": "VHS tape",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/VHS",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c34",
+   "type": "article",
+   "title": "Vinyl jacket",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Album_cover",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c35",
+   "type": "article",
+   "title": "Spoon",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Spoon",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c36",
+   "type": "article",
+   "title": "Robot",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Robot",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c37",
+   "type": "article",
+   "title": "Telescope",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Telescope",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c38",
+   "type": "article",
+   "title": "Car",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Car",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c39",
+   "type": "article",
+   "title": "Motorcycle",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Motorcycle",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c40",
+   "type": "article",
+   "title": "Fish bowl",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Aquarium",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c41",
+   "type": "article",
+   "title": "Yo-yo",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Yo-yo",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c42",
+   "type": "article",
+   "title": "Skateboard",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Skateboard",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c43",
+   "type": "article",
+   "title": "Soccer ball",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Ball_(association_football)",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c44",
+   "type": "article",
+   "title": "Flying saucer",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Flying_saucer",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c45",
+   "type": "article",
+   "title": "Lava lamp",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Lava_lamp",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c46",
+   "type": "article",
+   "title": "Puzzle cube",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Rubik's_Cube",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c47",
+   "type": "article",
+   "title": "Rubber duck",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Rubber_duck",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c48",
+   "type": "article",
+   "title": "Globe",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Globe",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c49",
+   "type": "article",
+   "title": "Cactus",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Cactus",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c50",
+   "type": "article",
+   "title": "Dice",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Dice",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  },
+  {
+   "id": "c51",
+   "type": "article",
+   "title": "Toy rocket",
+   "sourceKind": "url",
+   "sourceRef": "https://en.wikipedia.org/wiki/Model_rocket",
+   "tags": [],
+   "createdAt": "2026-10-22T00:00:00.000Z"
+  }
+ ],
+ "representations": [
+  {
+   "id": "r1",
+   "contentItemId": "c1",
+   "objectKind": "arDevice"
+  },
+  {
+   "id": "r2",
+   "contentItemId": "c2",
+   "objectKind": "vrDevice"
+  },
+  {
+   "id": "r3",
+   "contentItemId": "c3",
+   "objectKind": "igniteLogo"
+  },
+  {
+   "id": "r4",
+   "contentItemId": "c4",
+   "objectKind": "fireplace"
+  },
+  {
+   "id": "r5",
+   "contentItemId": "c5",
+   "objectKind": "book"
+  },
+  {
+   "id": "r6",
+   "contentItemId": "c6",
+   "objectKind": "photoFrame"
+  },
+  {
+   "id": "r7",
+   "contentItemId": "c7",
+   "objectKind": "record"
+  },
+  {
+   "id": "r8",
+   "contentItemId": "c8",
+   "objectKind": "tv"
+  },
+  {
+   "id": "r9",
+   "contentItemId": "c9",
+   "objectKind": "boombox"
+  },
+  {
+   "id": "r10",
+   "contentItemId": "c10",
+   "objectKind": "box"
+  },
+  {
+   "id": "r11",
+   "contentItemId": "c11",
+   "objectKind": "plant"
+  },
+  {
+   "id": "r12",
+   "contentItemId": "c12",
+   "objectKind": "mug"
+  },
+  {
+   "id": "r13",
+   "contentItemId": "c13",
+   "objectKind": "notebook"
+  },
+  {
+   "id": "r14",
+   "contentItemId": "c14",
+   "objectKind": "trophy"
+  },
+  {
+   "id": "r15",
+   "contentItemId": "c15",
+   "objectKind": "armchair"
+  },
+  {
+   "id": "r16",
+   "contentItemId": "c16",
+   "objectKind": "sideTable"
+  },
+  {
+   "id": "r17",
+   "contentItemId": "c17",
+   "objectKind": "turntable"
+  },
+  {
+   "id": "r18",
+   "contentItemId": "c18",
+   "objectKind": "rug"
+  },
+  {
+   "id": "r19",
+   "contentItemId": "c19",
+   "objectKind": "clock"
+  },
+  {
+   "id": "r20",
+   "contentItemId": "c20",
+   "objectKind": "guitar"
+  },
+  {
+   "id": "r21",
+   "contentItemId": "c21",
+   "objectKind": "synthesizer"
+  },
+  {
+   "id": "r22",
+   "contentItemId": "c22",
+   "objectKind": "drum"
+  },
+  {
+   "id": "r23",
+   "contentItemId": "c23",
+   "objectKind": "lamp"
+  },
+  {
+   "id": "r24",
+   "contentItemId": "c24",
+   "objectKind": "coffeeMaker"
+  },
+  {
+   "id": "r25",
+   "contentItemId": "c25",
+   "objectKind": "cat"
+  },
+  {
+   "id": "r26",
+   "contentItemId": "c26",
+   "objectKind": "teapot"
+  },
+  {
+   "id": "r27",
+   "contentItemId": "c27",
+   "objectKind": "lantern"
+  },
+  {
+   "id": "r28",
+   "contentItemId": "c28",
+   "objectKind": "headphones"
+  },
+  {
+   "id": "r29",
+   "contentItemId": "c29",
+   "objectKind": "cassette"
+  },
+  {
+   "id": "r30",
+   "contentItemId": "c30",
+   "objectKind": "cushion"
+  },
+  {
+   "id": "r31",
+   "contentItemId": "c31",
+   "objectKind": "console"
+  },
+  {
+   "id": "r32",
+   "contentItemId": "c32",
+   "objectKind": "cartridge"
+  },
+  {
+   "id": "r33",
+   "contentItemId": "c33",
+   "objectKind": "vhs"
+  },
+  {
+   "id": "r34",
+   "contentItemId": "c34",
+   "objectKind": "recordSleeve"
+  },
+  {
+   "id": "r35",
+   "contentItemId": "c35",
+   "objectKind": "spoon"
+  },
+  {
+   "id": "r36",
+   "contentItemId": "c36",
+   "objectKind": "robot"
+  },
+  {
+   "id": "r37",
+   "contentItemId": "c37",
+   "objectKind": "telescope"
+  },
+  {
+   "id": "r38",
+   "contentItemId": "c38",
+   "objectKind": "car"
+  },
+  {
+   "id": "r39",
+   "contentItemId": "c39",
+   "objectKind": "motorcycle"
+  },
+  {
+   "id": "r40",
+   "contentItemId": "c40",
+   "objectKind": "fishBowl"
+  },
+  {
+   "id": "r41",
+   "contentItemId": "c41",
+   "objectKind": "yoyo"
+  },
+  {
+   "id": "r42",
+   "contentItemId": "c42",
+   "objectKind": "skateboard"
+  },
+  {
+   "id": "r43",
+   "contentItemId": "c43",
+   "objectKind": "soccerBall"
+  },
+  {
+   "id": "r44",
+   "contentItemId": "c44",
+   "objectKind": "flyingSaucer"
+  },
+  {
+   "id": "r45",
+   "contentItemId": "c45",
+   "objectKind": "lavaLamp"
+  },
+  {
+   "id": "r46",
+   "contentItemId": "c46",
+   "objectKind": "rubiksCube"
+  },
+  {
+   "id": "r47",
+   "contentItemId": "c47",
+   "objectKind": "rubberDuck"
+  },
+  {
+   "id": "r48",
+   "contentItemId": "c48",
+   "objectKind": "globe"
+  },
+  {
+   "id": "r49",
+   "contentItemId": "c49",
+   "objectKind": "cactus"
+  },
+  {
+   "id": "r50",
+   "contentItemId": "c50",
+   "objectKind": "dice"
+  },
+  {
+   "id": "r51",
+   "contentItemId": "c51",
+   "objectKind": "rocket"
+  }
+ ],
+ "placements": [
+  {
+   "representationId": "r1",
+   "slotId": "case-1"
+  },
+  {
+   "representationId": "r2",
+   "slotId": "case-2"
+  },
+  {
+   "representationId": "r3",
+   "slotId": "shelf-1"
+  },
+  {
+   "representationId": "r4",
+   "slotId": "floor-east-back-3"
+  },
+  {
+   "representationId": "r5",
+   "slotId": "bench-1"
+  },
+  {
+   "representationId": "r6",
+   "slotId": "shelf-2"
+  },
+  {
+   "representationId": "r7",
+   "slotId": "floor-1"
+  },
+  {
+   "representationId": "r8",
+   "slotId": "floor-2"
+  },
+  {
+   "representationId": "r9",
+   "slotId": "floor-3"
+  },
+  {
+   "representationId": "r10",
+   "slotId": "floor-front-loft-1"
+  },
+  {
+   "representationId": "r11",
+   "slotId": "case-3"
+  },
+  {
+   "representationId": "r12",
+   "slotId": "shelf-3"
+  },
+  {
+   "representationId": "r13",
+   "slotId": "bench-2"
+  },
+  {
+   "representationId": "r14",
+   "slotId": "shelf-high-1"
+  },
+  {
+   "representationId": "r15",
+   "slotId": "floor-east-back-1"
+  },
+  {
+   "representationId": "r16",
+   "slotId": "floor-east-back-2"
+  },
+  {
+   "representationId": "r17",
+   "slotId": "floor-9"
+  },
+  {
+   "representationId": "r18",
+   "slotId": "floor-12"
+  },
+  {
+   "representationId": "r19",
+   "slotId": "shelf-high-2"
+  },
+  {
+   "representationId": "r20",
+   "slotId": "floor-front-loft-2"
+  },
+  {
+   "representationId": "r21",
+   "slotId": "floor-8"
+  },
+  {
+   "representationId": "r22",
+   "slotId": "floor-6"
+  },
+  {
+   "representationId": "r23",
+   "slotId": "case-4"
+  },
+  {
+   "representationId": "r24",
+   "slotId": "case-5"
+  },
+  {
+   "representationId": "r25",
+   "slotId": "case-6"
+  },
+  {
+   "representationId": "r26",
+   "slotId": "shelf-high-3"
+  },
+  {
+   "representationId": "r27",
+   "slotId": "bench-3"
+  },
+  {
+   "representationId": "r28",
+   "slotId": "block-1"
+  },
+  {
+   "representationId": "r29",
+   "slotId": "block-2"
+  },
+  {
+   "representationId": "r30",
+   "slotId": "loft-1"
+  },
+  {
+   "representationId": "r31",
+   "slotId": "floor-15"
+  },
+  {
+   "representationId": "r32",
+   "slotId": "loft-4"
+  },
+  {
+   "representationId": "r33",
+   "slotId": "step-1"
+  },
+  {
+   "representationId": "r34",
+   "slotId": "floor-old-11"
+  },
+  {
+   "representationId": "r35",
+   "slotId": "step-2"
+  },
+  {
+   "representationId": "r36",
+   "slotId": "step-3"
+  },
+  {
+   "representationId": "r37",
+   "slotId": "loft-5"
+  },
+  {
+   "representationId": "r38",
+   "slotId": "floor-old-7"
+  },
+  {
+   "representationId": "r39",
+   "slotId": "floor-old-8"
+  },
+  {
+   "representationId": "r40",
+   "slotId": "loft-6"
+  },
+  {
+   "representationId": "r41",
+   "slotId": "floor-old-12"
+  },
+  {
+   "representationId": "r42",
+   "slotId": "floor-5"
+  },
+  {
+   "representationId": "r43",
+   "slotId": "floor-13"
+  },
+  {
+   "representationId": "r44",
+   "slotId": "floor-14"
+  },
+  {
+   "representationId": "r45",
+   "slotId": "loft-2"
+  },
+  {
+   "representationId": "r46",
+   "slotId": "floor-11"
+  },
+  {
+   "representationId": "r47",
+   "slotId": "loft-3"
+  },
+  {
+   "representationId": "r48",
+   "slotId": "floor-4"
+  },
+  {
+   "representationId": "r49",
+   "slotId": "floor-old-9"
+  },
+  {
+   "representationId": "r50",
+   "slotId": "floor-old-10"
+  },
+  {
+   "representationId": "r51",
+   "slotId": "floor-7"
+  }
+ ]
+}

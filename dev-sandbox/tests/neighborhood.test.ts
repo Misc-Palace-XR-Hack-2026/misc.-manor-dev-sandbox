@@ -22,6 +22,7 @@ const EXPECTED = [
   'levi',
   'omari',
   'german',
+  'neat-stuff',
 ];
 
 test('neighborhood example rooms are valid JSON configs with themed furnishings', () => {
@@ -29,7 +30,8 @@ test('neighborhood example rooms are valid JSON configs with themed furnishings'
   for (const name of EXPECTED) {
     const room = rooms[name];
     assert.equal(validateRoom(room), null, `${name} failed validation: ${validateRoom(room)}`);
-    assert.equal(room.layoutId, 'cozy-loft');
+    // Neat stuff needs the display furniture; every other room is the plain loft.
+    assert.equal(room.layoutId, name === 'neat-stuff' ? 'curio-hall' : 'cozy-loft');
     assert.ok(room.contentItems.length >= 3, `${name} needs example content`);
     assert.ok(room.placements.length >= 3, `${name} needs placed objects`);
     for (const rep of room.representations) {

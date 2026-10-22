@@ -75,26 +75,26 @@ test('dropIn copies the objects onto free slots as one undo step, and stops when
   assert.equal(store.freeSlotIds().length, Math.max(0, free - many.length));
 });
 
-test('a drop keeps the other persons content but picks a random object kind', () => {
+test('a drop keeps the other persons object exactly as they set it out', () => {
   const byRoom = devRoomObjects(repo);
   const originals = new Map([...byRoom.values()].flat().map((i) => [dropKey(i.content), i.kind]));
-  let differed = 0;
+  let checked = 0;
   for (let seed = 1; seed <= 40; seed++) {
     for (const item of pickDrop(byRoom, seedDemoRoom(), rng(seed))) {
-      if (item.kind !== originals.get(dropKey(item.content))) differed++;
+      assert.equal(item.kind, originals.get(dropKey(item.content)), 'a dropped item keeps its original model');
+      checked++;
     }
   }
-  assert.ok(differed > 0, 'at least some drops should not keep the original object');
+  assert.ok(checked > 0, 'drops actually happened');
 });
 
-test('a drop skips object kinds the room already has', () => {
+test('a drop may repeat a model the room already has, because the model belongs to the item', () => {
   const room = seedDemoRoom();
-  const had = new Set(room.representations.map((r) => r.objectKind));
+  const originals = new Map([...devRoomObjects(repo).values()].flat().map((i) => [dropKey(i.content), i.kind]));
   for (let seed = 1; seed <= 40; seed++) {
-    const kinds = pickDrop(devRoomObjects(repo), room, rng(seed)).map((p) => p.kind);
-    assert.ok(kinds.every((k) => !had.has(k) || k === 'spoon'), `seed ${seed}: ${kinds.join()}`);
-    const others = kinds.filter((k) => k !== 'spoon');
-    assert.equal(new Set(others).size, others.length, 'no duplicate non-spoon kinds in one drop');
+    for (const item of pickDrop(devRoomObjects(repo), room, rng(seed))) {
+      assert.equal(item.kind, originals.get(dropKey(item.content)), `seed ${seed}: model was swapped`);
+    }
   }
 });
 
