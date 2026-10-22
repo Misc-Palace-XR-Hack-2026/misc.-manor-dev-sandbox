@@ -182,6 +182,7 @@ export function xrSelect(store: Store, hit: { kind: 'object' | 'destination' | '
 }
 
 export type PanelPage =
+  | 'neighborhood'
   | 'room-portal'
   | 'overworld'
   | 'customize'
@@ -211,6 +212,7 @@ export interface PanelButton {
 }
 
 export interface PanelActionResult {
+  neighborhoodAction?: 'home' | 'resume';
   status?: string;
   devSandbox?: boolean;
   roomFile?: 'save' | 'load';
@@ -316,6 +318,7 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
   const selected = store.selectedId
     ? store.state.representations.find((r) => r.id === store.selectedId)
     : undefined;
+  if (page === 'neighborhood') return [{id:'neighborhood:return',label:'Return to my room'},{id:'exit',label:'Camera · exit VR'},{id:'neighborhood:resume',label:'Keep exploring'}];
   if (page === 'room-portal') return [
     {id:'page:home',label:'Back'},
     {id:'rooms:random',label:'Visit a random room'},
@@ -324,7 +327,7 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
     {id:'page:overworld',label:'Neighborhood / Overworld'},
     {id:'page:customize',label:'Customize · lighting, walls & floors'},
     {id:'rooms:dev',label:'Dev sandbox'},
-    ...(store.visiting ? [{id:'home:return',label:'Return to My room'}] : []),
+    ...(store.visiting ? [{id:'home:return',label:'Return to my room'}] : []),
   ];
   if (page === 'customize') return [
     {id:'page:room-portal',label:'Back'},
@@ -403,7 +406,7 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
         label: (store.visiting === room.name ? '• ' : '') + repoRoomLabel(room.name),
       });
     }
-    if (store.visiting) buttons.push({ id: 'home:return', label: 'Return home' });
+    if (store.visiting) buttons.push({ id: 'home:return', label: 'Return to my room' });
     return buttons;
   }
   if (page === 'themes') {
@@ -477,7 +480,7 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
     { id: 'cancel', label: 'Cancel selection' },
   );
   if (selected) home.push({ id: 'stash:' + selected.id, label: 'Pack item' });
-  if (store.visiting) home.push({ id: 'home:return', label: 'Return home' });
+  if (store.visiting) home.push({ id: 'home:return', label: 'Return to my room' });
   home.push({ id: 'exit', label: 'Exit VR' });
   return home;
 }
@@ -546,6 +549,8 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
     if (edited && draft.created) return { tutorialEvent: 'edited' };
     return created ? { tutorialEvent: 'created' } : {tutorialEvent:'create-invalid'};
   }
+  if (id === 'neighborhood:return') return {neighborhoodAction:'home'};
+  if (id === 'neighborhood:resume') return {neighborhoodAction:'resume'};
   if (id === 'exit') return { exit: true };
   if (id === 'home:return') {
     store.returnHome();

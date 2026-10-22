@@ -1,7 +1,7 @@
 import './room-portal.css';
 import type { Store } from '../core/store';
 import { roomCatalog, visitCatalogRoom, randomRoom, loadRoomJson, downloadRoom } from '../core/room-portal';
-import { drawRoomDiorama } from '../views/room-diorama';
+
 
 export function mountRoomPortal(
   store: Store,
@@ -9,6 +9,7 @@ export function mountRoomPortal(
   customize: () => void = () => {
     document.querySelector<HTMLButtonElement>('.demo-edit-room, .chrome button[data-tutorial="style"]')?.click();
   },
+  openNeighborhood: () => void = () => document.dispatchEvent(new CustomEvent('palace-neighborhood', { detail: store })),
 ) {
   const catalog = roomCatalog(rooms);
   const dialog = document.createElement('dialog');
@@ -20,10 +21,7 @@ export function mountRoomPortal(
   status.setAttribute('role', 'status');
   const actions = document.createElement('div');
   actions.className = 'room-portal-actions';
-  const map = document.createElement('div');
-  map.className = 'room-overworld';
-  map.hidden = true;
-  map.setAttribute('aria-label', 'Neighborhood overworld');
+
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = '.json,application/json';
@@ -45,24 +43,11 @@ export function mountRoomPortal(
     visitCatalogRoom(store, room);
     close();
   }
-  const home = button('Return to My room', () => visit('home'));
+  const home = button('Return to my room', () => visit('home'));
   function render(): void {
     home.hidden = !store.visiting;
     undo.disabled = !store.canUndo;
-    map.replaceChildren();
-    for (const room of catalog) {
-      const b = button(room.label, () => visit(room.id));
-      b.className = 'room-island';
-      b.dataset.roomId = room.id;
-      b.setAttribute('aria-label', `Visit ${room.label}`);
-      if (store.visiting === room.id || (!store.visiting && room.id === 'home')) b.setAttribute('aria-current', 'page');
-      const canvas = document.createElement('canvas');
-      canvas.width = 320;
-      canvas.height = 190;
-      drawRoomDiorama(canvas.getContext('2d')!, room.data ?? store.personalRoom, 0, 0, 320, 190);
-      b.prepend(canvas);
-      map.append(b);
-    }
+
   }
   const backup = button('Save room · JSON', () => {
     downloadRoom(store);
@@ -86,9 +71,8 @@ export function mountRoomPortal(
     backup,
     load,
     button('Neighborhood / Overworld', () => {
-      map.hidden = false;
-      render();
-      say(`${catalog.length} available rooms · scroll the neighborhood and select an island to visit.`);
+      close();
+      openNeighborhood();
     }),
     button('Customize · lighting, walls & floors', () => { close(); customize(); }),
     home,
@@ -117,14 +101,14 @@ export function mountRoomPortal(
       if (token === generation && dialog.open) say(`Room not loaded: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
-  dialog.append(title, status, actions, map, input);
+  dialog.append(title, status, actions, input);
   document.body.append(dialog);
   function open(): void {
     generation++;
     dev.hidden = false;
     for (const b of actions.querySelectorAll('button')) b.hidden = false;
     render();
-    map.hidden = true;
+
     say(store.visiting
       ? `Visiting ${store.state.owner} · My room is safe. Changes here are temporary.`
       : 'My room · saved locally. Export JSON for a portable backup before loading or customizing.');

@@ -740,11 +740,14 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     });
     const vrEntry = new VrCameraEntry();
     const cameraChoice: CameraChoice = loadCamera(storage);
+    view.setNeighborhoodMode(cameraChoice);
     hud = mountDemoHud({
       dev,
       camera: cameraChoice,
+      homeControl: view.homeControl,
       onCamera: (choice) => {
         saveCamera(storage, choice);
+        view.setNeighborhoodMode(choice);
         dropPickup();
         choice === 'dollhouse' ? walk?.toOverview() : walk?.toWalk();
       },

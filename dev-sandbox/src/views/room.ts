@@ -16,6 +16,8 @@ import { roomOwnerName } from '../core/rooms';
 import { canEnterVr, enterReason, type NeighborhoodRoom } from '../xr/interaction';
 import { XrSession } from '../xr/session';
 import { roomSoundtrack } from './soundtrack';
+import { NeighborhoodWorld } from './neighborhood-world';
+import { roomCatalog, visitCatalogRoom } from '../core/room-portal';
 
 // Thin 3D adapter: draws store.state and sends clicks back as store commands. Holds no truth of its own.
 // Replaceable later (IWSDK, Babylon) as long as the store contract stays the same.
@@ -129,8 +131,74 @@ export class RoomView {
   private xr: XrSession | null = null;
   private vrButton = document.createElement('button');
   private demo: DemoHooks | null = null;
+  neighborhood: NeighborhoodWorld | null = null;
+  private neighborhoodMode: 'tactile' | 'dollhouse' = 'tactile';
+  private neighborhoodRooms: NeighborhoodRoom[] = [];
+  private neighborhoodHidden = new Map<THREE.Object3D, boolean>();
+  private neighborhoodBackground: THREE.Scene['background'] = null;
+  private neighborhoodBack = document.createElement('button');
+  private neighborhoodHint = document.createElement('p');
+
+  get homeControl(): HTMLButtonElement { return this.neighborhoodBack; }
+  setNeighborhoodMode(mode: 'tactile' | 'dollhouse'): void {
+    this.neighborhoodMode = mode; this.neighborhood?.setMode(mode);
+    this.updateNeighborhoodHint();
+  }
+  private updateNeighborhoodHint(): void {
+    const hud=document.querySelector('.demo-hud');if(hud&&this.neighborhoodBack.parentElement!==hud)hud.append(this.neighborhoodBack);
+    this.neighborhoodHint.hidden = !this.neighborhood;
+    this.neighborhoodHint.textContent = this.neighborhood?.mode === 'dollhouse'
+      ? 'Neighborhood · drag to pan · scroll / pinch to zoom · select a pavilion to visit'
+      : 'Neighborhood · WASD / arrows to walk · drag to look · tap path to walk or a room to visit';
+    this.neighborhoodBack.hidden = !this.neighborhood && !this.store.visiting;
+    this.neighborhoodBack.textContent = 'Return to my room';
+  }
+  openNeighborhood(): void {
+    if (this.neighborhood) return;
+    this.store.select(null); this.card.show(null);
+    const catalog=roomCatalog(this.neighborhoodRooms).map(room=>room.id===this.store.visiting?{...room,data:structuredClone(this.store.state)}:room);
+    const world = new NeighborhoodWorld(catalog, this.store.personalRoom, id => {
+      const room = catalog.find(r => r.id === id);
+      if (!room) return;
+      this.clickAt = null; this.downAt = null;
+      this.closeNeighborhood(); visitCatalogRoom(this.store, room);
+      this.xr?.neighborhoodEnteredRoom();
+      this.updateNeighborhoodHint();
+    });
+    for (const object of this.scene.children) {
+      if (object.userData.neighborhoodKeep) continue;
+      this.neighborhoodHidden.set(object, this.xr?.desktopVisibility(object) ?? object.visible); object.visible = false;
+    }
+    this.neighborhoodBackground = this.scene.background;
+    this.scene.background = new THREE.Color(0xe3c7a0);
+    this.scene.add(world.group); this.neighborhood = world;
+    world.spawnOutside(this.store.visiting);
+    world.setMode(this.neighborhoodMode); world.mount(this.canvas);
+    world.resize(this.container.clientWidth, this.container.clientHeight);
+    this.controls.enabled = false;
+    this.xr?.setNeighborhood(world);
+    this.updateNeighborhoodHint();
+  }
+  closeNeighborhood(): void {
+    if (!this.neighborhood) return;
+    this.xr?.setNeighborhood(null);
+    this.neighborhood.dispose(); this.neighborhood = null;
+    for (const [object, visible] of this.neighborhoodHidden) object.visible = visible;
+    this.neighborhoodHidden.clear(); this.scene.background = this.neighborhoodBackground; this.surfaceError.hidden=true;
+    this.sync(); this.updateNeighborhoodHint();
+  }
 
   constructor(private container: HTMLElement, private store: Store, rooms: NeighborhoodRoom[] = []) {
+    this.neighborhoodRooms = rooms;
+    this.neighborhoodBack.className = 'demo-hud-btn neighborhood-back';
+    this.neighborhoodBack.textContent='Return to my room';
+    this.neighborhoodHint.className = 'neighborhood-hint';
+    this.neighborhoodBack.hidden = this.neighborhoodHint.hidden = true;
+    this.neighborhoodBack.onclick = () => { this.closeNeighborhood(); this.store.returnHome(); this.xr?.neighborhoodEnteredRoom(); this.updateNeighborhoodHint(); };
+    document.body.append(this.neighborhoodBack, this.neighborhoodHint);
+    document.addEventListener('palace-neighborhood', event => { if ((event as CustomEvent).detail === this.store) this.openNeighborhood(); });
+    document.addEventListener('palace-neighborhood-home', event => { if ((event as CustomEvent).detail === this.store) this.neighborhoodBack.click(); });
+    this.store.subscribe(() => this.updateNeighborhoodHint());
     this.renderer = createRoomRenderer();
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.shadowMap.enabled = true;
@@ -337,7 +405,7 @@ export class RoomView {
   }
 
   get activeCamera(): THREE.Camera {
-    return this.demo?.camera ?? this.camera;
+    return this.neighborhood?.camera ?? this.demo?.camera ?? this.camera;
   }
 
   get canvas(): HTMLCanvasElement {
@@ -579,6 +647,19 @@ export class RoomView {
   }
 
   private tick(t: number): void {
+    if (this.neighborhood) {
+      this.controls.enabled = false;
+      for (const object of this.neighborhoodHidden.keys()) object.visible = false;
+      this.roomGroup.visible = this.objectsGroup.visible = this.markerGroup.visible = false;
+      this.practiceOutline.visible = false; this.practicePad.hidden = true;
+      this.neighborhood.resize(this.container.clientWidth, this.container.clientHeight);
+      this.neighborhood.tick(t, Boolean(this.xr?.presenting));
+      if(this.neighborhood.surfaceError){this.surfaceError.textContent='A neighborhood surface image could not be decoded. Your room data is unchanged.';this.surfaceError.hidden=false;}
+      const camera = this.xr?.tick() ?? this.neighborhood.camera;
+      this.neighborhoodBack.hidden = Boolean(this.xr?.presenting);
+      this.neighborhoodHint.hidden = Boolean(this.xr?.presenting);
+      this.renderer.render(this.scene, camera); return;
+    }
     const tutorial=(window as unknown as {tutorial?:{targetRepresentationId:string|null}}).tutorial;
     const practice=tutorial?.targetRepresentationId ? this.objects.get(tutorial.targetRepresentationId) : null;
     this.practiceOutline.visible=Boolean(practice && this.store.practicing);
@@ -846,6 +927,7 @@ export class RoomView {
   }
 
   private activateAt(e: { clientX: number; clientY: number }): void {
+    if (this.neighborhood) return;
     const selected = this.store.selectedId;
     const repId = this.repIdAt(e); // What object did we click on?
 
@@ -877,6 +959,7 @@ export class RoomView {
   }
 
   private onHover(e: PointerEvent): void {
+    if (this.neighborhood) { this.hideTooltip(); return; }
     if (this.downAt) return;
     const repId = this.repIdAt(e);
     const slotOver = this.store.selectedId ? this.slotIdAt(e) : null;

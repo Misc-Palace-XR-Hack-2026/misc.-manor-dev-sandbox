@@ -5,10 +5,99 @@
     "persisted": true
   },
   "download": "misc-manor-room.json",
-  "desktopIslands": 16,
+  "desktopPavilions": 16,
+  "culDeSacs": {
+    "groups": {
+      "daylight": [
+        "directory:omari",
+        "home",
+        "repo:curious-web",
+        "repo:omari"
+      ],
+      "warm": [
+        "directory:german",
+        "directory:jawan",
+        "directory:levi",
+        "repo:creative-atelier",
+        "repo:garden-notebook",
+        "repo:german",
+        "repo:levi",
+        "repo:sample"
+      ],
+      "garden": [
+        "repo:greenhouse-conservatory"
+      ],
+      "electric": [
+        "directory:matt",
+        "repo:matt",
+        "repo:vinyl-lounge"
+      ]
+    },
+    "lights": [
+      {
+        "distance": 24,
+        "shadow": false,
+        "color": "c6e5ff",
+        "visible": true
+      },
+      {
+        "distance": 24,
+        "shadow": false,
+        "color": "ffab68",
+        "visible": true
+      },
+      {
+        "distance": 24,
+        "shadow": false,
+        "color": "ffab68",
+        "visible": false
+      },
+      {
+        "distance": 24,
+        "shadow": false,
+        "color": "77ffb7",
+        "visible": true
+      },
+      {
+        "distance": 24,
+        "shadow": false,
+        "color": "c69aff",
+        "visible": true
+      }
+    ],
+    "homeSpawn": true
+  },
+  "homeCameraHud": {
+    "adjacent": true,
+    "bottom": true,
+    "stableHelpAndCamera": true,
+    "mobile320StableAndUnclipped": true
+  },
+  "walkAndModeSwitch": true,
+  "actualPavilionClickAndExactHome": true,
+  "clickedDestinations": [
+    "home",
+    "directory:german",
+    "directory:matt",
+    "directory:levi",
+    "directory:jawan",
+    "directory:omari",
+    "repo:creative-atelier",
+    "repo:curious-web",
+    "repo:garden-notebook",
+    "repo:german",
+    "repo:greenhouse-conservatory",
+    "repo:levi",
+    "repo:matt",
+    "repo:omari",
+    "repo:sample",
+    "repo:vinyl-lounge"
+  ],
+  "tactilePavilionClick": true,
   "staleImportCancelled": true,
   "tactilePortal": true,
-  "mobileLastIslandReachable": true,
+  "mobileLastPavilionReachable": true,
+  "touchPathWalking": true,
   "introReplayPreserved": true,
   "rejectionRecovery": {
     "requests": 1,
@@ -20,6 +109,44 @@
     "gl": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
     "personalPreserved": true,
     "unpackModelAndFullFeedback": true
+  },
+  "actualSurfaces": {
+    "pavilions": 16,
+    "shellMeshes": 80,
+    "personalBrickAndCustomFloor": true,
+    "allSeedFinishesMatch": true
+  },
+  "signsAndCenterpieces": {
+    "daylight": {
+      "text": "Daylight Court",
+      "bothFaces": true,
+      "centerpiece": "court-centerpiece-daylight",
+      "bottom": 0.9199999997496605
+    },
+    "warm": {
+      "text": "Fireside Court",
+      "bothFaces": true,
+      "centerpiece": "court-centerpiece-warm",
+      "bottom": 0.9200000022530554
+    },
+    "garden": {
+      "text": "Conservatory Court",
+      "bothFaces": true,
+      "centerpiece": "court-centerpiece-garden",
+      "bottom": 0.9200000100135803
+    },
+    "electric": {
+      "text": "Twilight Court",
+      "bothFaces": true,
+      "centerpiece": "court-centerpiece-electric",
+      "bottom": 0.9199999987232685
+    }
+  },
+  "xrTeleportAndMode": {
+    "sameWorld": true,
+    "safeTeleport": true,
+    "xrHomeCameraAction": true,
+    "personalPreserved": true
   },
   "fileFallback": {
     "overlay": true,
