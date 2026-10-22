@@ -28,6 +28,16 @@ The menu provides:
 - **Dev sandbox:** BASE_URL-relative navigation inside the pillar, with XR exit before navigation.
 - **Return to My room:** reversible even after multiple visits, edits, or imported JSON in a visited room. Edits to visits are temporary and never autosave over My room. Export a visit to keep its changes.
 
+## Pack item and the item pillar’s Unpack tray
+
+The existing new-item pillar now contains an expandable **Unpack** tray on desktop. In VR, **Unpack** expands the shared glass tray page, with Back to Items, all packed content, and existing pagination for long collections. It is not a new floating control or a second unrelated home-menu inbox.
+
+- Lists every content item without a representation, including import overflow and previously packed items.
+- Calls the existing `Store.bringOut` restoration path. The chosen `lastObjectKind` survives packing; restoration creates one representation only when a valid free spot is available.
+- Empty trays explain there are no packed items. Full/incompatible-capacity rooms explicitly say to pack an item and retry; packed content and remembered model remain intact. Successful restoration reports Unpacked.
+- Visible desktop/XR actions now read **Pack item** / **Unpack**; editor rows and import/status/tutorial copy use **Packed items**. Internal `stash`, `bringOut`, inbox page/class IDs, tutorial event/target IDs, commands, and persistence keys are deliberately unchanged for compatibility.
+- Regression and actual browser checks pack and unpack a guitar, assert the same content/chosen model, exactly one representation, saved/reloaded restoration, and XR full-room feedback without losing packed content. The ordinary editor retains its existing actions with the updated wording.
+
 ## VR entry and file capabilities
 
 The third camera option, **VR**, is absent until a completed, successful secure-context `immersive-vr` support probe. A missing API, insecure origin, rejected probe, or unsupported device does not show it. The entry selection primes shared music and calls `requestSession` without another asynchronous capability probe between the gesture and request.
@@ -43,7 +53,7 @@ Controller selects cannot be assumed to grant native file/download activation:
 
 ## Verification
 
-Base `9b311fa`: **405/405 tests pass**. Feature: **415/415 tests pass**, plus `npm run typecheck`, `npm run build`, and `git diff --check`. Build retains the existing large-chunk advisory; it is not a build failure.
+Base `9b311fa`: **405/405 tests pass**. Feature: **419/419 tests pass**, plus `npm run typecheck`, `npm run build`, and `git diff --check`. Build retains the existing large-chunk advisory; it is not a build failure.
 
 Reproduce the browser harness from `dev-sandbox/` with a Vite dev server on port 5534:
 
@@ -77,6 +87,8 @@ Committed under `docs/evidence/prod-room-portal/`:
 - `xr-room-portal.png`: rendered world-space glass menu.
 - `xr-overworld.png`: rendered world-space diorama islands.
 - `xr-file-fallback.png`: real browser file fallback form.
+- `desktop-unpack.png`: expanded item-pillar Unpack tray.
+- `xr-unpack.png`: rendered glass XR Unpack tray.
 - `result.json`: browser assertions/capability/lifecycle results.
 
 Local originals: `/home/dvgpro/.hermes/cache/scratch/prod-room-portal-evidence/`. Automated suite logs: `/home/dvgpro/.hermes/cache/scratch/room-portal-tests.log` and `room-portal-base-tests.log`.

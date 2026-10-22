@@ -115,7 +115,7 @@ export function buildImport(host: FormHost): HTMLElement {
       if (!current()) return;
       const entries = parseBookmarksHtml(text);
       const { added, placed } = host.store.importBookmarks(entries);
-      done(`Imported ${added} bookmarks (${placed} placed, ${added - placed} in inbox).`);
+      done(`Imported ${added} bookmarks (${placed} placed, ${added - placed} in Packed items).`);
       document.dispatchEvent(new CustomEvent('palace-import', {detail:{entries, added, placed}}));
     } catch (e) {
       host.flash(`Could not import bookmarks: ${e instanceof Error ? e.message : String(e)}`);
@@ -123,11 +123,11 @@ export function buildImport(host: FormHost): HTMLElement {
   });
   const files = input('', true, false, (list) => {
     const { added, placed } = host.store.importFiles(entries(list));
-    done(`Added ${added} files by name (${placed} placed in the room, the rest are in the inbox).`);
+    done(`Added ${added} files by name (${placed} placed in the room, the rest are in Packed items).`);
   });
   const folder = input('', true, true, (list) => {
     const { added, placed } = host.store.importFiles(entries(list));
-    done(`Added ${added} files from the folder by name (${placed} placed, the rest in the inbox).`);
+    done(`Added ${added} files from the folder by name (${placed} placed, the rest in Packed items).`);
   });
   const button = (label: string, target: HTMLInputElement) => {
     const b = el('button', { type: 'button', textContent: label });

@@ -264,7 +264,7 @@ test('selected objects grow Edit, Move, Put away, and Open buttons', () => {
   const noteId = store.addItem({ title: 'Note', sourceRef: 'just a note', type: 'note', kind: 'notebook' });
   store.select(noteId);
   assert.deepEqual(objectActions(store).map((b) => b.id), ['page:object', 'move', 'stash:' + noteId]);
-  assert.deepEqual(objectActions(store).map((b) => b.label), ['Edit', 'Move', 'Put away']);
+  assert.deepEqual(objectActions(store).map((b) => b.label), ['Edit', 'Move', 'Pack item']);
   const linkId = store.addItem({ title: 'Docs', sourceRef: 'https://example.com/docs', type: 'link', kind: 'book' });
   store.select(linkId);
   assert.deepEqual(objectActions(store).map((b) => b.id), ['page:object', 'move', 'stash:' + linkId, 'open:link']);

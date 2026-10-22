@@ -508,7 +508,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     const id = nearestVacuum();
     if (!id) {
       vacuumHold = false;
-      showHint('The first objects stay. The rest went back into the portal.', 2400);
+      showHint('The first objects stay. Find packed items in the item pillar’s Unpack tray.', 2400);
       return;
     }
     vacuuming = id;

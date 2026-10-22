@@ -1,4 +1,5 @@
 import type { Store } from '../core/store';
+import { packedItems, unpackItem, unpackMessage } from '../core/packed-items';
 import { ROOM_TRACKS, TRACK_LABELS, validTrack, type Soundtrack } from '../core/soundtrack';
 import { ensureJukeboxTrack } from '../core/room-amenities';
 import { buildAddForm, buildImport, type FormHost } from '../views/add-forms';
@@ -257,10 +258,31 @@ export function mountSavePointPanel(
   });
   window.addEventListener('pointerup', endHold);
   window.addEventListener('pointercancel', endHold);
+  const unpack = el('details', 'demo-unpack');
+  const unpackSummary = el('summary', '', 'Unpack');
+  const packedList = el('div', 'demo-packed-list');
+  const unpackStatus = el('p', 'demo-unpack-status');
+  unpackStatus.setAttribute('role', 'status');
+  unpack.append(unpackSummary, packedList, unpackStatus);
+  const renderPacked = () => {
+    const items = packedItems(store);
+    unpackSummary.textContent = 'Unpack';
+    packedList.replaceChildren();
+    if (!items.length) packedList.append(el('p', '', 'No packed items. Pack an item to keep it here, then Unpack it later.'));
+    for (const item of items) packedList.append(button('', `Unpack ${item.title}`, () => {
+      const message = unpackMessage(unpackItem(store, item.id));
+      unpackStatus.textContent = message;
+      say(message, 3000);
+      renderPacked();
+    }));
+  };
+  store.subscribe(renderPacked);
+  renderPacked();
   menu.append(
     head,
     button('', '⭐ Random drop', () => { close(); onRandomDrop(); }),
     button('', 'Add link or file', () => show(addSheet)),
+    unpack,
     button('', 'Import from bookmarks (file)', () => show(importSheet)),
     clean,
   );
@@ -276,7 +298,7 @@ export function mountSavePointPanel(
   document.body.append(backdrop, menu, addSheet, importSheet);
 
   return {
-    open: () => { if (store.canEdit) show(menu); },
+    open: () => { if (store.canEdit) { unpackStatus.textContent = ''; renderPacked(); show(menu); } },
     close,
     get isOpen() { return !menu.hidden; },
     showClean() { clean.hidden = false; },

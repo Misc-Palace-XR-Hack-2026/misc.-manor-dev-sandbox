@@ -45,7 +45,7 @@ try {
     await page.evaluate(id => window.store.select(id), id);
     const item = page.getByRole('dialog', {name:'Item',exact:true});
     await item.waitFor();
-    for (const action of ['Edit','Pick up','Stash','Delete']) assert.equal(await item.getByRole('button',{name:action,exact:true}).count(),0);
+    for (const action of ['Edit','Pick up','Pack item','Delete']) assert.equal(await item.getByRole('button',{name:action,exact:true}).count(),0);
     assert.equal(await item.locator('.kind-current').count(),0);
     page.once('dialog', () => { throw new Error('Preview title must not prompt to rename'); });
     await item.locator('.title').dispatchEvent('dblclick');

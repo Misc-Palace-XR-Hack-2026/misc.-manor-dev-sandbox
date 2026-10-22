@@ -52,7 +52,7 @@ test('VR scenery sits exactly where the public build puts it', () => {
 
 test('portal and jukebox pages expose real actions independent of onboarding', () => {
   const store = new Store(newRoom());
-  assert.deepEqual(panelButtons(store, 'portal').map(b => b.id), ['page:home', 'page:create', 'portal:drop', 'portal:files', 'portal:clean']);
+  assert.deepEqual(panelButtons(store, 'portal').map(b => b.id), ['page:home', 'page:create', 'portal:drop', 'page:inbox', 'portal:files', 'portal:clean']);
   const music = panelButtons(store, 'jukebox').map(b => b.id);
   for (const id of ['music:follow', 'music:off', 'player:play', 'player:mute', 'player:pause']) assert.ok(music.includes(id));
   assert.deepEqual(runPanelAction(store, 'portal:files'), { portalFiles: true });

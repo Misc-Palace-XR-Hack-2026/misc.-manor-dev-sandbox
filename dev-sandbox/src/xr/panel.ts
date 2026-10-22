@@ -265,11 +265,11 @@ export class XrPanel {
     c.font = '28px system-ui, sans-serif';
     const preview = this.store.selectedId ? inspectPreview(this.store, this.store.selectedId) : null;
     c.fillStyle = HUD.mint;
-    const section = this.page === 'home' ? 'ROOM CONTROL' : this.page === 'create' ? (this.draft.editing ? 'EDIT CONTENT' : 'CREATE OBJECT') : this.page.replaceAll('-', ' ').toUpperCase();
+    const section = this.page === 'home' ? 'ROOM CONTROL' : this.page === 'create' ? (this.draft.editing ? 'EDIT CONTENT' : 'CREATE OBJECT') : this.page === 'inbox' ? 'UNPACK' : this.page.replaceAll('-', ' ').toUpperCase();
     c.fillText(section, 48, 122);
     const detail = this.page === 'create' && this.draft.error
       ? this.draft.error
-      : this.status || (this.page === 'overworld' ? 'Select an island to visit. More islands shows every available room.' : this.page === 'room-portal' ? 'JSON uses a browser form; without DOM overlay it exits VR.' : this.page === 'portal' ? 'No overlay? Browser import exits VR; your room stays saved.' : this.page === 'jukebox' || this.page === 'music' ? 'Pick a track, then Play. Own music uploads are not supported yet.' : preview?.href || preview?.detail || 'Point at an object to see its name and link.');
+      : this.status || (this.page === 'inbox' ? 'Select a packed item to return its model to a free spot.' : this.page === 'overworld' ? 'Select an island to visit. More islands shows every available room.' : this.page === 'room-portal' ? 'JSON uses a browser form; without DOM overlay it exits VR.' : this.page === 'portal' ? 'No overlay? Browser import exits VR; your room stays saved.' : this.page === 'jukebox' || this.page === 'music' ? 'Pick a track, then Play. Own music uploads are not supported yet.' : preview?.href || preview?.detail || 'Point at an object to see its name and link.');
     c.fillStyle = this.page === 'create' && this.draft.error ? HUD.danger : HUD.muted;
     const description = this.page === 'create' && this.draft.error ? detail : preview?.title ? preview.title + ' · ' + detail : detail;
     c.fillText(this.clip(c, description, 928), 48, 158);

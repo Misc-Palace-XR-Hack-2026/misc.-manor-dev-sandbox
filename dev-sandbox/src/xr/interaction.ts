@@ -1,4 +1,5 @@
 import type { Store } from '../core/store';
+import { packedItems, unpackItem, unpackMessage } from '../core/packed-items';
 import { roomCatalog, randomRoom, visitCatalogRoom } from '../core/room-portal';
 import { OBJECT_KINDS, OBJECT_LABELS, type ObjectKind } from '../core/types';
 import { LIGHTING_PRESETS, type Lighting } from '../core/appearance';
@@ -210,6 +211,7 @@ export interface PanelButton {
 }
 
 export interface PanelActionResult {
+  status?: string;
   devSandbox?: boolean;
   roomFile?: 'save' | 'load';
   portalFiles?: boolean;
@@ -304,7 +306,7 @@ export function objectActions(store: Store): PanelButton[] {
   const actions: PanelButton[] = [
     { id: 'page:object', label: 'Edit' },
     { id: 'move', label: 'Move' },
-    { id: 'stash:' + selected.id, label: 'Put away' },
+    { id: 'stash:' + selected.id, label: 'Pack item' },
   ];
   if (inspectPreview(store, selected.id).href) actions.push({ id: 'open:link', label: 'Open' });
   return actions;
@@ -340,6 +342,7 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
     { id: 'page:home', label: 'Back' },
     { id: 'page:create', label: 'Add link or text (VR keyboard)' },
     { id: 'portal:drop', label: '⭐ Random drop' },
+    { id: 'page:inbox', label: 'Unpack' },
     { id: 'portal:files', label: 'Files, photos & bookmarks (browser form)' },
     { id: 'portal:clean', label: 'Hold trigger to spring clean' },
   ];
@@ -372,10 +375,11 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
     ];
   }
   if (page === 'inbox') {
-    const inbox = store.state.contentItems.filter((item) => !store.repFor(item.id));
+    const inbox = packedItems(store);
     return [
-      { id: 'page:home', label: 'Back' },
-      ...inbox.map((item) => ({ id: 'out:' + item.id, label: `Bring out: ${item.title}` })),
+      { id: 'page:portal', label: 'Back to Items' },
+      ...(!inbox.length ? [{ id: 'packed:empty', label: 'No packed items. Pack an item to keep it here.' }] : []),
+      ...inbox.map((item) => ({ id: 'out:' + item.id, label: `Unpack: ${item.title}` })),
     ];
   }
   if (page === 'rooms') {
@@ -433,7 +437,7 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
       { id: 'guide:rooms', label: 'Practice: rooms' },
       { id: 'guide:style', label: 'Practice: style' },
       { id: 'howto:create', label: 'Create an item' },
-      { id: 'howto:move', label: 'Move and put away' },
+      { id: 'howto:move', label: 'Move and pack items' },
       { id: 'howto:rooms', label: 'Visit rooms' },
       { id: 'howto:style', label: 'Change the look' },
       { id: 'howto:skip', label: 'Skip how-to' },
@@ -442,7 +446,7 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
   if (page.startsWith('howto-')) {
     const copy: Record<string, string> = {
       'howto-create': 'Desktop: tap + then Add object. VR: assign a kind, then place it on a pad.',
-      'howto-move': 'Select an object, choose Move, then a pad. Put away sends it to Inbox. Cancel restores it.',
+      'howto-move': 'Select an object, choose Move, then a pad. Pack item keeps it in the item pillar’s Unpack tray. Cancel restores a move.',
       'howto-rooms': 'Open Rooms, pick a saved room, then Return home. Visiting does not overwrite your save.',
       'howto-style': 'Lighting, Surfaces, and Theme change this room only. Music is independent.',
     };
@@ -472,9 +476,9 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
     { id: 'undo', label: store.canUndo ? 'Undo' : 'Undo (nothing yet)' },
     { id: 'cancel', label: 'Cancel selection' },
   );
-  if (selected) home.push({ id: 'stash:' + selected.id, label: 'Stash' });
+  if (selected) home.push({ id: 'stash:' + selected.id, label: 'Pack item' });
   if (store.visiting) home.push({ id: 'home:return', label: 'Return home' });
-  home.push({ id: 'page:inbox', label: 'Inbox' }, { id: 'exit', label: 'Exit VR' });
+  home.push({ id: 'exit', label: 'Exit VR' });
   return home;
 }
 
@@ -596,7 +600,7 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   else if (id.startsWith('kind:') && store.selectedId) store.setKind(store.selectedId, id.slice(5) as ObjectKind);
   else if (id.startsWith('light:')) { store.setLighting((id.slice(6) || undefined) as Lighting | undefined); return { tutorialEvent: 'styled' }; }
   else if (id.startsWith('stash:') && store.selectedId) store.stash(store.selectedId);
-  else if (id.startsWith('out:')) store.bringOut(id.slice(4));
+  else if (id.startsWith('out:')) return { status: unpackMessage(unpackItem(store, id.slice(4))) };
   else if (id.startsWith('music:')) {
     const value = id.slice(6);
     if (value === 'follow') store.setSoundtrack(undefined);

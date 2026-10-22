@@ -61,7 +61,7 @@ try {
  await page.screenshot({path:`${out}/${name}-create-pad.png`});
  let pad=await page.locator('[data-tutorial=place-pad]').boundingBox();await page.mouse.click(pad.x+pad.width/2,pad.y+pad.height/2);
  await page.waitForFunction(()=>!window.tutorial.state.lesson);await preserved();
- await lesson('Move, stash and restore');await show();
+ await lesson('Move, pack and unpack');await show();
  await page.locator('.row').filter({has:page.getByText('Occupied pad',{exact:true})}).first().locator('.title').click();assert.equal(await page.evaluate(()=>window.tutorial.state.step),0);await show();
  await page.locator('.row').filter({has:page.getByText('Practice object',{exact:true})}).first().click();await step('Pick it up');
  await page.locator('.item-sheet [data-action=pick-up]').click();await step('Cancel the move');

@@ -69,7 +69,7 @@ try {
   });
   const item = page.getByRole('dialog', { name: /item/i });
   await item.waitFor({ state: 'visible' });
-  assert.ok(await item.getByRole('button', { name: 'Pick up', exact: true }).count() + await item.getByRole('button', { name: 'Stash', exact: true }).count() >= 1);
+  assert.ok(await item.getByRole('button', { name: 'Pick up', exact: true }).count() + await item.getByRole('button', { name: 'Pack item', exact: true }).count() >= 1);
 
   const framed = await page.evaluate(() => {
     const sheet = document.querySelector('.item-sheet');

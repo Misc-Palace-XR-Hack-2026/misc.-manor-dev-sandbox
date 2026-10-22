@@ -15,6 +15,15 @@ try{
  await page.locator('.demo-camera-select').selectOption('dollhouse');await page.waitForTimeout(3500);
  assert.equal(await page.locator('.demo-camera-select option[value=vr]').count(),0);
  await page.screenshot({path:OUT+'/desktop-portals.png'});
+ await page.evaluate(()=>{const store=window.__productionRoomView.store;const id=store.addItem({title:'Browser packed guitar',sourceRef:'https://example.com/packed-guitar',kind:'guitar'});window.packProof={id,content:store.state.representations.find(r=>r.id===id).contentItemId};store.select(id);});
+ await page.locator('.item-sheet:visible').getByRole('button',{name:'Pack item',exact:true}).click();
+ const itemPoint=await page.evaluate(()=>{const view=window.__productionRoomView;const p=view.scene.getObjectByName('save-point').position.clone().add({x:0,y:1,z:0}).project(view.activeCamera);return{x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2};});
+ await page.mouse.click(itemPoint.x,itemPoint.y);await page.locator('.demo-sp:visible summary').filter({hasText:'Unpack'}).click();
+ await page.screenshot({path:OUT+'/desktop-unpack.png'});
+ await page.locator('.demo-sp:visible').getByRole('button',{name:'Unpack Browser packed guitar',exact:true}).click();
+ assert.equal(await page.locator('.demo-sp:visible .demo-packed-list').getByText(/No packed items/).count(),1);
+ facts.desktopUnpack=await page.evaluate(async()=>{const store=window.__productionRoomView.store;const {Store}=await import('/src/core/store.ts');store.flushSave();return {model:store.repFor(window.packProof.content)?.objectKind,copies:store.state.representations.filter(r=>r.contentItemId===window.packProof.content).length,persisted:Store.loadSaved('demo-visit').representations.some(r=>r.contentItemId===window.packProof.content&&r.objectKind==='guitar')};});assert.deepEqual(facts.desktopUnpack,{model:'guitar',copies:1,persisted:true});
+ await page.locator('.demo-sp:visible .demo-panel-close').click();
  const portalTap=await page.evaluate(()=>{const view=window.__productionRoomView;const model=view.scene.getObjectByName('rooms-portal');const p=model.position.clone().add({x:0,y:1,z:0}).project(view.activeCamera);return {x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2};});
  await page.mouse.click(portalTap.x,portalTap.y);let dlg=page.locator('dialog[open]');assert.equal(await dlg.getByRole('button',{name:'Visit a random room',exact:true}).count(),1);assert.ok((await dlg.getByRole('link',{name:'Dev sandbox',exact:true}).getAttribute('href')).endsWith('/dev/'));const downloading=page.waitForEvent('download');await dlg.getByRole('button',{name:'Save room · JSON',exact:true}).click();
  const download=await downloading;await download.saveAs(OUT+'/exported-room.json');facts.download=download.suggestedFilename();
@@ -74,11 +83,20 @@ try{
   panel.show('overworld');press('island:directory:matt');check(store.visiting==='directory:matt','controller visits Matt');press('home:return');check(store.exportJson()===before,'home unchanged');
   panel.show('room-portal');press('rooms:random');check(!!store.visiting,'random visit');press('home:return');
   panel.show('customize');press('page:lighting');press('light:dawn');check(store.state.lighting==='dawn','lighting works');store.undo();check(store.exportJson()===before,'look undo');
+  const packedId=store.addItem({title:'XR packed guitar',sourceRef:'https://example.com/xr-packed',kind:'guitar'});const packedContent=store.state.representations.find(r=>r.id===packedId).contentItemId;
+  store.select(packedId);panel.show('home');press('stash:'+packedId);check(!store.repFor(packedContent),'Pack item removes representation only');
+  const packedSnapshot=store.exportJson();const full=JSON.parse(packedSnapshot);const source=full.contentItems[0];
+  for(const [i,slot] of store.layout.slots.entries()){full.contentItems.push({...source,id:'fill-content-'+i});full.representations.push({id:'fill-rep-'+i,contentItemId:'fill-content-'+i,objectKind:'book'});full.placements.push({representationId:'fill-rep-'+i,slotId:slot.id});}
+  store.replaceState(full);panel.show('portal');press('page:inbox');press('out:'+packedContent);check(panel.status.includes('Room is full'),'XR full feedback');check(!store.repFor(packedContent),'full room keeps packed content');
+  store.replaceState(JSON.parse(packedSnapshot));panel.show('portal');press('page:inbox');press('out:'+packedContent);check(store.repFor(packedContent)?.objectKind==='guitar','XR Unpack keeps model');check(panel.status.includes('Unpacked'),'XR restore feedback');store.deleteContent(packedContent);check(store.exportJson()===before,'unpack proof cleanup preserves personal');
   xr.onEnd();check(!xr.amenities.rooms,'disposed rooms model');xr.onStart();check(store.exportJson()===before,'entry preserved room');
   window.proof={view,xr,panel,store,press};
-  return {islands:seen.length,gl:view.renderer.getContext().getParameter(view.renderer.getContext().VERSION),personalPreserved:true};
+  return {islands:seen.length,gl:view.renderer.getContext().getParameter(view.renderer.getContext().VERSION),personalPreserved:true,unpackModelAndFullFeedback:true};
  });
  for(const kind of ['room-portal','overworld']){await page.evaluate(kind=>{const {view,xr,panel}=window.proof;xr.player.position.set(4.2,0,3.4);xr.player.rotation.set(0,0,0);xr.camera.position.set(0,1.65,0);xr.camera.rotation.set(0,0,0);panel.group.position.set(0,.2,0);panel.group.rotation.set(0,0,0);panel.show(kind);view.scene.updateMatrixWorld(true);view.renderer.render(view.scene,xr.camera);},kind);await page.screenshot({path:OUT+'/xr-'+kind+'.png'});}
+ await page.evaluate(()=>{const {view,xr,panel,store}=window.proof;const id=store.addItem({title:'Packed guitar',sourceRef:'https://example.com/evidence-packed',kind:'guitar'});const content=store.state.representations.find(r=>r.id===id).contentItemId;store.stash(id);window.unpackEvidence=content;panel.show('portal');window.proof.press('page:inbox');view.scene.updateMatrixWorld(true);view.renderer.render(view.scene,xr.camera);});
+ await page.screenshot({path:OUT+'/xr-unpack.png'});
+ await page.evaluate(()=>{const {store,press}=window.proof;press('out:'+window.unpackEvidence);store.deleteContent(window.unpackEvidence);});
  // Granted overlay keeps the file form in VR; absent overlay exits before presenting it.
  await page.evaluate(()=>{const {xr,panel,press}=window.proof;xr.overlayGranted=true;xr.overlay.hidden=false;panel.show('room-portal');press('rooms:load');if(!xr.roomFiles.isOpen||!xr.overlay.querySelector('dialog[open]'))throw Error('overlay room form missing');xr.roomFiles.close();xr.overlayGranted=false;xr.exit=async()=>xr.onEnd();panel.show('room-portal');press('rooms:save');});
  await page.locator('body > dialog[open]').waitFor();await page.screenshot({path:OUT+'/xr-file-fallback.png'});

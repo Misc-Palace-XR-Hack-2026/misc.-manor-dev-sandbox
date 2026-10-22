@@ -534,7 +534,8 @@ export class XrSession {
           : 'The headset browser blocked audio. Leave VR, press the speaker once, then re-enter.')
         : `Music: ${player.soundState}.`);
     }
-    if (result.page) this.panel.setStatus('');
+    if (result.status) this.panel.setStatus(result.status);
+    else if (result.page) this.panel.setStatus('');
     if (result.page === 'jukebox') ensureJukeboxTrack(this.store);
     if (result.page && result.page !== 'jukebox' && result.page !== 'music') this.amenities.jukebox?.setMouthOpen(0);
     if (result.openEmbed) {
@@ -605,7 +606,7 @@ export class XrSession {
     if (!this.presenting || !this.panel.visible || this.panel.currentPage !== 'portal' || !this.cleanGuard?.()) { this.stopClean(); return; }
     if (now < this.cleanAt) return;
     const id = vacuumTargets(this.store.state)[0];
-    if (!id) { this.panel.setStatus('The first objects stay. The rest are in Inbox.'); this.stopClean(); return; }
+    if (!id) { this.panel.setStatus('The first objects stay. Find packed items in the item pillar’s Unpack tray.'); this.stopClean(); return; }
     this.store.stash(id);
     this.cleanAt = now + 480;
   }

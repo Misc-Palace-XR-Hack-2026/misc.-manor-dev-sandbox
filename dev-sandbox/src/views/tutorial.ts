@@ -36,7 +36,7 @@ export class TutorialView {
     document.addEventListener('palace-import', event => {
       if (!this.store.canEdit || this.state.lesson !== 'bookmarks') return;
       const {entries,added,placed} = (event as CustomEvent<{entries:BookmarkEntry[];added:number;placed:number}>).detail;
-      this.result = `${added} added · ${placed} placed · ${added-placed} to Inbox. Folder tags: ${[...new Set(entries.map(e=>e.folder).filter(Boolean))].join(', ') || 'none'}.`;
+      this.result = `${added} added · ${placed} placed · ${added-placed} to Packed items. Folder tags: ${[...new Set(entries.map(e=>e.folder).filter(Boolean))].join(', ') || 'none'}.`;
       if (!entries.length && !added) this.accept('import-empty');
       else if (added > 0 && placed > 0 && added > placed && entries.every(e=>e.url.startsWith('https://example.com/practice/'))) {
         this.overflow = new Set(this.store.state.contentItems.filter(c=>!this.store.repFor(c.id)).map(c=>c.id));
@@ -89,7 +89,7 @@ export class TutorialView {
     const intro = button('Watch the intro', () => { window.location.assign(INTRO_PATH); });
     intro.dataset.tutorial = 'watch-intro';
     this.card.append(intro);
-    for (const [id,label] of Object.entries({bookmarks:'Import bookmarks',create:'Create content',move:'Move, stash and restore',rooms:'Visit local rooms',style:'Themes, lighting and surfaces'})) this.card.append(button(label,()=>this.start(id as LessonId)));
+    for (const [id,label] of Object.entries({bookmarks:'Import bookmarks',create:'Create content',move:'Move, pack and unpack',rooms:'Visit local rooms',style:'Themes, lighting and surfaces'})) this.card.append(button(label,()=>this.start(id as LessonId)));
     this.card.append(button('Go to room',()=>this.goToRoom()));
   }
   private start(lesson: LessonId): void {

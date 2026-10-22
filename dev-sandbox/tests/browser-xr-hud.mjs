@@ -174,7 +174,7 @@ try {
     return { shots, linkLabels, openHit, toolbarGapHit, toolbarSceneHits, toolbarAlpha, pillCornerAlpha, pillShapes, pages, controls, labels, hoveredTextureVersion, clearedTextureVersion, whiteTint, hit: hit?.object.userData.actionId, contrasts, alpha, transmitted, glassMaterials };
   });
   for (const [name, data] of Object.entries(result.shots)) writeFileSync(join(out, name+'.png'), Buffer.from(data.split(',')[1], 'base64'));
-  assert.deepEqual(result.linkLabels, ['Edit', 'Move', 'Put away', 'Open', 'Close'], 'link actions stay in one capsule');
+  assert.deepEqual(result.linkLabels, ['Edit', 'Move', 'Pack item', 'Open', 'Close'], 'link actions stay in one capsule');
   assert.equal(result.openHit, 'open:link', 'Open keeps its ray target');
   assert.equal(result.toolbarGapHit, null, 'shared capsule leaves button gaps non-interactive');
   assert.equal(result.toolbarSceneHits, 0, 'decoration does not block recursive scene rays');
