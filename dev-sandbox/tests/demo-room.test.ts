@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  DEMO_ROOM_ID, LEGACY_TRAY_SLOTS, SHELF_SLOTS, TUTORIAL_SLOTS, inBox, migrateDemoRoom, repIdFor, seedDemoRoom, tutorialDone,
+  DEMO_ROOM_ID, LEGACY_TRAY_SLOTS, SHELF_SLOTS, TUTORIAL_SLOTS, inBox, migrateDemoRoom, prepareIntroReplayRoom, repIdFor,
+  seedDemoRoom, tutorialDone,
 } from '../src/demo/demo-room';
 import { INTRO_OBJECTS } from '../src/demo/intro-objects';
 import { Store, normalizeRoom, roomKeys } from '../src/core/store';
@@ -90,4 +91,43 @@ test('a starter object can change kind and be stashed, but its link, text and ex
   assert.ok(store.content('intro-rocket'));
   store.stash(rep);
   assert.ok(store.content('intro-rocket'));
+});
+
+
+test('replaying the intro preserves My room customizations and puts only the starters back in the box', () => {
+  const room = seedDemoRoom();
+  // A finished tutorial plus something the visitor added.
+  room.placements = [
+    { representationId: repIdFor('intro-rocket'), slotId: 'shelf-1' },
+    { representationId: repIdFor('intro-drum'), slotId: 'shelf-2' },
+    { representationId: repIdFor('intro-cassette'), slotId: 'bench-1' },
+  ];
+  room.contentItems.push({
+    id: 'custom-keep', type: 'note', title: 'Keep this', sourceKind: 'text', sourceRef: 'local note',
+    tags: ['custom'], createdAt: new Date().toISOString(),
+  } as never);
+  room.representations.push({ id: 'rep-custom-keep', contentItemId: 'custom-keep', objectKind: 'book' } as never);
+  room.placements.push({ representationId: 'rep-custom-keep', slotId: 'floor-8' } as never);
+  // A starter whose kind the visitor changed keeps that kind.
+  room.representations.find((r) => r.id === repIdFor('intro-drum'))!.objectKind = 'lamp';
+
+  const replay = prepareIntroReplayRoom(room);
+
+  // User customization survives.
+  assert.ok(replay.contentItems.some((c) => c.id === 'custom-keep'));
+  assert.ok(replay.placements.some((p) => p.representationId === 'rep-custom-keep' && p.slotId === 'floor-8'));
+  assert.equal(replay.representations.find((r) => r.id === repIdFor('intro-drum'))!.objectKind, 'lamp');
+
+  // Starters are back in the box: no placement, all three waiting.
+  assert.ok(!replay.placements.some((p) => p.representationId.startsWith('rep-intro-')));
+  assert.deepEqual(inBox(replay), INTRO_OBJECTS.map((o) => repIdFor(o.id)));
+  assert.equal(tutorialDone(replay), false);
+  assert.doesNotThrow(() => normalizeRoom(replay));
+});
+
+test('replaying restores a starter the visitor stashed', () => {
+  const room = seedDemoRoom();
+  room.representations = room.representations.filter((r) => r.id !== repIdFor('intro-cassette'));
+  const replay = prepareIntroReplayRoom(room);
+  assert.deepEqual(inBox(replay), INTRO_OBJECTS.map((o) => repIdFor(o.id)));
 });

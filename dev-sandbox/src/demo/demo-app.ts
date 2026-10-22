@@ -14,7 +14,8 @@ import { buildJukebox } from './jukebox';
 import { buildCardboardBox } from './cardboard-box';
 import { mountWalkMode } from './walk-mode';
 import {
-  DEMO_ROOM_ID, SHELF_SLOTS, TUTORIAL_SLOTS, inBox, migrateDemoRoom, normalizeDemoOwner, seedDemoRoom, tutorialDone,
+  DEMO_ROOM_ID, SHELF_SLOTS, TUTORIAL_SLOTS, inBox, migrateDemoRoom, normalizeDemoOwner, prepareIntroReplayRoom,
+  seedDemoRoom, tutorialDone,
 } from './demo-room';
 import { EYE_HEIGHT, poseFromLookAt, type WalkPose } from '../core/walk';
 
@@ -116,14 +117,18 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     console.error('demo room', roomKeys(DEMO_ROOM_ID).main, error);
     return;
   }
-  if (normalizeDemoOwner(initial)) {
+  let shouldPersist = normalizeDemoOwner(initial);
+  // `/` is always the demo and always plays the walk-in. Partial progress is kept (placed starters stay put, the rest
+  // wait in the box); a finished room gets its starters back in the box, keeping everything else the visitor added.
+  if (tutorialDone(initial)) {
+    initial = prepareIntroReplayRoom(initial);
+    shouldPersist = true;
+  }
+  if (shouldPersist) {
     try { localStorage.setItem(roomKeys(DEMO_ROOM_ID).main, JSON.stringify(initial)); }
-    catch { /* storage may be blocked/full; the repaired label still appears for this session */ }
+    catch { /* storage may be blocked/full; keep repaired/replayed state for this session */ }
   }
   const store = new Store(initial, DEMO_ROOM_ID);
-  // `/` is always the demo and always plays the walk-in. Partial progress is kept (placed starters stay put, the rest
-  // wait in the box); only a finished room starts over with a full box.
-  if (tutorialDone(store.state)) store.replaceState(seedDemoRoom());
 
   // The in-VR room picker needs the committed rooms here too: a headset visitor has no desktop toolbar.
   const view = new RoomView(container, store, REPO_ROOMS);
