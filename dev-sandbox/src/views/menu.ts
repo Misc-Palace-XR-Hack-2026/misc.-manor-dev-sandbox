@@ -6,6 +6,7 @@ import { preparePhoto } from './photo-upload';
 import { previewOpenUrl } from '../core/preview';
 import { SHOW_PREVIEW_BUTTON } from '../core/demo-flags';
 import { Store } from '../core/store';
+import { unpackItem, unpackMessage } from '../core/packed-items';
 import { ROOMS_PICKER_ORDER, displayRoomName, isDemoHomeAlias, isDemoSessionRoom, openRoom, seedRoom } from '../core/rooms';
 import { THEMES } from '../core/themes';
 import { OBJECT_KINDS, OBJECT_LABELS, type ObjectKind } from '../core/types';
@@ -490,12 +491,12 @@ export class MenuView {
     if (href) meta.append(el('a', { href, target: '_blank', rel: 'noopener noreferrer', textContent: 'open' }));
     else meta.append(c.imageData ? 'local photo · included in export' : c.sourceRef || 'note');
 
-    const where = el('div', { class: 'where' }, rep ? (slotLabel ?? 'held: pick a spot in the room') : 'inbox (not in room)');
+    const where = el('div', { class: 'where' }, rep ? (slotLabel ?? 'held: pick a spot in the room') : 'Packed items (not in room)');
 
     const actions = el('div', { class: 'actions' });
-    const act = (label: string, fn: () => void) => {
+    const act = (label: string, fn: () => void, actionId = label.toLowerCase().replace(/ /g, '-')) => {
       const b = el('button', { textContent: label });
-      b.dataset.action = label.toLowerCase().replace(/ /g, '-');
+      b.dataset.action = actionId;
       b.addEventListener('click', (e) => {
         e.stopPropagation();
         fn();
@@ -521,9 +522,9 @@ export class MenuView {
           store.pickUp(rep.id);
           this.closeSheets();
         });
-        act('Stash', () => store.stash(rep.id));
+        act('Pack item', () => store.stash(rep.id), 'stash');
       } else {
-        act('Bring out', () => store.bringOut(c.id));
+        act('Unpack', () => this.flash(unpackMessage(unpackItem(store, c.id))), 'bring-out');
       }
       if (!c.locked) act('Delete', () => store.deleteContent(c.id));
     }

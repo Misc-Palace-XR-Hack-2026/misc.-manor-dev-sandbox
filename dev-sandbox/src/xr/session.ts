@@ -1,6 +1,8 @@
 import * as THREE from 'three';
+import { NeighborhoodWorld } from '../views/neighborhood-world';
+import { mountRoomPortal } from '../demo/room-portal';
 import type { Store } from '../core/store';
-import { walkStairs, inspectPreview, loftBeaconVisible, objectIdFromRay, overlayIsGranted, spawnPosition, stairHeight, stickForwardTeleport, walkableAt, walkableFloorPad, xrSelect, xrSessionInit, type NeighborhoodRoom, type PanelActionResult } from './interaction';
+import { walkStairs, inspectPreview, loftBeaconVisible, objectIdFromRay, overlayIsGranted, spawnPosition, stairHeight, stickForwardTeleport, walkableAt, walkableFloorPad, xrSelect, xrSessionInit, panelFollowsSelection, panelPillarKind, panelPose, type NeighborhoodRoom, type PanelActionResult, type PanelPage } from './interaction';
 import type { OnboardingState } from '../core/onboarding';
 import { XrPanel } from './panel';
 import { XrHoverLabel } from './hover';
@@ -236,9 +238,12 @@ class XrTeleportPillar {
   }
 }
 
+/** Indoors the whole room is 11 m across, so a tight far plane keeps depth precision high. */
+export const ROOM_CLIP = { near: 0.05, far: 40 } as const;
+
 export class XrSession {
   readonly player = new THREE.Group();
-  readonly camera = new THREE.PerspectiveCamera(70, 1, 0.05, 40);
+  readonly camera = new THREE.PerspectiveCamera(70, 1, ROOM_CLIP.near, ROOM_CLIP.far);
   private raycaster = new THREE.Raycaster();
   private temp = new THREE.Matrix4();
   private controllers: THREE.Group[] = [];
@@ -258,10 +263,46 @@ export class XrSession {
   presenting = false;
   readonly amenities: XrAmenities;
   private imports: XrImportSheet;
+  private roomFiles: ReturnType<typeof mountRoomPortal> | null = null;
+  private roomSources: NeighborhoodRoom[];
   private dropPool: ReturnType<typeof devRoomObjects>;
   private cleaning: THREE.Group | null = null;
   private cleanAt = 0;
   private hiddenScenery: THREE.Object3D[] = [];
+  neighborhood: NeighborhoodWorld | null = null;
+
+  /**
+   * Match the headset's clip range to what is being looked at. The neighborhood is ~210 m across, so
+   * the room's 40 m far plane would cut away the far cul-de-sacs, distant rooms and the ground under
+   * them. Take the world's own camera range rather than a second magic number, so the headset sees
+   * exactly as far as the desktop street view does.
+   */
+  private syncCameraRange(): void {
+    const near = this.neighborhood ? this.neighborhood.street.near : ROOM_CLIP.near;
+    const far = this.neighborhood ? this.neighborhood.street.far : ROOM_CLIP.far;
+    if (this.camera.near === near && this.camera.far === far) return;
+    this.camera.near = near;
+    this.camera.far = far;
+    // three copies these onto the XR eye cameras and into the session's depth range each frame.
+    this.camera.updateProjectionMatrix();
+  }
+
+  setNeighborhood(world: NeighborhoodWorld | null): void {
+    this.neighborhood = world;
+    this.syncCameraRange();
+    if (this.presenting) {
+      if (world) { this.amenities.end(); this.player.position.copy(world.street.position).setY(0); this.player.rotation.set(0,world.street.rotation.y,0); this.panel.hide(); }
+      else this.amenities.start();
+    }
+    this.syncGuides();
+  }
+  desktopVisibility(object: THREE.Object3D): boolean { return this.hiddenScenery.includes(object) || object.visible; }
+  neighborhoodEnteredRoom(): void {
+    this.syncCameraRange();
+    if (!this.presenting) return;
+    const spawn = spawnPosition(); this.player.position.set(spawn.x, spawn.y, spawn.z); this.player.rotation.set(0,0,0);
+    this.panel.hide(); this.syncGuides();
+  }
   private cleanGuard: (() => boolean) | null = null;
 
   constructor(
@@ -277,6 +318,7 @@ export class XrSession {
   ) {
     this.amenities = new XrAmenities(scene);
     this.imports = new XrImportSheet(store);
+    this.roomSources = rooms;
     this.dropPool = devRoomObjects(Object.fromEntries(rooms.map(r => [r.name, r.data])));
     this.renderer.xr.enabled = true;
     this.renderer.xr.setReferenceSpaceType('local-floor');
@@ -286,8 +328,10 @@ export class XrSession {
     this.loftBeacon.setPosition(new THREE.Vector3(2.0, 2.28, 1.6));
     this.loftBeacon.group.userData.walkable = true;
     this.loftBeacon.setVisible(false);
+    for (const group of [this.player, this.floors, this.marker.group, this.hoverLabel.group]) group.userData.neighborhoodKeep = true;
     this.scene.add(this.player, this.floors, this.marker.group, this.hoverLabel.group);
     this.panel = new XrPanel(store, (result) => this.onPanel(result), rooms);
+    this.panel.place = (page) => this.anchorPanel(page);
     this.objectMenu = new XrObjectMenu(store, (result) => this.onPanel(result));
     this.overlay = document.createElement('div');
     this.overlay.id = 'xr-dom-overlay';
@@ -295,8 +339,10 @@ export class XrSession {
     this.overlay.hidden = true;
     document.body.append(this.overlay);
     this.overlayCard = new PreviewCardView(this.overlay);
-    this.player.add(this.panel.group);
-    this.scene.add(this.objectMenu.group);
+    // The panel is parked on the thing that opened it, so it belongs to the world, not the player rig.
+    this.panel.group.userData.neighborhoodKeep = true;
+    this.objectMenu.group.userData.neighborhoodKeep = true;
+    this.scene.add(this.panel.group, this.objectMenu.group);
     this.buildFloors();
     this.bindControllers();
     this.renderer.xr.addEventListener('sessionstart', () => this.onStart());
@@ -307,8 +353,6 @@ export class XrSession {
     if (!globalThis.isSecureContext) throw new Error('Enter VR needs HTTPS or localhost.');
     const xr = navigator.xr;
     if (!xr) throw new Error('WebXR is not available in this browser.');
-    const ok = await xr.isSessionSupported('immersive-vr');
-    if (!ok) throw new Error('This headset/browser does not support immersive VR.');
     const session = await xr.requestSession('immersive-vr', xrSessionInit(this.overlay));
     this.overlayGranted = overlayIsGranted(session);
     this.objectMenu.useDomOverlay = this.overlayGranted;
@@ -349,9 +393,12 @@ export class XrSession {
 
   private onStart(): void {
     this.presenting = true;
+    this.syncCameraRange();
+    document.body.classList.add('palace-immersive');
+    this.roomFiles?.close();
     this.lastWalk = 0;
     this.imports.close();
-    this.amenities.start();
+    if (!this.neighborhood) this.amenities.start();
     this.scene.traverse(object => {
       if (object.userData.xrDesktopOnly && object.visible) { this.hiddenScenery.push(object); object.visible = false; }
     });
@@ -364,16 +411,21 @@ export class XrSession {
     this.overlay.hidden = !this.overlayGranted;
     const tutorial = (globalThis as unknown as { tutorial?: { state: unknown } }).tutorial;
     this.panel.setGuide((tutorial?.state as typeof this.panel.guide) ?? null);
-    this.panel.show(this.panel.guide?.status === 'fresh' && !this.panel.guide.lesson ? 'welcome' : 'home');
+    if (this.neighborhood) { this.player.position.copy(this.neighborhood.street.position).setY(0); this.player.rotation.y = this.neighborhood.street.rotation.y; this.panel.hide(); }
+    else this.panel.show(this.panel.guide?.status === 'fresh' && !this.panel.guide.lesson ? 'welcome' : 'home');
     this.syncGuides();
   }
 
   private onEnd(): void {
     this.presenting = false;
+    this.syncCameraRange();
+    document.body.classList.remove('palace-immersive');
+    this.roomFiles?.close();
     this.stopClean();
     this.imports.close();
     this.amenities.end();
-    for (const object of this.hiddenScenery) object.visible = true;
+    if (this.neighborhood) this.neighborhood.setStreetPose(this.player.position, this.player.rotation.y + this.camera.rotation.y);
+    else for (const object of this.hiddenScenery) object.visible = true;
     this.hiddenScenery = [];
     this.store.select(null);
     this.marker.setVisible(false);
@@ -447,7 +499,7 @@ export class XrSession {
 
   private onSelectStart(controller: THREE.Group): void {
     if (controller.userData.targetRayMode && controller.userData.targetRayMode !== 'tracked-pointer') return;
-    if (!this.presenting || this.imports.visible) return;
+    if (!this.presenting || this.imports.visible || this.roomFiles?.isOpen) return;
     controller.userData.selecting = true;
     const hit = this.pick(controller);
     if (hit?.kind === 'panel' && hit.uv && this.panel.actionAt(hit.uv) === 'portal:clean' && this.store.canEdit) {
@@ -462,16 +514,22 @@ export class XrSession {
   private onSelectEnd(controller: THREE.Group): void {
     controller.userData.selecting = false;
     if (this.cleaning === controller) { this.stopClean(); return; }
-    if (!this.presenting || this.imports.visible) return;
+    if (!this.presenting || this.imports.visible || this.roomFiles?.isOpen) return;
+    if (this.neighborhood) {
+      const panelHit=this.panel.hit(this.rayFrom(controller));
+      if(panelHit){this.panel.activate(panelHit.uv,panelHit.mesh);return;}
+      const hit = this.neighborhood.pick(this.rayFrom(controller));
+      if (hit?.id) this.neighborhood.visit(hit.id);
+      else if (hit) this.teleport(hit.point);
+      return;
+    }
     const hit = this.pick(controller);
-    if (hit?.kind === 'portal' || hit?.kind === 'jukebox') {
+    if (hit?.kind === 'portal' || hit?.kind === 'jukebox' || hit?.kind === 'room-portal') {
       this.store.select(null);
       this.placing = false;
       this.panel.setStatus('');
       if (hit.kind === 'jukebox') ensureJukeboxTrack(this.store);
       this.amenities.jukebox?.setMouthOpen(hit.kind === 'jukebox' ? .5 : 0);
-      this.panel.group.position.set(this.camera.position.x, this.camera.position.y - 1.45, this.camera.position.z);
-      this.panel.group.rotation.y = this.camera.rotation.y;
       this.panel.show(hit.kind);
       return;
     }
@@ -500,10 +558,25 @@ export class XrSession {
   }
 
   private onPanel(result: PanelActionResult): void {
+    if(result.neighborhoodAction){if(result.neighborhoodAction==='home')document.dispatchEvent(new CustomEvent('palace-neighborhood-home',{detail:this.store}));this.panel.hide();return;}
+    if (result.page === 'overworld') {
+      document.dispatchEvent(new CustomEvent('palace-neighborhood', { detail: this.store })); this.panel.hide(); return;
+    }
+    if (result.devSandbox) {
+      void this.exit().then(() => location.assign(`${import.meta.env.BASE_URL}dev/`)).catch(() => this.panel.setStatus('Could not leave VR. Exit VR, then open Dev sandbox from the Rooms pillar.'));
+      return;
+    }
     if (result.portalDrop && this.store.canEdit) {
       const { picked, placed } = randomPortalDrop(this.store, this.dropPool);
       if (placed.length && this.amenities.portal) this.onPortalDrop?.(placed, this.amenities.portal.center.clone());
       this.panel.setStatus(placed.length ? `Added ${placed.length} objects.` : picked.length ? 'Room is full. Hold spring clean or put objects away.' : 'Nothing new to drop in.');
+    }
+    if (result.roomFile) {
+      // Native file APIs need a DOM gesture. Use a granted overlay, otherwise exit before showing the browser action.
+      const action=result.roomFile;
+      const files = this.roomFiles ??= mountRoomPortal(this.store, this.roomSources);
+      if (this.overlayGranted) { this.overlay.hidden = false; files.openFiles(action, this.overlay); }
+      else void this.exit().then(()=>files.openFiles(action)).catch(()=>this.panel.setStatus('Exit VR, then use Rooms to save or load JSON.'));
     }
     if (result.portalFiles) void this.openImports();
     if (result.musicAction) {
@@ -519,7 +592,8 @@ export class XrSession {
           : 'The headset browser blocked audio. Leave VR, press the speaker once, then re-enter.')
         : `Music: ${player.soundState}.`);
     }
-    if (result.page) this.panel.setStatus('');
+    if (result.status) this.panel.setStatus(result.status);
+    else if (result.page) this.panel.setStatus('');
     if (result.page === 'jukebox') ensureJukeboxTrack(this.store);
     if (result.page && result.page !== 'jukebox' && result.page !== 'music') this.amenities.jukebox?.setMouthOpen(0);
     if (result.openEmbed) {
@@ -590,26 +664,103 @@ export class XrSession {
     if (!this.presenting || !this.panel.visible || this.panel.currentPage !== 'portal' || !this.cleanGuard?.()) { this.stopClean(); return; }
     if (now < this.cleanAt) return;
     const id = vacuumTargets(this.store.state)[0];
-    if (!id) { this.panel.setStatus('The first objects stay. The rest are in Inbox.'); this.stopClean(); return; }
+    if (!id) { this.panel.setStatus('The first objects stay. Find packed items in the item pillar’s Unpack tray.'); this.stopClean(); return; }
     this.store.stash(id);
     this.cleanAt = now + 480;
   }
 
   private teleport(point: THREE.Vector3): void {
+    if (this.neighborhood) {
+      if (this.neighborhood.walkable(point)) this.player.position.set(point.x, 0, point.z);
+      return;
+    }
     const landing = walkableAt(point) ?? (point.y > 1.6 ? { x: 2.0, y: 2.3, z: 1.6 } : null);
     if (!landing) return;
     this.player.position.set(landing.x, landing.y, landing.z);
+    // An anchored panel stays with its pillar but turns to wherever the viewer landed.
+    if (this.panel.visible) this.anchorPanel(this.panel.currentPage);
     this.syncGuides();
   }
 
+  /** World centre of the pillar a page belongs to, when that pillar is in the room. */
+  private pillarCenter(kind: 'portal' | 'jukebox' | 'room-portal'): THREE.Vector3 | null {
+    if (kind === 'portal') return this.amenities.portal?.center.clone() ?? null;
+    if (kind === 'room-portal') return this.amenities.rooms?.center.clone() ?? null;
+    const jukebox = this.amenities.jukebox;
+    if (!jukebox) return null;
+    return jukebox.group.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.9, 0));
+  }
+
+  /**
+   * Park the panel where the page belongs: on the pillar that opened it, under the selected object's
+   * action pills when the page is about that object, and only otherwise in front of the viewer.
+   */
+  private anchorPanel(page: PanelPage): void {
+    const viewer = this.camera.getWorldPosition(new THREE.Vector3());
+    const selection = this.objectMenu.anchor;
+    if (panelFollowsSelection(page, this.panel.draft.editing) && selection) {
+      // Just under the object's pill toolbar, so the object and its menu read as one stack.
+      this.panel.placeAt(panelPose(selection, viewer, { standoff: 0.62, lift: -0.52, minHeight: 0.8 }));
+      return;
+    }
+    const pillar = panelPillarKind(page);
+    const center = pillar ? this.pillarCenter(pillar) : null;
+    if (center) {
+      this.panel.placeAt(panelPose(center, viewer, { standoff: 0.85, lift: 0.22 }));
+      return;
+    }
+    this.panelInFrontOfViewer();
+  }
+
+  /** Fallback for pages with nothing in the room to belong to (home, howto, the wrist menu). */
+  private panelInFrontOfViewer(): void {
+    const viewer = this.camera.getWorldPosition(new THREE.Vector3());
+    const forward = this.camera.getWorldDirection(new THREE.Vector3());
+    const yaw = Math.atan2(-forward.x, -forward.z);
+    this.panel.placeAt({
+      x: viewer.x + forward.x * 1.15,
+      y: viewer.y - 0.17,
+      z: viewer.z + forward.z * 1.15,
+      yaw,
+    });
+  }
+
+
   private syncGuides(): void {
-    const inVr = this.presenting;
+    const inVr = this.presenting && !this.neighborhood;
     this.floors.visible = inVr;
     this.loftBeacon.setVisible(loftBeaconVisible(inVr, this.player.position.y));
   }
 
   private updateControllers(now: number, dt: number): void {
     const session = this.renderer.xr.getSession();
+    if (this.neighborhood) {
+      this.neighborhood.viewerPosition.copy(this.player.position);
+      this.marker.setVisible(false); this.hoverLabel.hide(); this.objectMenu.hide();
+      for (const controller of this.controllers) {
+        const panelHit=this.panel.hit(this.rayFrom(controller));if(panelHit){this.panel.setHover(panelHit.uv,panelHit.mesh);continue;}
+        const hit = this.neighborhood.pick(this.rayFrom(controller));
+        if (hit?.id) {
+          const label = this.neighborhood.pavilions.find(p => p.id === hit.id)?.label ?? 'Room';
+          this.hoverLabel.show({ title: label, detail: 'Select to visit · My room stays safe', href: null, embedSrc: null }, hit.point, this.camera);
+        } else if (hit) { this.marker.setPosition(hit.point.clone().setY(.08)); this.marker.setVisible(true); }
+      }
+      for (const source of session?.inputSources ?? []) {
+        const gp = source.gamepad; if (!gp) continue;
+        const x = gp.axes[2] ?? gp.axes[0] ?? 0;
+        const y = gp.axes[3] ?? gp.axes[1] ?? 0;
+        if (Math.abs(x) > .7 && now - this.lastSnap > 280) { this.player.rotateY(-Math.sign(x) * SNAP); this.lastSnap = now; }
+        if (y < -.7 && now - this.lastSnap > 280) {
+          const controller = this.controllers.find(c => c.userData.handedness === source.handedness);
+          const hit = controller ? this.neighborhood.pick(this.rayFrom(controller)) : null;
+          if (hit && !hit.id) { this.teleport(hit.point); this.lastSnap = now; }
+        }
+        if ((gp.buttons[5] ?? gp.buttons[4] ?? gp.buttons[1])?.pressed && now - this.lastSnap > 400) {
+          this.panel.visible?this.panel.hide():this.panel.show('neighborhood');this.lastSnap = now;
+        }
+      }
+      return;
+    }
     this.hoverPoint = null;
     this.marker.setVisible(false);
     this.hoverLabel.hide();
@@ -630,7 +781,7 @@ export class XrSession {
       const hit = this.pick(controller);
       if (hit?.kind === 'panel' && hit.uv) this.panel.setHover(hit.uv, hit.target);
       if (hit?.kind === 'action' && hit.target) this.objectMenu.setHover(hit.target);
-      if (hit?.kind === 'portal' || hit?.kind === 'jukebox') this.hoverLabel.show({ title: hit.kind === 'portal' ? 'New-item portal' : 'Jukebox', detail: 'Select to open', href: null, embedSrc: null }, hit.point, this.camera);
+      if (hit?.kind === 'portal' || hit?.kind === 'jukebox' || hit?.kind === 'room-portal') this.hoverLabel.show({ title: hit.kind === 'portal' ? 'New-item portal' : hit.kind === 'room-portal' ? 'Rooms portal' : 'Jukebox', detail: 'Select to open', href: null, embedSrc: null }, hit.point, this.camera);
       if (hit?.kind === 'object' && hit.id && hit.id !== this.store.selectedId) {
         const preview = inspectPreview(this.store, hit.id);
         if (preview.title) this.hoverLabel.show(preview, hit.point, this.camera);
@@ -697,7 +848,7 @@ export class XrSession {
   }
 
   private pick(controller: THREE.Group):
-    | { kind: 'object' | 'slot' | 'floor' | 'panel' | 'action' | 'portal' | 'jukebox'; id?: string; point: THREE.Vector3; uv?: { x: number; y: number }; target?: THREE.Mesh }
+    | { kind: 'object' | 'slot' | 'floor' | 'panel' | 'action' | 'portal' | 'jukebox' | 'room-portal'; id?: string; point: THREE.Vector3; uv?: { x: number; y: number }; target?: THREE.Mesh }
     | null {
     const ray = this.rayFrom(controller);
     const actionHit = this.objectMenu.hit(ray);

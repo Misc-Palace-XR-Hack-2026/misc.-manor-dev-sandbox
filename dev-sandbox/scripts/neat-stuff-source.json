@@ -1,0 +1,257 @@
+[
+ {
+  "kind": "arDevice",
+  "title": "Ignite AR glasses",
+  "url": "https://en.wikipedia.org/wiki/Smartglasses"
+ },
+ {
+  "kind": "vrDevice",
+  "title": "Ignite VR headset",
+  "url": "https://en.wikipedia.org/wiki/Virtual_reality_headset"
+ },
+ {
+  "kind": "igniteLogo",
+  "title": "Ignite flame",
+  "url": "https://en.wikipedia.org/wiki/Fire"
+ },
+ {
+  "kind": "fireplace",
+  "title": "Cozy fireplace",
+  "url": "https://en.wikipedia.org/wiki/Fireplace"
+ },
+ {
+  "kind": "book",
+  "title": "Book",
+  "url": "https://en.wikipedia.org/wiki/Book"
+ },
+ {
+  "kind": "photoFrame",
+  "title": "Photo frame",
+  "url": "https://en.wikipedia.org/wiki/Picture_frame"
+ },
+ {
+  "kind": "record",
+  "title": "Record player (classic)",
+  "url": "https://en.wikipedia.org/wiki/Phonograph"
+ },
+ {
+  "kind": "tv",
+  "title": "TV",
+  "url": "https://en.wikipedia.org/wiki/Television"
+ },
+ {
+  "kind": "boombox",
+  "title": "Boombox",
+  "url": "https://en.wikipedia.org/wiki/Boombox"
+ },
+ {
+  "kind": "box",
+  "title": "Storage box",
+  "url": "https://en.wikipedia.org/wiki/Box"
+ },
+ {
+  "kind": "plant",
+  "title": "Leafy plant",
+  "url": "https://en.wikipedia.org/wiki/Houseplant"
+ },
+ {
+  "kind": "mug",
+  "title": "Mug",
+  "url": "https://en.wikipedia.org/wiki/Mug"
+ },
+ {
+  "kind": "notebook",
+  "title": "Notebook",
+  "url": "https://en.wikipedia.org/wiki/Notebook"
+ },
+ {
+  "kind": "trophy",
+  "title": "Trophy",
+  "url": "https://en.wikipedia.org/wiki/Trophy"
+ },
+ {
+  "kind": "armchair",
+  "title": "Armchair",
+  "url": "https://en.wikipedia.org/wiki/Chair"
+ },
+ {
+  "kind": "sideTable",
+  "title": "Side table",
+  "url": "https://en.wikipedia.org/wiki/Table_(furniture)"
+ },
+ {
+  "kind": "turntable",
+  "title": "Turntable cabinet",
+  "url": "https://en.wikipedia.org/wiki/Direct-drive_turntable"
+ },
+ {
+  "kind": "rug",
+  "title": "Patterned rug",
+  "url": "https://en.wikipedia.org/wiki/Carpet"
+ },
+ {
+  "kind": "clock",
+  "title": "Mantel clock",
+  "url": "https://en.wikipedia.org/wiki/Mantel_clock"
+ },
+ {
+  "kind": "guitar",
+  "title": "Acoustic guitar",
+  "url": "https://en.wikipedia.org/wiki/Acoustic_guitar"
+ },
+ {
+  "kind": "synthesizer",
+  "title": "Synthesizer",
+  "url": "https://en.wikipedia.org/wiki/Synthesizer"
+ },
+ {
+  "kind": "drum",
+  "title": "Drum",
+  "url": "https://en.wikipedia.org/wiki/Drum"
+ },
+ {
+  "kind": "lamp",
+  "title": "Table lamp",
+  "url": "https://en.wikipedia.org/wiki/Light_fixture"
+ },
+ {
+  "kind": "coffeeMaker",
+  "title": "Coffee maker",
+  "url": "https://en.wikipedia.org/wiki/Coffeemaker"
+ },
+ {
+  "kind": "cat",
+  "title": "Sleeping cat",
+  "url": "https://en.wikipedia.org/wiki/Cat"
+ },
+ {
+  "kind": "teapot",
+  "title": "Teapot",
+  "url": "https://en.wikipedia.org/wiki/Teapot"
+ },
+ {
+  "kind": "lantern",
+  "title": "Paper lantern",
+  "url": "https://en.wikipedia.org/wiki/Paper_lantern"
+ },
+ {
+  "kind": "headphones",
+  "title": "Headphones",
+  "url": "https://en.wikipedia.org/wiki/Headphones"
+ },
+ {
+  "kind": "cassette",
+  "title": "Cassette tape",
+  "url": "https://en.wikipedia.org/wiki/Cassette_tape"
+ },
+ {
+  "kind": "cushion",
+  "title": "Floor cushion",
+  "url": "https://en.wikipedia.org/wiki/Cushion"
+ },
+ {
+  "kind": "console",
+  "title": "Retro console",
+  "url": "https://en.wikipedia.org/wiki/Video_game_console"
+ },
+ {
+  "kind": "cartridge",
+  "title": "Game cartridge",
+  "url": "https://en.wikipedia.org/wiki/ROM_cartridge"
+ },
+ {
+  "kind": "vhs",
+  "title": "VHS tape",
+  "url": "https://en.wikipedia.org/wiki/VHS"
+ },
+ {
+  "kind": "recordSleeve",
+  "title": "Vinyl jacket",
+  "url": "https://en.wikipedia.org/wiki/Album_cover"
+ },
+ {
+  "kind": "spoon",
+  "title": "Spoon",
+  "url": "https://en.wikipedia.org/wiki/Spoon"
+ },
+ {
+  "kind": "robot",
+  "title": "Robot",
+  "url": "https://en.wikipedia.org/wiki/Robot"
+ },
+ {
+  "kind": "telescope",
+  "title": "Telescope",
+  "url": "https://en.wikipedia.org/wiki/Telescope"
+ },
+ {
+  "kind": "car",
+  "title": "Car",
+  "url": "https://en.wikipedia.org/wiki/Car"
+ },
+ {
+  "kind": "motorcycle",
+  "title": "Motorcycle",
+  "url": "https://en.wikipedia.org/wiki/Motorcycle"
+ },
+ {
+  "kind": "fishBowl",
+  "title": "Fish bowl",
+  "url": "https://en.wikipedia.org/wiki/Aquarium"
+ },
+ {
+  "kind": "yoyo",
+  "title": "Yo-yo",
+  "url": "https://en.wikipedia.org/wiki/Yo-yo"
+ },
+ {
+  "kind": "skateboard",
+  "title": "Skateboard",
+  "url": "https://en.wikipedia.org/wiki/Skateboard"
+ },
+ {
+  "kind": "soccerBall",
+  "title": "Soccer ball",
+  "url": "https://en.wikipedia.org/wiki/Ball_(association_football)"
+ },
+ {
+  "kind": "flyingSaucer",
+  "title": "Flying saucer",
+  "url": "https://en.wikipedia.org/wiki/Flying_saucer"
+ },
+ {
+  "kind": "lavaLamp",
+  "title": "Lava lamp",
+  "url": "https://en.wikipedia.org/wiki/Lava_lamp"
+ },
+ {
+  "kind": "rubiksCube",
+  "title": "Puzzle cube",
+  "url": "https://en.wikipedia.org/wiki/Rubik's_Cube"
+ },
+ {
+  "kind": "rubberDuck",
+  "title": "Rubber duck",
+  "url": "https://en.wikipedia.org/wiki/Rubber_duck"
+ },
+ {
+  "kind": "globe",
+  "title": "Globe",
+  "url": "https://en.wikipedia.org/wiki/Globe"
+ },
+ {
+  "kind": "cactus",
+  "title": "Cactus",
+  "url": "https://en.wikipedia.org/wiki/Cactus"
+ },
+ {
+  "kind": "dice",
+  "title": "Dice",
+  "url": "https://en.wikipedia.org/wiki/Dice"
+ },
+ {
+  "kind": "rocket",
+  "title": "Toy rocket",
+  "url": "https://en.wikipedia.org/wiki/Model_rocket"
+ }
+]

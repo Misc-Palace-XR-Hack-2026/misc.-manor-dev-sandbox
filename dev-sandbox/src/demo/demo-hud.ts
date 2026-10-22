@@ -1,4 +1,5 @@
 import type { Store } from '../core/store';
+import { packedItems, unpackItem, unpackMessage } from '../core/packed-items';
 import { ROOM_TRACKS, TRACK_LABELS, validTrack, type Soundtrack } from '../core/soundtrack';
 import { ensureJukeboxTrack } from '../core/room-amenities';
 import { buildAddForm, buildImport, type FormHost } from '../views/add-forms';
@@ -62,6 +63,7 @@ export interface DemoHud {
   showEditRoom(onClick: () => void): void;
   /** Free mode: the tutorial is over, so Exit tutorial goes. */
   free(): void;
+  setVrAvailable(available: boolean): void;
   dispose(): void;
 }
 
@@ -69,7 +71,9 @@ export function mountDemoHud(opts: {
   /** The `dev` link; Exit tutorial goes right after it. */
   dev: HTMLElement;
   camera: CameraChoice;
+  homeControl?: HTMLElement;
   onCamera: (choice: CameraChoice) => void;
+  onVr?: () => Promise<void>;
   onExit: () => void;
 }): DemoHud {
   const hud = el('nav', 'demo-hud');
@@ -104,9 +108,15 @@ export function mountDemoHud(opts: {
   cameraWrap.append(el('span', 'demo-camera-label', 'Camera'), select);
   select.addEventListener('change', () => {
     goalMet();
-    opts.onCamera(select.value as CameraChoice);
+    if (select.value === 'vr') {
+      select.disabled = true;
+      const restore = () => { select.disabled = false; select.value = opts.camera; };
+      if (opts.onVr) void opts.onVr().finally(restore).catch(() => {});
+      else restore();
+    } else { opts.camera = select.value as CameraChoice; opts.onCamera(opts.camera); }
     select.blur(); // arrow keys and WASD walk again
   });
+  if(opts.homeControl)hud.append(opts.homeControl);
   hud.append(helpBtn, cameraWrap);
 
   // ---- exit tutorial ----
@@ -137,6 +147,10 @@ export function mountDemoHud(opts: {
       goalTimer = window.setTimeout(() => goal.classList.remove('demo-goal-on'), 6000);
       window.clearTimeout(pulseTimer);
       pulseTimer = window.setTimeout(goalMet, PULSE_MS);
+    },
+    setVrAvailable(available) {
+      select.querySelector('option[value="vr"]')?.remove();
+      if (available) { const o = el('option', '', 'VR'); o.value = 'vr'; select.append(o); }
     },
     goalMet,
     hideGoal() {
@@ -246,10 +260,31 @@ export function mountSavePointPanel(
   });
   window.addEventListener('pointerup', endHold);
   window.addEventListener('pointercancel', endHold);
+  const unpack = el('details', 'demo-unpack');
+  const unpackSummary = el('summary', '', 'Unpack');
+  const packedList = el('div', 'demo-packed-list');
+  const unpackStatus = el('p', 'demo-unpack-status');
+  unpackStatus.setAttribute('role', 'status');
+  unpack.append(unpackSummary, packedList, unpackStatus);
+  const renderPacked = () => {
+    const items = packedItems(store);
+    unpackSummary.textContent = 'Unpack';
+    packedList.replaceChildren();
+    if (!items.length) packedList.append(el('p', '', 'No packed items. Pack an item to keep it here, then Unpack it later.'));
+    for (const item of items) packedList.append(button('', `Unpack ${item.title}`, () => {
+      const message = unpackMessage(unpackItem(store, item.id));
+      unpackStatus.textContent = message;
+      say(message, 3000);
+      renderPacked();
+    }));
+  };
+  store.subscribe(renderPacked);
+  renderPacked();
   menu.append(
     head,
     button('', '⭐ Random drop', () => { close(); onRandomDrop(); }),
     button('', 'Add link or file', () => show(addSheet)),
+    unpack,
     button('', 'Import from bookmarks (file)', () => show(importSheet)),
     clean,
   );
@@ -265,7 +300,7 @@ export function mountSavePointPanel(
   document.body.append(backdrop, menu, addSheet, importSheet);
 
   return {
-    open: () => { if (store.canEdit) show(menu); },
+    open: () => { if (store.canEdit) { unpackStatus.textContent = ''; renderPacked(); show(menu); } },
     close,
     get isOpen() { return !menu.hidden; },
     showClean() { clean.hidden = false; },

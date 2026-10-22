@@ -46,5 +46,5 @@ test('full room creation remains recoverable in Inbox and keyboard supports edit
  const s=new Store(newRoom());for(const slot of s.layout.slots)s.addItem({title:slot.id,sourceRef:''});
  const d=new Draft();d.key('A');d.key('space');d.key('B');d.key('backspace');assert.equal(d.title,'A ');
  d.mode='note';d.field='text';for(const c of 'a note!')d.key(c);assert.equal(d.text,'a note!');
- const id=d.create(s);assert.ok(id);const c=s.state.contentItems.at(-1)!;assert.equal(s.repFor(c.id),undefined);assert.match(d.message,/Inbox/);
+ const id=d.create(s);assert.ok(id);const c=s.state.contentItems.at(-1)!;assert.equal(s.repFor(c.id),undefined);assert.match(d.message,/Unpack/);
 });

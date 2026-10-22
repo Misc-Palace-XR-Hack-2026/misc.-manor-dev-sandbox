@@ -62,14 +62,21 @@ html, body { margin: 0; height: 100dvh; overflow: hidden; background: #000; font
 .demo-skip-seq:hover, .demo-skip-seq:focus-visible { color: #fff; background: rgba(241, 233, 220, 0.18); outline: none; }
 .demo-skip-seq { font: 11px/1.4 ui-monospace, monospace; color: rgba(241, 233, 220, 0.6); }
 
+/* Right-docked at every width: the bar grows leftward as controls appear, so Help and the Camera
+   choice keep their screen position instead of sliding when Return to my room shows or hides. */
 .demo-hud {
-  position: fixed; z-index: 14; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+  position: fixed; z-index: 14; right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
   display: flex; align-items: center; gap: 6px; padding: 5px; border-radius: 999px;
   border: 1px solid rgba(241, 233, 220, 0.2); background: rgba(20, 16, 28, 0.62); backdrop-filter: blur(8px);
 }
+/* Icon sizing only: room-portal.css owns the in-bar pill geometry. */
+.neighborhood-back svg { width: 20px; height: 20px; }
+/* One source of truth for the bar's pill treatment, so the icon-only home button can match Help exactly. */
+.demo-hud { --hud-btn-bg: rgba(241, 233, 220, 0.1); --hud-btn-height: 38px; }
 .demo-hud-btn, .demo-camera {
-  min-height: 38px; box-sizing: border-box; padding: 0 14px; border-radius: 999px; border: 0;
-  background: rgba(241, 233, 220, 0.1); color: #f1e9dc; font: 600 13px/1 system-ui, sans-serif; cursor: pointer;
+  min-height: var(--hud-btn-height, 38px); box-sizing: border-box; padding: 0 14px; border-radius: 999px; border: 0;
+  background: var(--hud-btn-bg, rgba(241, 233, 220, 0.1)); color: #f1e9dc; font: 600 13px/1 system-ui, sans-serif; cursor: pointer;
 }
 .demo-hud-btn:hover, .demo-hud-btn:focus-visible { background: rgba(241, 233, 220, 0.2); outline: none; }
 .demo-camera { display: flex; align-items: center; gap: 6px; padding-right: 6px; }
@@ -86,7 +93,7 @@ html, body { margin: 0; height: 100dvh; overflow: hidden; background: #000; font
 }
 @media (prefers-reduced-motion: reduce) { .demo-pulse { animation: none; box-shadow: 0 0 0 2px rgba(77, 255, 210, 0.6); } }
 @media (max-width: 600px) {
-  .demo-hud { left: auto; right: max(12px, env(safe-area-inset-right)); transform: none; }
+  .demo-hud { max-width: calc(100vw - 24px); }
 }
 
 .demo-goal {
@@ -110,6 +117,13 @@ html, body { margin: 0; height: 100dvh; overflow: hidden; background: #000; font
 .demo-panel-close { min-height: 32px; padding: 0 12px; border-radius: 999px; font-size: 12px; }
 .demo-help-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; line-height: 1.35; }
 .demo-sp { border-color: rgba(77, 255, 210, 0.45); }
+.demo-unpack summary {cursor:pointer;min-height:44px;display:flex;align-items:center;padding:0 12px;border:1px solid #d5cdeb40;border-radius:14px;background:#e8ddff12;font-weight:600}
+.demo-unpack summary::after {content:'⌄';margin-left:auto}
+.demo-unpack[open] summary::after {content:'⌃'}
+.demo-packed-list {display:grid;gap:6px;max-height:240px;overflow:auto;padding-top:8px;overscroll-behavior:contain}
+.demo-packed-list button {min-height:44px;text-align:left;white-space:normal;border-radius:14px;padding:8px 12px}
+.demo-packed-list p,.demo-unpack-status {margin:6px 0;font-size:13px;color:#d8d2e3}
+.demo-sp {max-height:calc(100dvh - 100px);overflow:auto}
 .demo-sp > button { min-height: 44px; text-align: left; border-radius: 10px; }
 .demo-sp-clean {
   border: 1px solid rgba(77, 255, 210, 0.55);

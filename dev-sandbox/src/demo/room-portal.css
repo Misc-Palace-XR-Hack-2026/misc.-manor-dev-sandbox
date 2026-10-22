@@ -1,0 +1,18 @@
+.room-portal-dialog { pointer-events:auto; color:#f1edf7; font:15px/1.5 system-ui; width:min(920px,calc(100vw - 48px)); max-height:80dvh; padding:24px; border:1px solid #b1a5ef66; border-radius:24px; background:rgba(28,26,36,.92); backdrop-filter:blur(20px); box-shadow:0 24px 90px #0008; }
+.room-portal-dialog::backdrop {background:#08081080;backdrop-filter:blur(4px)}
+.room-portal-dialog h2 {margin:0;font-size:25px}.room-portal-dialog p{color:#cec7db}
+.room-portal-actions a {display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.room-portal-actions{display:flex;flex-wrap:wrap;gap:8px}
+.room-portal-dialog :is(button,a) {font:inherit;color:inherit;border:1px solid #d5cdeb40;background:#e8ddff12;border-radius:999px;min-height:44px;padding:10px 16px;cursor:pointer}
+.room-portal-dialog :is(button,a):hover,.room-portal-dialog :is(button,a):focus-visible {background:#b1a5ef40;outline:2px solid #b1a5ef}
+.neighborhood-back {position:fixed;z-index:60;left:20px;top:80px;min-height:44px;padding:10px 18px;border:1px solid #fff5;border-radius:999px;background:#302b265e;backdrop-filter:blur(18px);color:white;font:14px system-ui;cursor:pointer;pointer-events:auto}
+.neighborhood-hint {position:fixed;z-index:50;left:50%;bottom:82px;transform:translateX(-50%);max-width:calc(100vw - 40px);width:max-content;box-sizing:border-box;padding:10px 18px;border-radius:999px;border:1px solid #fff4;background:#302b2666;backdrop-filter:blur(14px);color:white;font:13px/1.4 system-ui;text-align:center;pointer-events:none}
+/* In the bar it is an icon pill with the same treatment as Help; .demo-hud-btn supplies the background. */
+.demo-hud .neighborhood-back{position:static;border:0;backdrop-filter:none;font:inherit;display:grid;place-items:center;width:var(--hud-btn-height,38px);min-height:var(--hud-btn-height,38px);padding:0;background:var(--hud-btn-bg)}
+.demo-hud .neighborhood-back[hidden]{display:none}
+.palace-immersive .demo-hud{display:none}
+@media(max-width:360px){.demo-hud .neighborhood-back{width:34px}.demo-hud .demo-hud-btn:not(.neighborhood-back){font-size:11px;padding:0 8px}.demo-camera-select{max-width:122px}}
+.neighborhood-back[hidden],.neighborhood-hint[hidden]{display:none}
+body.demo-free .chrome button[data-tutorial="rooms"], .demo-hud .demo-edit-room {display:none}
+body:has(.demo-hud) .vr-enter {display:none}
+@media(max-width:600px){.room-portal-actions{display:grid;grid-template-columns:1fr 1fr}.room-portal-actions :is(button,a){min-width:0;font-size:13px;padding:8px}.room-portal-dialog{padding:16px;width:calc(100vw - 48px)}.demo-hud{max-width:calc(100vw - 20px);gap:3px}.demo-camera-label{display:none}.demo-hud-btn{padding:0 10px}}

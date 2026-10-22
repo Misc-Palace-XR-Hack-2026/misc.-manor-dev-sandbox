@@ -1,4 +1,6 @@
 import type { Store } from '../core/store';
+import { packedItems, unpackItem, unpackMessage } from '../core/packed-items';
+import { roomCatalog, randomRoom, visitCatalogRoom } from '../core/room-portal';
 import { OBJECT_KINDS, OBJECT_LABELS, type ObjectKind } from '../core/types';
 import { LIGHTING_PRESETS, type Lighting } from '../core/appearance';
 import { ROOM_TRACKS, TRACK_LABELS, type RoomTrack } from '../core/soundtrack';
@@ -180,6 +182,10 @@ export function xrSelect(store: Store, hit: { kind: 'object' | 'destination' | '
 }
 
 export type PanelPage =
+  | 'neighborhood'
+  | 'room-portal'
+  | 'overworld'
+  | 'customize'
   | 'home'
   | 'lighting'
   | 'music'
@@ -206,6 +212,10 @@ export interface PanelButton {
 }
 
 export interface PanelActionResult {
+  neighborhoodAction?: 'home' | 'resume';
+  status?: string;
+  devSandbox?: boolean;
+  roomFile?: 'save' | 'load';
   portalFiles?: boolean;
   portalDrop?: boolean;
   musicAction?: 'play' | 'pause' | 'mute';
@@ -271,6 +281,54 @@ export function objectMenuAnchor(origin: { x: number; y: number; z: number }, _r
   return { x: origin.x, y: origin.y + 0.55, z: origin.z };
 }
 
+export interface PanelPose { x: number; y: number; z: number; yaw: number }
+
+/**
+ * Where the big panel sits when it belongs to a thing in the room (a pillar, or the selected object)
+ * rather than to the viewer: a short step in front of that thing, on the viewer's side, turned to face
+ * them. Keeping it off the viewer's face is the whole point — the menu reads as the pillar's own.
+ */
+export function panelPose(
+  target: { x: number; y: number; z: number },
+  viewer: { x: number; y: number; z: number },
+  opts: { standoff?: number; lift?: number; minHeight?: number; maxHeight?: number } = {},
+): PanelPose {
+  const standoff = opts.standoff ?? 0.78;
+  const lift = opts.lift ?? 0.12;
+  const minHeight = opts.minHeight ?? 0.95;
+  const maxHeight = opts.maxHeight ?? 2.0;
+  let dx = viewer.x - target.x;
+  let dz = viewer.z - target.z;
+  const len = Math.hypot(dx, dz);
+  // Standing on top of the anchor gives no direction; fall back to the +Z wall of the room.
+  if (len < 1e-4) { dx = 0; dz = 1; }
+  else { dx /= len; dz /= len; }
+  // Never place the panel behind the viewer when they are closer than the standoff.
+  const distance = Math.max(0.3, Math.min(standoff, len > 0 ? len * 0.62 : standoff));
+  return {
+    x: target.x + dx * distance,
+    y: Math.min(maxHeight, Math.max(minHeight, target.y + lift)),
+    z: target.z + dz * distance,
+    yaw: Math.atan2(dx, dz),
+  };
+}
+
+/** Pages that describe the selected object, so their panel rides with that object. */
+const SELECTION_PAGES = new Set<PanelPage>(['object']);
+
+/** True when this page is about the current selection: the object actions page, or editing its text/link. */
+export function panelFollowsSelection(page: PanelPage, editingSelection: boolean): boolean {
+  return SELECTION_PAGES.has(page) || (page === 'create' && editingSelection);
+}
+
+/** Pages opened by selecting a pillar, which stay parked at that pillar. */
+export function panelPillarKind(page: PanelPage): 'portal' | 'jukebox' | 'room-portal' | null {
+  if (page === 'portal' || page === 'inbox' || page === 'create') return 'portal';
+  if (page === 'jukebox' || page === 'music') return 'jukebox';
+  if (page === 'room-portal' || page === 'rooms' || page === 'repo-rooms' || page === 'neighborhood') return 'room-portal';
+  return null;
+}
+
 export function objectMenuHit(
   at: { x: number; y: number; z: number },
   actions: PanelButton[],
@@ -298,7 +356,7 @@ export function objectActions(store: Store): PanelButton[] {
   const actions: PanelButton[] = [
     { id: 'page:object', label: 'Edit' },
     { id: 'move', label: 'Move' },
-    { id: 'stash:' + selected.id, label: 'Put away' },
+    { id: 'stash:' + selected.id, label: 'Pack item' },
   ];
   if (inspectPreview(store, selected.id).href) actions.push({ id: 'open:link', label: 'Open' });
   return actions;
@@ -308,6 +366,22 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
   const selected = store.selectedId
     ? store.state.representations.find((r) => r.id === store.selectedId)
     : undefined;
+  if (page === 'neighborhood') return [{id:'neighborhood:return',label:'Return to my room'},{id:'exit',label:'Camera · exit VR'},{id:'neighborhood:resume',label:'Keep exploring'}];
+  if (page === 'room-portal') return [
+    {id:'page:home',label:'Back'},
+    {id:'rooms:random',label:'Visit a random room'},
+    {id:'rooms:save',label:'Save room · JSON (browser form)'},
+    {id:'rooms:load',label:'Load room · JSON (browser form)'},
+    {id:'page:overworld',label:'Neighborhood / Overworld'},
+    {id:'page:customize',label:'Customize · lighting, walls & floors'},
+    {id:'rooms:dev',label:'Dev sandbox'},
+    ...(store.visiting ? [{id:'home:return',label:'Return to my room'}] : []),
+  ];
+  if (page === 'customize') return [
+    {id:'page:room-portal',label:'Back'},
+    {id:'page:lighting',label:'Lighting'}, {id:'page:surfaces',label:'Walls & floors'},
+    {id:'undo',label:'Undo look change'}, {id:'rooms:save',label:'Backup room · JSON (browser form)'},
+  ];
   if (page === 'lighting') {
     return [
       { id: 'page:home', label: 'Back' },
@@ -319,6 +393,7 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
     { id: 'page:home', label: 'Back' },
     { id: 'page:create', label: 'Add link or text (VR keyboard)' },
     { id: 'portal:drop', label: '⭐ Random drop' },
+    { id: 'page:inbox', label: 'Unpack' },
     { id: 'portal:files', label: 'Files, photos & bookmarks (browser form)' },
     { id: 'portal:clean', label: 'Hold trigger to spring clean' },
   ];
@@ -351,10 +426,11 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
     ];
   }
   if (page === 'inbox') {
-    const inbox = store.state.contentItems.filter((item) => !store.repFor(item.id));
+    const inbox = packedItems(store);
     return [
-      { id: 'page:home', label: 'Back' },
-      ...inbox.map((item) => ({ id: 'out:' + item.id, label: `Bring out: ${item.title}` })),
+      { id: 'page:portal', label: 'Back to Items' },
+      ...(!inbox.length ? [{ id: 'packed:empty', label: 'No packed items. Pack an item to keep it here.' }] : []),
+      ...inbox.map((item) => ({ id: 'out:' + item.id, label: `Unpack: ${item.title}` })),
     ];
   }
   if (page === 'rooms') {
@@ -378,7 +454,7 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
         label: (store.visiting === room.name ? '• ' : '') + repoRoomLabel(room.name),
       });
     }
-    if (store.visiting) buttons.push({ id: 'home:return', label: 'Return home' });
+    if (store.visiting) buttons.push({ id: 'home:return', label: 'Return to my room' });
     return buttons;
   }
   if (page === 'themes') {
@@ -412,7 +488,7 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
       { id: 'guide:rooms', label: 'Practice: rooms' },
       { id: 'guide:style', label: 'Practice: style' },
       { id: 'howto:create', label: 'Create an item' },
-      { id: 'howto:move', label: 'Move and put away' },
+      { id: 'howto:move', label: 'Move and pack items' },
       { id: 'howto:rooms', label: 'Visit rooms' },
       { id: 'howto:style', label: 'Change the look' },
       { id: 'howto:skip', label: 'Skip how-to' },
@@ -421,7 +497,7 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
   if (page.startsWith('howto-')) {
     const copy: Record<string, string> = {
       'howto-create': 'Desktop: tap + then Add object. VR: assign a kind, then place it on a pad.',
-      'howto-move': 'Select an object, choose Move, then a pad. Put away sends it to Inbox. Cancel restores it.',
+      'howto-move': 'Select an object, choose Move, then a pad. Pack item keeps it in the item pillar’s Unpack tray. Cancel restores a move.',
       'howto-rooms': 'Open Rooms, pick a saved room, then Return home. Visiting does not overwrite your save.',
       'howto-style': 'Lighting, Surfaces, and Theme change this room only. Music is independent.',
     };
@@ -451,9 +527,9 @@ export function panelButtons(store: Store, page: PanelPage, rooms: NeighborhoodR
     { id: 'undo', label: store.canUndo ? 'Undo' : 'Undo (nothing yet)' },
     { id: 'cancel', label: 'Cancel selection' },
   );
-  if (selected) home.push({ id: 'stash:' + selected.id, label: 'Stash' });
-  if (store.visiting) home.push({ id: 'home:return', label: 'Return home' });
-  home.push({ id: 'page:inbox', label: 'Inbox' }, { id: 'exit', label: 'Exit VR' });
+  if (selected) home.push({ id: 'stash:' + selected.id, label: 'Pack item' });
+  if (store.visiting) home.push({ id: 'home:return', label: 'Return to my room' });
+  home.push({ id: 'exit', label: 'Exit VR' });
   return home;
 }
 
@@ -467,6 +543,13 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   if (id === 'page:lighting') return { page: 'lighting', tutorialEvent: 'open-style' };
   if (id === 'page:music') return { page: 'music' };
   if (id === 'page:surfaces') return { page: 'surfaces' };
+  if (id === 'rooms:dev') return {devSandbox:true};
+  if (id === 'page:room-portal') return {page:'room-portal'};
+  if (id === 'page:overworld') return {page:'overworld'};
+  if (id === 'page:customize') return {page:'customize'};
+  if (id === 'rooms:save' || id === 'rooms:load') return {roomFile:id === 'rooms:save' ? 'save' : 'load'};
+  if (id === 'rooms:random') { const r=randomRoom(roomCatalog(rooms),store.visiting);if(r)visitCatalogRoom(store,r);return {page:'room-portal'}; }
+  if (id.startsWith('island:')) { const r=roomCatalog(rooms).find(r=>r.id===id.slice(7));if(r)visitCatalogRoom(store,r);return {page:'room-portal'}; }
   if (id === 'page:object') return { page: 'object' };
   if (id === 'page:inbox') return { page: 'inbox', tutorialEvent: 'inbox-open' };
   if (id === 'page:rooms') return { page: 'rooms', tutorialEvent:'open-rooms' };
@@ -514,6 +597,8 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
     if (edited && draft.created) return { tutorialEvent: 'edited' };
     return created ? { tutorialEvent: 'created' } : {tutorialEvent:'create-invalid'};
   }
+  if (id === 'neighborhood:return') return {neighborhoodAction:'home'};
+  if (id === 'neighborhood:resume') return {neighborhoodAction:'resume'};
   if (id === 'exit') return { exit: true };
   if (id === 'home:return') {
     store.returnHome();
@@ -568,7 +653,7 @@ export function runPanelAction(store: Store, id: string, rooms: NeighborhoodRoom
   else if (id.startsWith('kind:') && store.selectedId) store.setKind(store.selectedId, id.slice(5) as ObjectKind);
   else if (id.startsWith('light:')) { store.setLighting((id.slice(6) || undefined) as Lighting | undefined); return { tutorialEvent: 'styled' }; }
   else if (id.startsWith('stash:') && store.selectedId) store.stash(store.selectedId);
-  else if (id.startsWith('out:')) store.bringOut(id.slice(4));
+  else if (id.startsWith('out:')) return { status: unpackMessage(unpackItem(store, id.slice(4))) };
   else if (id.startsWith('music:')) {
     const value = id.slice(6);
     if (value === 'follow') store.setSoundtrack(undefined);

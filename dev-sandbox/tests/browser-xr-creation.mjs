@@ -57,7 +57,7 @@ try {
     while (store.freeSlotIds().length) store.addItem({ title: 'Fill room', sourceRef: '', type: 'note' });
     panel.show('create'); panel.draft.title = 'Overflow'; panel.draft.mode = 'note'; panel.draft.text = 'Overflow body';
     press('create:submit');
-    const fullRoomMessage = panel.shown.some(b => b.id === 'create:done') && /Inbox/.test(panel.draft.message);
+    const fullRoomMessage = panel.shown.some(b => b.id === 'create:done') && /Unpack/.test(panel.draft.message);
     const overflow = store.state.contentItems.at(-1);
     const inInbox = !store.repFor(overflow.id);
     room.xr.onEnd();

@@ -135,6 +135,8 @@ export class Store {
   /** Which named room is open (see core/rooms.ts). Undefined = the legacy single save. */
   roomId: string | undefined;
   private homeSnapshot: string | null = null;
+  private homeHistory: string[] = [];
+  get personalRoom(): RoomState { return this.homeSnapshot ? JSON.parse(this.homeSnapshot) as RoomState : this.state; }
   private history: string[] = [];
   /** Nested: while > 0, commits skip extra undo snapshots and localStorage writes until endBatch(). */
   private batching = 0;
@@ -147,7 +149,7 @@ export class Store {
 
   /** A disposable session. Personal objects and history are retained by reference, never restored through save(). */
   private personal: { state: RoomState; roomId?: string; history: string[]; selectedId: string | null;
-    pickup: Store['pickup']; visiting: string | null; homeSnapshot: string | null; saveError: string | null } | null = null;
+    pickup: Store['pickup']; visiting: string | null; homeSnapshot: string | null; homeHistory: string[]; saveError: string | null } | null = null;
   private practiceRooms = new Map<string, RoomState>();
   epoch = 0;
   lastCommand = '';
@@ -162,7 +164,7 @@ export class Store {
     this.endPractice();
     this.flushSave();
     this.personal = { state: this.state, roomId: this.roomId, history: this.history, selectedId: this.selectedId,
-      pickup: this.pickup, visiting: this.visiting, homeSnapshot: this.homeSnapshot, saveError: this.saveError };
+      pickup: this.pickup, visiting: this.visiting, homeSnapshot: this.homeSnapshot, homeHistory: this.homeHistory, saveError: this.saveError };
     this.epoch++;
     this.state = newRoom('Practice');
     this.history = []; this.batching = 0; this.batchDirty = false; this.pickup = null; this.selectedId = null;
@@ -672,11 +674,14 @@ export class Store {
     if (!this.canEdit) return;
     const error = validateRoom(data);
     if (error) throw new Error(error);
+    this.cancelPickup(null);
     if (!this.visiting) {
       this.flushSave();
       this.homeSnapshot = JSON.stringify(this.state);
+      this.homeHistory = this.history;
     }
-    this.pushHistory();
+    this.history = [];
+    this.pickup = null;
     // A room transition invalidates in-flight imports/uploads, as sessionGuard() promises.
     this.epoch++;
     this.state = normalizeRoom(data);
@@ -688,7 +693,9 @@ export class Store {
   returnHome(): void {
     if (!this.canEdit) return;
     if (!this.homeSnapshot) return;
-    this.pushHistory();
+    this.history = this.homeHistory;
+    this.homeHistory = [];
+    this.pickup = null;
     this.epoch++;
     this.state = JSON.parse(this.homeSnapshot) as RoomState;
     this.homeSnapshot = null;

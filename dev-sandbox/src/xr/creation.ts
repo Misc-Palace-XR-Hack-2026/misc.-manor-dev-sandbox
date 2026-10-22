@@ -125,7 +125,7 @@ export class XrCreation {
       this.message = 'Point at a pad to place it, or cancel to leave it in the room.';
     } else {
       if (store.state.representations.some((r) => r.id === id)) store.stash(id);
-      this.message = store.state.contentItems.length > before ? 'Room is full. Find it in Inbox.' : 'Created.';
+      this.message = store.state.contentItems.length > before ? 'Room is full. Find it in the item pillar’s Unpack tray.' : 'Created.';
     }
     if (store.state.representations.some((r) => r.id === id)) store.select(id);
     return id;

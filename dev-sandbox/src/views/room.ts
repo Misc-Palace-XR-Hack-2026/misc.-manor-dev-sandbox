@@ -16,6 +16,8 @@ import { roomOwnerName } from '../core/rooms';
 import { canEnterVr, enterReason, type NeighborhoodRoom } from '../xr/interaction';
 import { XrSession } from '../xr/session';
 import { roomSoundtrack } from './soundtrack';
+import { NeighborhoodWorld } from './neighborhood-world';
+import { roomCatalog, visitCatalogRoom } from '../core/room-portal';
 
 // Thin 3D adapter: draws store.state and sends clicks back as store commands. Holds no truth of its own.
 // Replaceable later (IWSDK, Babylon) as long as the store contract stays the same.
@@ -116,6 +118,7 @@ export class RoomView {
   private lamp = new THREE.PointLight(0xffd8a8, 0, 6, 2);
   private roomGroup = new THREE.Group();
   private isoOffset = new THREE.Vector3(14, 14, 14);
+  private overviewPadding = 0;
   private viewHeight = 11; // orthographic frustum height, world units; set per layout
   private ground!: THREE.Mesh;
   private hoverTimer: number | undefined;
@@ -128,8 +131,81 @@ export class RoomView {
   private xr: XrSession | null = null;
   private vrButton = document.createElement('button');
   private demo: DemoHooks | null = null;
+  neighborhood: NeighborhoodWorld | null = null;
+  private neighborhoodMode: 'tactile' | 'dollhouse' = 'tactile';
+  private neighborhoodRooms: NeighborhoodRoom[] = [];
+  private neighborhoodHidden = new Map<THREE.Object3D, boolean>();
+  private neighborhoodBackground: THREE.Scene['background'] = null;
+  private neighborhoodBack = document.createElement('button');
+  private neighborhoodHint = document.createElement('p');
+
+  get homeControl(): HTMLButtonElement { return this.neighborhoodBack; }
+  setNeighborhoodMode(mode: 'tactile' | 'dollhouse'): void {
+    this.neighborhoodMode = mode; this.neighborhood?.setMode(mode);
+    this.updateNeighborhoodHint();
+  }
+  private updateNeighborhoodHint(): void {
+    const hud=document.querySelector('.demo-hud');if(hud&&this.neighborhoodBack.parentElement!==hud)hud.append(this.neighborhoodBack);
+    this.neighborhoodHint.hidden = !this.neighborhood;
+    this.neighborhoodHint.textContent = this.neighborhood?.mode === 'dollhouse'
+      ? 'Neighborhood · drag to pan · scroll / pinch to zoom · select a pavilion to visit'
+      : 'Neighborhood · WASD / arrows to walk · drag to look · tap path to walk or a room to visit';
+    this.neighborhoodBack.hidden = !this.neighborhood && !this.store.visiting;
+  }
+  openNeighborhood(): void {
+    if (this.neighborhood) return;
+    this.store.select(null); this.card.show(null);
+    const catalog=roomCatalog(this.neighborhoodRooms).map(room=>room.id===this.store.visiting?{...room,data:structuredClone(this.store.state)}:room);
+    const world = new NeighborhoodWorld(catalog, this.store.personalRoom, id => {
+      const room = catalog.find(r => r.id === id);
+      if (!room) return;
+      this.clickAt = null; this.downAt = null;
+      this.closeNeighborhood(); visitCatalogRoom(this.store, room);
+      this.xr?.neighborhoodEnteredRoom();
+      this.updateNeighborhoodHint();
+    });
+    for (const object of this.scene.children) {
+      if (object.userData.neighborhoodKeep) continue;
+      this.neighborhoodHidden.set(object, this.xr?.desktopVisibility(object) ?? object.visible); object.visible = false;
+    }
+    this.neighborhoodBackground = this.scene.background;
+    this.scene.background = new THREE.Color(0xe3c7a0);
+    this.scene.add(world.group); this.neighborhood = world;
+    world.spawnOutside(this.store.visiting);
+    world.setMode(this.neighborhoodMode); world.mount(this.canvas);
+    world.resize(this.container.clientWidth, this.container.clientHeight);
+    this.controls.enabled = false;
+    this.xr?.setNeighborhood(world);
+    this.updateNeighborhoodHint();
+  }
+  closeNeighborhood(): void {
+    if (!this.neighborhood) return;
+    this.xr?.setNeighborhood(null);
+    this.neighborhood.dispose(); this.neighborhood = null;
+    for (const [object, visible] of this.neighborhoodHidden) object.visible = visible;
+    this.neighborhoodHidden.clear(); this.scene.background = this.neighborhoodBackground; this.surfaceError.hidden=true;
+    this.sync(); this.updateNeighborhoodHint();
+  }
 
   constructor(private container: HTMLElement, private store: Store, rooms: NeighborhoodRoom[] = []) {
+    this.neighborhoodRooms = rooms;
+    // A house icon, styled like Help. The label stays in title/aria so the bar can stay compact,
+    // and the bar itself shrinks when this button is hidden rather than reserving an empty slot.
+    this.neighborhoodBack.className = 'demo-hud-btn neighborhood-back';
+    this.neighborhoodBack.type = 'button';
+    this.neighborhoodBack.title = 'Return to my room';
+    this.neighborhoodBack.setAttribute('aria-label', 'Return to my room');
+    this.neighborhoodBack.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+      + '<path d="M3 11.2 12 4l9 7.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+      + '<path d="M5.6 10.4V19a1 1 0 0 0 1 1h3.2v-5h4.4v5h3.2a1 1 0 0 0 1-1v-8.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+      + '</svg>';
+    this.neighborhoodHint.className = 'neighborhood-hint';
+    this.neighborhoodBack.hidden = this.neighborhoodHint.hidden = true;
+    this.neighborhoodBack.onclick = () => { this.closeNeighborhood(); this.store.returnHome(); this.xr?.neighborhoodEnteredRoom(); this.updateNeighborhoodHint(); };
+    document.body.append(this.neighborhoodBack, this.neighborhoodHint);
+    document.addEventListener('palace-neighborhood', event => { if ((event as CustomEvent).detail === this.store) this.openNeighborhood(); });
+    document.addEventListener('palace-neighborhood-home', event => { if ((event as CustomEvent).detail === this.store) this.neighborhoodBack.click(); });
+    this.store.subscribe(() => this.updateNeighborhoodHint());
     this.renderer = createRoomRenderer();
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.shadowMap.enabled = true;
@@ -215,7 +291,7 @@ export class RoomView {
     this.vrButton.hidden = true;
     this.vrButton.disabled = true;
     container.appendChild(this.vrButton);
-    this.vrButton.addEventListener('click', () => void this.enterVr());
+    this.vrButton.addEventListener('click', () => { void this.enterVr().catch(() => {}); });
     let mode = this.store.mode;
     this.store.subscribe(() => {
       if (mode === this.store.mode) return;
@@ -319,6 +395,13 @@ export class RoomView {
     this.sync();
   }
 
+  /** Include production amenities beyond the open front edge in the overview framing. */
+  setOverviewPadding(padding: number): void {
+    this.overviewPadding = padding;
+    this.viewHeight = this.store.layout.viewHeight + padding;
+    this.resize();
+  }
+
   /** Extra scenery that is not part of the saved room (the demo's crate and jukebox). */
   addToScene(...objects: THREE.Object3D[]): void {
     this.scene.add(...objects);
@@ -329,7 +412,7 @@ export class RoomView {
   }
 
   get activeCamera(): THREE.Camera {
-    return this.demo?.camera ?? this.camera;
+    return this.neighborhood?.camera ?? this.demo?.camera ?? this.camera;
   }
 
   get canvas(): HTMLCanvasElement {
@@ -369,7 +452,7 @@ export class RoomView {
   private frameLayout(layout: RoomLayout): void {
     const [fx, fy, fz] = layout.focus;
     const focus = new THREE.Vector3(fx, fy, fz);
-    this.viewHeight = layout.viewHeight;
+    this.viewHeight = layout.viewHeight + this.overviewPadding;
     this.camera.zoom = 1;
     this.controls.target.copy(focus);
     this.camera.position.copy(focus).add(this.isoOffset);
@@ -571,6 +654,19 @@ export class RoomView {
   }
 
   private tick(t: number): void {
+    if (this.neighborhood) {
+      this.controls.enabled = false;
+      for (const object of this.neighborhoodHidden.keys()) object.visible = false;
+      this.roomGroup.visible = this.objectsGroup.visible = this.markerGroup.visible = false;
+      this.practiceOutline.visible = false; this.practicePad.hidden = true;
+      this.neighborhood.resize(this.container.clientWidth, this.container.clientHeight);
+      this.neighborhood.tick(t, Boolean(this.xr?.presenting));
+      if(this.neighborhood.surfaceError){this.surfaceError.textContent='A neighborhood surface image could not be decoded. Your room data is unchanged.';this.surfaceError.hidden=false;}
+      const camera = this.xr?.tick() ?? this.neighborhood.camera;
+      this.neighborhoodBack.hidden = Boolean(this.xr?.presenting);
+      this.neighborhoodHint.hidden = Boolean(this.xr?.presenting);
+      this.renderer.render(this.scene, camera); return;
+    }
     const tutorial=(window as unknown as {tutorial?:{targetRepresentationId:string|null}}).tutorial;
     const practice=tutorial?.targetRepresentationId ? this.objects.get(tutorial.targetRepresentationId) : null;
     this.practiceOutline.visible=Boolean(practice && this.store.practicing);
@@ -793,7 +889,7 @@ export class RoomView {
     else this.vrButton.textContent = supported ? 'Enter VR' : 'VR not supported';
   }
 
-  private async enterVr(): Promise<void> {
+  async enterVr(): Promise<void> {
     if (!this.store.canEdit) return;
     // Unlock audio here, on the click itself: controller selects inside the session do not grant
     // user activation, so the jukebox's Play would otherwise always come back browser-blocked.
@@ -802,6 +898,7 @@ export class RoomView {
       await this.xr?.enter();
     } catch (error) {
       this.vrButton.textContent = error instanceof Error ? error.message : String(error);
+      throw error;
     }
   }
 
@@ -837,6 +934,7 @@ export class RoomView {
   }
 
   private activateAt(e: { clientX: number; clientY: number }): void {
+    if (this.neighborhood) return;
     const selected = this.store.selectedId;
     const repId = this.repIdAt(e); // What object did we click on?
 
@@ -868,6 +966,7 @@ export class RoomView {
   }
 
   private onHover(e: PointerEvent): void {
+    if (this.neighborhood) { this.hideTooltip(); return; }
     if (this.downAt) return;
     const repId = this.repIdAt(e);
     const slotOver = this.store.selectedId ? this.slotIdAt(e) : null;

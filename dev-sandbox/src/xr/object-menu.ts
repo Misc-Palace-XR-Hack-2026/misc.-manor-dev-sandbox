@@ -37,20 +37,26 @@ export class XrObjectMenu {
     this.store.subscribe(() => this.rebuild());
   }
 
+  /** World point of the action pills while they are up, for UI that should sit with them. */
+  anchor: THREE.Vector3 | null = null;
+
   follow(origin: THREE.Vector3 | null, camera: THREE.Camera): void {
     if (!this.store.selectedId || !origin) {
       this.group.visible = false;
+      this.anchor = null;
       return;
     }
     if (!this.buttons.length) this.rebuild();
     const at = objectMenuAnchor({ x: origin.x, y: origin.y, z: origin.z });
     this.group.position.set(at.x, at.y, at.z);
     this.group.lookAt(camera.getWorldPosition(new THREE.Vector3()));
+    this.anchor = new THREE.Vector3(at.x, at.y, at.z);
     this.group.visible = this.buttons.length > 0;
   }
 
   hide(): void {
     this.group.visible = false;
+    this.anchor = null;
     this.setHover(null);
   }
 

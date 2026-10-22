@@ -69,8 +69,8 @@ try {
    if(other) assert.equal(await page.evaluate(id=>window.store.slotOf(id),other),'floor-5');
    await page.getByRole('button',{name:'Undo',exact:true}).click();
    assert.equal(await page.evaluate(id=>window.store.slotOf(id),rep.id),'floor-5');
-   await row.getByRole('button',{name:'Stash',exact:true}).click();
-   assert.equal(await row.getByRole('button',{name:'Bring out',exact:true}).count(),1);
+   await row.getByRole('button',{name:'Pack item',exact:true}).click();
+   assert.equal(await row.getByRole('button',{name:'Unpack',exact:true}).count(),1);
    assert.equal(await row.locator('a').getAttribute('href'),`https://example.com/${kind}`);
    await page.getByRole('button',{name:'Undo',exact:true}).click();
    assert.equal(await selector.inputValue(),kind);
