@@ -18,7 +18,7 @@ do simplest things first and consult if eneeded
 -- also when we click random object drop, our camera shoud face back towards teh room a bit, idk figure out closest direction to center of room and move the persons camera slightly to look towarsd center a bit for ease
 , also the items shoud fly out of the portal into their spots in the room, also we should add a little text over the preveiw of the objects that belong to others the name of htat dev or in italics from <dev name> in the corner somewhere of the preveiw card,
 
-now when a user interacts with the portal in any way like iport or random or files, after that we show the edit room button to the left of help, no indicator on it just show that that buttn aooears, and now the jukebox should be visiable and allow for ourmusic slection (no feeding music yet) so update the jukebox to not appear until the 2nd interaction w portal completes
+now when a user interacts with the portal in any way like import or random or files, after that we show the edit room button to the left of help, no indicator on it just show that that buttn aooears, and now the jukebox should be visiable and allow for ourmusic slection (no feeding music yet) so update the jukebox to not appear until the 2nd interaction w portal completes
 and exit tutorial button now skops to seq 2 being done, w camera selctor help and edit rooms button on the bottom,  that is now "free mode" free mode is after sequence 2 is done all those options and what we have now
 
 does that make sense? lets disucss 

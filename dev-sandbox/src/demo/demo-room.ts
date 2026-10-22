@@ -107,6 +107,18 @@ export function tutorialDone(state: RoomState): boolean {
   return STARTER_REPS.every((id) => state.placements.some((p) => p.representationId === id && shelves.has(p.slotId)));
 }
 
+/** Sequence 1 starters, wherever they sit. The portal's clean-up leaves these alone. */
+export function isDemoStarter(state: RoomState, repId: string): boolean {
+  if (STARTER_REPS.includes(repId)) return true;
+  const contentId = state.representations.find((r) => r.id === repId)?.contentItemId;
+  return Boolean(contentId && INTRO_OBJECTS.some((o) => o.id === contentId));
+}
+
+/** Placed objects the portal may suck up (everything except the three starters). */
+export function vacuumTargets(state: RoomState): string[] {
+  return state.placements.map((p) => p.representationId).filter((id) => !isDemoStarter(state, id));
+}
+
 /** Starter objects still in the box: they exist but have no slot. */
 export function inBox(state: RoomState): string[] {
   return STARTER_REPS.filter((id) =>

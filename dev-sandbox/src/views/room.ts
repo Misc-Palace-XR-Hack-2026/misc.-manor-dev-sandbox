@@ -67,8 +67,12 @@ interface Entry {
 
 interface Flight {
   from: THREE.Vector3;
+  /** When set, the object flies here (portal suck) instead of to its slot. */
+  to?: THREE.Vector3;
+  outbound?: boolean;
   start: number;
   duration: number;
+  onLand?: () => void;
 }
 
 export class RoomView {
@@ -234,18 +238,45 @@ export class RoomView {
     repIds.forEach((id, i) => this.flights.set(id, { from: from.clone(), start: start + i * stagger, duration }));
   }
 
-  /** One frame of a fly-in; false once it has landed. */
+  /**
+   * Pull one object into a point (the demo portal). `onLand` runs once it disappears into the mouth. Instant under
+   * reduced motion.
+   */
+  flyOut(repId: string, to: THREE.Vector3, duration = 0.5, onLand?: () => void): void {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      onLand?.();
+      return;
+    }
+    const entry = this.objects.get(repId);
+    this.flights.set(repId, {
+      from: (entry?.group.position ?? to).clone(),
+      to: to.clone(),
+      outbound: true,
+      start: performance.now() / 1000,
+      duration,
+      onLand,
+    });
+  }
+
+  /** One frame of a fly-in or fly-out; false once it has landed. */
   private fly(e: Entry, f: Flight, t: number): boolean {
+    const dest = f.to ?? e.target;
     const k = (t - f.start) / f.duration;
     if (k >= 1) {
-      e.group.position.copy(e.target);
+      e.group.position.copy(f.outbound ? dest : e.target);
+      if (f.outbound) e.group.scale.setScalar(0.001);
       return false;
     }
     const s = k <= 0 ? 0 : 1 - (1 - k) ** 3;
-    e.group.position.lerpVectors(f.from, e.target, s);
-    e.group.position.y += Math.sin(Math.PI * Math.max(0, k)) * (1 + 0.15 * f.from.distanceTo(e.target));
-    e.group.scale.setScalar(k <= 0 ? 0.001 : 1.6 * (0.2 + 0.8 * Math.min(1, k * 2)));
-    e.group.rotation.y = this.yaw + (1 - s) * Math.PI * 2;
+    e.group.position.lerpVectors(f.from, dest, s);
+    e.group.position.y += Math.sin(Math.PI * Math.max(0, k)) * (1 + 0.15 * f.from.distanceTo(dest));
+    if (f.outbound) {
+      e.group.scale.setScalar(1.6 * Math.max(0.001, 1 - s));
+      e.group.rotation.y = this.yaw + s * Math.PI * 4;
+    } else {
+      e.group.scale.setScalar(k <= 0 ? 0.001 : 1.6 * (0.2 + 0.8 * Math.min(1, k * 2)));
+      e.group.rotation.y = this.yaw + (1 - s) * Math.PI * 2;
+    }
     return true;
   }
 
@@ -455,9 +486,10 @@ export class RoomView {
 
     const held = this.store.holding !== null;
     const restricted = this.demo?.slots;
+    // Demo: a selected object stays on its spot; still show the glowing spots so it can be moved.
     this.markerGroup.visible = restricted
       ? held || this.store.selectedId !== null
-      : held || (this.store.selectedId !== null && !this.objects.has(this.store.selectedId));
+      : held || this.store.selectedId !== null && (!this.objects.has(this.store.selectedId) || Boolean(this.demo));
     for (const [slotId, m] of this.markers) {
       m.visible = !restricted || restricted.has(slotId);
       const occupant = this.store.repAt(slotId);
@@ -494,6 +526,8 @@ export class RoomView {
       if (flight) {
         if (this.fly(e, flight, t)) continue;
         this.flights.delete(id);
+        const land = flight.onLand;
+        if (land) queueMicrotask(land);
       }
       const presenting = Boolean(this.xr?.presenting);
       const bob = presenting || id !== selected ? 0 : 0.2 + Math.sin(t * 4) * 0.05;

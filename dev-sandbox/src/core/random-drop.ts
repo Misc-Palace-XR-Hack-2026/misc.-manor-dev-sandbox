@@ -1,5 +1,5 @@
 import { GUEST_ROOM_ID, ROOM_DIRECTORY, seedRoom } from './rooms';
-import type { ContentItem, ObjectKind, RoomState } from './types';
+import { OBJECT_KINDS, type ContentItem, type ObjectKind, type RoomState } from './types';
 
 // Random drop (the demo's save point): a handful of objects from the devs' rooms, picked at random, no repeats.
 
@@ -47,7 +47,8 @@ export function pickDrop(byRoom: ReadonlyMap<string, readonly DropItem[]>, room:
     const items = devs[Math.floor(random() * devs.length)];
     const item = items[Math.floor(random() * items.length)];
     taken.add(dropKey(item.content));
-    picked.push(item);
+    // Keep the other person's link/title; pick a fresh object so drops don't all look like their original rooms.
+    picked.push({ ...item, kind: OBJECT_KINDS[Math.floor(random() * OBJECT_KINDS.length)] });
   }
   return picked;
 }

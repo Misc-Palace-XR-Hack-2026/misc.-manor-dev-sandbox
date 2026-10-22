@@ -75,6 +75,18 @@ test('dropIn copies the objects onto free slots as one undo step, and stops when
   assert.equal(store.freeSlotIds().length, Math.max(0, free - many.length));
 });
 
+test('a drop keeps the other persons content but picks a random object kind', () => {
+  const byRoom = devRoomObjects(repo);
+  const originals = new Map([...byRoom.values()].flat().map((i) => [dropKey(i.content), i.kind]));
+  let differed = 0;
+  for (let seed = 1; seed <= 40; seed++) {
+    for (const item of pickDrop(byRoom, seedDemoRoom(), rng(seed))) {
+      if (item.kind !== originals.get(dropKey(item.content))) differed++;
+    }
+  }
+  assert.ok(differed > 0, 'at least some drops should not keep the original object');
+});
+
 test('a dropped object is credited to the person whose room it came from', () => {
   assert.equal(roomOwnerName('matt'), 'Matt');
   assert.equal(roomOwnerName('jawan'), 'Jawan');

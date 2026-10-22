@@ -16,7 +16,8 @@ export const HELP_LINES = [
   'Pinch or scroll to step back.',
   'Camera: Tactile walks the room, Dollhouse shows all of it.',
   'Tap the glowing portal to add your stuff.',
-  'Tap an object, then tap it again to pick it up. Tap a glowing spot to put it down.',
+  'Tap an object to see it, then tap an empty glowing spot to move it.',
+  'Hold Space (or Hold on the portal) to spring-clean extra objects.',
 ];
 
 export const GOAL_LINE = 'Choose your camera / motion to get to the portal';
@@ -153,6 +154,8 @@ export interface SavePointPanel {
   open(): void;
   close(): void;
   readonly isOpen: boolean;
+  /** After the portal has been used: Hold (and Space on a keyboard) sucks extra objects back. */
+  showClean(): void;
 }
 
 /**
@@ -162,6 +165,7 @@ export interface SavePointPanel {
  */
 export function mountSavePointPanel(
   store: Store, say: (text: string, ms?: number) => void, onRandomDrop: () => void, onUsed: () => void,
+  onCleanHold?: (holding: boolean) => void,
 ): SavePointPanel {
   let version = 0;
   const backdrop = el('button', 'sheet-backdrop');
@@ -205,11 +209,17 @@ export function mountSavePointPanel(
   };
   const head = el('header', 'demo-panel-head');
   head.append(el('h2', '', 'Add objects to room'), button('demo-panel-close', 'Close', close));
+  const clean = el('button', 'demo-sp-clean', 'Hold to spring-clean');
+  clean.type = 'button';
+  clean.hidden = true;
+  clean.title = 'Hold. On a keyboard, Space does the same.';
+  clean.addEventListener('pointerdown', (e) => { e.preventDefault(); onCleanHold?.(true); });
   menu.append(
     head,
     button('', '⭐ Random drop', () => { close(); onRandomDrop(); }),
     button('', 'Add link or file', () => show(addSheet)),
     button('', 'Import from bookmarks (file)', () => show(importSheet)),
+    clean,
   );
 
   function close(): void {
@@ -225,6 +235,7 @@ export function mountSavePointPanel(
     open: () => { if (store.canEdit) show(menu); },
     close,
     get isOpen() { return !backdrop.hidden; },
+    showClean() { clean.hidden = false; },
   };
 }
 
@@ -292,5 +303,6 @@ export function mountJukeboxPanel(store: Store, onClose: () => void, onPick?: ()
     },
     close,
     get isOpen() { return !backdrop.hidden; },
+    showClean() {},
   };
 }

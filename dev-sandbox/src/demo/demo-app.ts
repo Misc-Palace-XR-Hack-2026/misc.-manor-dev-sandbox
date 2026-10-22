@@ -20,7 +20,7 @@ import type { SoundtrackPlayer } from '../views/soundtrack';
 import { mountWalkMode, type WalkHandle } from './walk-mode';
 import {
   DEMO_ROOM_ID, SHELF_SLOTS, TUTORIAL_SLOTS, inBox, migrateDemoRoom, normalizeDemoOwner, prepareIntroReplayRoom,
-  seedDemoRoom, tutorialDone,
+  seedDemoRoom, tutorialDone, vacuumTargets,
 } from './demo-room';
 import { EYE_HEIGHT, poseFromLookAt, type WalkPose } from '../core/walk';
 
@@ -252,12 +252,9 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     held = null;
   }
 
-  /** Where an object picked up while walking was lifted from (it pops from there into the visitor's hands). */
-  let liftedFrom: THREE.Vector3 | null = null;
-
   function syncHeld(t: number): void {
-    // In the dollhouse nothing is in hand: the glowing spots show where the picked-up object can go.
-    const eye = mode === 'tutorial' ? camera : mode === 'walk' && walk?.mode === 'walk' ? walk.camera : null;
+    // Only the tutorial holds an object in front of the camera. Walking, things stay on their spots until moved.
+    const eye = mode === 'tutorial' ? camera : null;
     const id = eye ? holding() : null;
     const rep = id ? store.state.representations.find((r) => r.id === id) : undefined;
     if (!eye || !id || !rep) { dropHeld(); return; }
@@ -266,9 +263,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       dropHeld();
       const group = buildObject(rep.objectKind, store.content(rep.contentItemId));
       view.addToScene(group);
-      const from = mode === 'tutorial' ? boxTop : liftedFrom;
-      liftedFrom = null;
-      held = { repId: id, kind: rep.objectKind, group, from: (from ?? handsPos).clone(), at: popping && from && !reduced ? t : -Infinity };
+      held = { repId: id, kind: rep.objectKind, group, from: boxTop.clone(), at: popping && !reduced ? t : -Infinity };
     }
     eye.updateMatrixWorld();
     handsPos.copy(HANDS).applyMatrix4(eye.matrixWorld);
@@ -312,7 +307,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   const hooks: DemoHooks = {
     camera,
     slots: TUTORIAL_SLOTS,
-    yaw: 0, // objects face the tutorial camera, which looks north along -z
+    // Same facing as the dollhouse (π/4). A north-facing yaw here made return visits snap every object 45° when free mode started.
     dock,
     keepSelectionOnPlace: true,
     liftSelected: false,
@@ -408,7 +403,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   let hud: DemoHud | null = null;
   let free = false;
   let goalShown = false;
-  const savePanel: SavePointPanel = mountSavePointPanel(store, (text, ms) => showHint(text, ms), randomDrop, portalUsed);
+  const savePanel: SavePointPanel = mountSavePointPanel(store, (text, ms) => showHint(text, ms), randomDrop, portalUsed, setVacuumHold);
   const jukeboxPanel: SavePointPanel = mountJukeboxPanel(store, () => jukebox.setMouthOpen(0), () => music?.startFromGesture());
   let music: SoundtrackPlayer | null = null;
   const portalMouth = new THREE.Vector3();
@@ -422,7 +417,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     const picked = pickDrop(devRoomObjects(REPO_ROOM_MAP), store.state);
     const placed = store.dropIn(picked);
     if (!placed.length) {
-      showHint(picked.length ? 'No free spots left in the room' : 'Nothing new to drop in', 2200);
+      showHint(picked.length ? 'Room is full, visit portal for spring cleaning.' : 'Nothing new to drop in', 2200);
       return;
     }
     walk?.lookToward(ROOM_MIDDLE[0], ROOM_MIDDLE[1], 1);
@@ -431,6 +426,83 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     jukeboxFadeDelay = FLY_IN.delay + Math.max(0, placed.length - 1) * FLY_IN.stagger + FLY_IN.duration;
     portalUsed();
   }
+
+  let vacuumHold = false;
+  let vacuuming: string | null = null;
+  let pointerVacuum = false;
+
+  function setVacuumHold(on: boolean): void {
+    if (on) {
+      pointerVacuum = true;
+      startVacuum();
+      return;
+    }
+    if (!pointerVacuum) return;
+    pointerVacuum = false;
+    vacuumHold = false;
+  }
+
+  function startVacuum(): void {
+    if (!free) return;
+    vacuumHold = true;
+    showHint('Hold to keep clearing…', 2800);
+    suckNext();
+  }
+
+  function nearestVacuum(): string | null {
+    const mouth = savePoint.center;
+    let best: string | null = null;
+    let bestD = Infinity;
+    for (const id of vacuumTargets(store.state)) {
+      if (id === vacuuming) continue;
+      const slotId = store.slotOf(id);
+      const pos = slotId ? store.layout.slots.find((s) => s.id === slotId)?.pos : undefined;
+      const d = pos ? Math.hypot(pos[0] - mouth.x, pos[2] - mouth.z) : 0;
+      if (d < bestD) { bestD = d; best = id; }
+    }
+    return best;
+  }
+
+  function suckNext(): void {
+    if (!vacuumHold || vacuuming) return;
+    const id = nearestVacuum();
+    if (!id) {
+      vacuumHold = false;
+      showHint('The first objects stay. The rest went back into the portal.', 2400);
+      return;
+    }
+    vacuuming = id;
+    store.select(null);
+    walk?.lookToward(SAVE_POINT_POS[0], SAVE_POINT_POS[2], 1);
+    const to = portalMouth.copy(savePoint.center).setY(savePoint.center.y + 1.1);
+    const finish = (): void => {
+      if (store.state.representations.some((r) => r.id === id)) store.stash(id);
+      vacuuming = null;
+      if (vacuumHold) suckNext();
+    };
+    if (reduced) {
+      finish();
+      return;
+    }
+    view.flyOut(id, to, 0.48, finish);
+  }
+
+  const typing = (e: Event): boolean => {
+    const t = e.target;
+    return t instanceof HTMLElement && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
+  };
+  window.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space' && e.key !== ' ') return;
+    if (e.repeat || typing(e) || !free) return;
+    e.preventDefault();
+    savePanel.close();
+    startVacuum();
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'Space' || e.key === ' ') vacuumHold = false;
+  });
+  window.addEventListener('pointerup', () => setVacuumHold(false));
+  window.addEventListener('pointercancel', () => setVacuumHold(false));
 
   // ---- progression: the first portal use ends sequence 2 (Edit room, jukebox, free mode) ----
   let editor: Promise<DemoEditor> | null = null;
@@ -458,6 +530,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     unlockEditRoom();
     hud?.free();
     document.body.classList.add('demo-free');
+    savePanel.showClean();
     void import('./room-app').then(({ mountMusic, mountMute, mountPhoto }) => {
       music ??= mountMusic(store);
       mountMute(music);
@@ -537,34 +610,21 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     return true;
   }
 
-  let pickTips = 0;
   /**
-   * Moving things: tap an object (its card shows), tap it again to pick it up (it pops into the visitor's hands), then
-   * tap a glowing spot, or another object to swap with it. A tap anywhere else puts it back where it was.
+   * Moving things: tap an object (it stays put, its card shows), then tap an empty glowing spot to move it. Tapping
+   * another object only shows that object's card — it never swaps.
    */
   function onObjectTap(tap: DemoTap): boolean {
-    const heldId = store.holding;
-    if (heldId) {
-      const slotId = tap.repId ? store.slotOf(tap.repId) : tap.slotId;
-      if (!slotId) return false;
-      store.place(heldId, slotId);
+    if (tap.repId) return false;
+    const selected = store.selectedId;
+    const from = selected ? store.slotOf(selected) : undefined;
+    if (selected && from && tap.slotId && tap.slotId !== from) {
+      if (store.repAt(tap.slotId)) return true;
+      store.place(selected, tap.slotId);
       store.select(null);
       return true;
     }
-    if (!tap.repId) return false;
-    const slotId = store.slotOf(tap.repId);
-    if (tap.repId === store.selectedId && slotId) {
-      const pos = store.layout.slots.find((sl) => sl.id === slotId)?.pos;
-      liftedFrom = pos ? new THREE.Vector3(pos[0], pos[1] + 0.3, pos[2]) : null;
-      store.pickUp(tap.repId);
-      showHint('Tap a glowing spot to put it down', 2400);
-      return true;
-    }
-    if (pickTips < 2) {
-      pickTips++;
-      showHint('Tap it again to pick it up', 1800);
-    }
-    return false; // RoomView selects it
+    return false;
   }
 
   function onWalkTap(tap: DemoTap): boolean {

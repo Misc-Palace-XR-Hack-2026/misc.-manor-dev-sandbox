@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DEMO_ROOM_ID, LEGACY_TRAY_SLOTS, SHELF_SLOTS, TUTORIAL_SLOTS, inBox, migrateDemoRoom, prepareIntroReplayRoom, repIdFor,
-  seedDemoRoom, tutorialDone,
+  seedDemoRoom, tutorialDone, vacuumTargets,
 } from '../src/demo/demo-room';
 import { INTRO_OBJECTS } from '../src/demo/intro-objects';
 import { Store, normalizeRoom, roomKeys } from '../src/core/store';
@@ -124,6 +124,17 @@ test('replaying the intro preserves My room customizations and puts only the sta
   assert.deepEqual(inBox(replay), INTRO_OBJECTS.map((o) => repIdFor(o.id)));
   assert.equal(tutorialDone(replay), false);
   assert.doesNotThrow(() => normalizeRoom(replay));
+});
+
+test('portal spring-clean leaves the three starters, wherever they sit', () => {
+  const room = seedDemoRoom();
+  room.placements = INTRO_OBJECTS.map((o, i) => ({ representationId: repIdFor(o.id), slotId: SHELF_SLOTS[i] }));
+  room.contentItems.push({
+    id: 'extra', type: 'note', title: 'Extra', sourceKind: 'note', sourceRef: 'n', tags: [], createdAt: new Date().toISOString(),
+  });
+  room.representations.push({ id: 'rep-extra', contentItemId: 'extra', objectKind: 'book' });
+  room.placements.push({ representationId: 'rep-extra', slotId: 'floor-8' });
+  assert.deepEqual(vacuumTargets(room), ['rep-extra']);
 });
 
 test('replaying restores a starter the visitor stashed', () => {
