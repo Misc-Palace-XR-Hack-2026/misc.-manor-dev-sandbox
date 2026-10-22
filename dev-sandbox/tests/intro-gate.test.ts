@@ -49,12 +49,12 @@ test('a first visit still plays, and a returning visitor is not nagged on every 
   assert.equal(shouldPlayIntro(null, ''), true);
 });
 
-test('an explicit request always plays the walk-in, and reseeds only a finished room', () => {
+test('an explicit request always plays the walk-in and always resets intro objects to the tray', () => {
   assert.deepEqual(planIntro({ explicit: true, introAllowed: true, tutorialDone: true }), { playIntro: true, reseed: true });
   assert.deepEqual(planIntro({ explicit: true, introAllowed: false, tutorialDone: true }), { playIntro: true, reseed: true },
     'the explicit path does not depend on the seen flag');
-  assert.deepEqual(planIntro({ explicit: true, introAllowed: true, tutorialDone: false }), { playIntro: true, reseed: false },
-    'an unfinished room is already in its tutorial state: nothing to reseed');
+  assert.deepEqual(planIntro({ explicit: true, introAllowed: true, tutorialDone: false }), { playIntro: true, reseed: true },
+    'explicit replay should always reset the starter objects to their intro tray slots');
 });
 
 test('without an explicit request the intro only plays for an unfinished room', () => {

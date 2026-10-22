@@ -13,7 +13,8 @@ export interface IntroPlan {
 }
 
 export function planIntro(opts: { explicit: boolean; introAllowed: boolean; tutorialDone: boolean }): IntroPlan {
-  if (opts.explicit) return { playIntro: true, reseed: opts.tutorialDone };
+  // Explicit replay should always start from the canonical intro state: all starter objects back in the tray.
+  if (opts.explicit) return { playIntro: true, reseed: true };
   if (opts.introAllowed && !opts.tutorialDone) return { playIntro: true, reseed: false };
   // A visitor who has seen the intro and kept their finished room walks straight into it.
   return { playIntro: false, reseed: false };
