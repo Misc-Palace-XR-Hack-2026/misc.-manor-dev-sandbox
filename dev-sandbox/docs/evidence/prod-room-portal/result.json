@@ -1,0 +1,26 @@
+{
+  "download": "misc-manor-room.json",
+  "desktopIslands": 16,
+  "staleImportCancelled": true,
+  "tactilePortal": true,
+  "mobileLastIslandReachable": true,
+  "introReplayPreserved": true,
+  "rejectionRecovery": {
+    "requests": 1,
+    "gestureActive": true,
+    "camera": "dollhouse"
+  },
+  "xr": {
+    "islands": 16,
+    "gl": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+    "personalPreserved": true
+  },
+  "fileFallback": {
+    "overlay": true,
+    "browserExit": true,
+    "reentryClosed": true,
+    "preserved": true
+  },
+  "devNavigationAndOrdinaryControls": true,
+  "errors": []
+}
