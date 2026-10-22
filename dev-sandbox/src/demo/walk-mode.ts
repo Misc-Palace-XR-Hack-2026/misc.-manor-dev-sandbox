@@ -600,8 +600,10 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
     lookToward(x, z, amount) {
       if (mode !== 'walk' || leaving || glide || dragging) return;
       const yaw = horizontalYaw([pose.x, pose.y, pose.z], [x, pose.y, z]);
-      lookTargetYaw = lookYaw + shortestYawDelta(lookYaw, yaw) * amount;
-      lookTargetPitch = Math.min(lookTargetPitch, ENTRY_PITCH);
+      const d = shortestYawDelta(lookYaw, yaw) * amount;
+      // A small nudge the short way, so the portal (and the objects flying out of it) stay on screen.
+      const cap = 0.32; // ~18°
+      lookTargetYaw = lookYaw + Math.sign(d) * Math.min(Math.abs(d), cap);
     },
     dispose() {
       canvas.removeEventListener('pointerdown', onPointerDown);

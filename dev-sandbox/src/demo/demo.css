@@ -122,6 +122,7 @@ html, body { margin: 0; height: 100dvh; overflow: hidden; background: #000; font
   min-height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid rgba(241, 233, 220, 0.25);
   background: rgba(20, 16, 28, 0.7); color: #f1e9dc; font: 600 16px/1 system-ui, sans-serif;
 }
+.demo-jukebox-play { min-height: 44px; border-radius: 10px; }
 .demo-jukebox-note { margin: 0; font-size: 12px; color: rgba(241, 233, 220, 0.55); }
 
 /* The sandbox edit tools in the demo (src/demo/room-app.ts). The portal replaces +, and Edit room lives in the HUD.

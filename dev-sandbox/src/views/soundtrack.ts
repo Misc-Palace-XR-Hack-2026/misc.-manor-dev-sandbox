@@ -84,9 +84,9 @@ export class SoundtrackPlayer {
     this.playFromGesture();
   }
 
-  /** Start following the room's track (the jukebox pick). No-op when music is off. */
+  /** Start following the room's track (the jukebox pick). No-op when music is off or already playing. */
   startFromGesture(): void {
-    if (!currentTrack(this.store.state)) return;
+    if (!currentTrack(this.store.state) || this.soundState === 'playing') return;
     this.playFromGesture();
   }
 
@@ -101,9 +101,15 @@ export class SoundtrackPlayer {
     this.last = track;
     const version = ++this.gestureVersion;
     this.blocked = false;
-    this.audio.volume = 1;
+    this.audio.volume = 0;
     // Keep play() on the trusted click/tap stack, before any promise or fade.
-    void this.audio.play().then(() => this.notify(), () => {
+    void this.audio.play().then(() => {
+      this.notify();
+      void this.fade(0, 1, 1800, (value) => {
+        if (version !== this.gestureVersion) return;
+        this.audio.volume = Math.min(1, Math.max(0, value));
+      });
+    }, () => {
       if (version !== this.gestureVersion) return;
       this.blocked = true;
       this.notify();

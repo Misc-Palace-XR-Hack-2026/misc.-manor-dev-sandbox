@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Store, roomKeys } from '../core/store';
 import type { ObjectKind, RoomState } from '../core/types';
 import {
-  BOX_POS, DOOR_POS, INTRO_DURATION, JUKEBOX_POS, ROOM_EAST, SAVE_POINT_POS, SAVE_POINT_REACH, clampLook, introFrame, lookAround,
+  BOX_POS, DOOR_POS, INTRO_DURATION, JUKEBOX_POS, PHASE_STARTS, ROOM_EAST, SAVE_POINT_POS, SAVE_POINT_REACH, clampLook, introFrame, lookAround,
   markIntroSeen, markSeq2Done, seq2Done, tutorialView, type View,
 } from '../core/intro-timeline';
 import { RoomView, type DemoHooks, type DemoTap } from '../views/room';
@@ -139,7 +139,13 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     return;
   }
   let shouldPersist = normalizeDemoOwner(initial);
+  if (initial.surfaces === undefined) {
+    initial = { ...initial, surfaces: { floor: { preset: 'stone' } } };
+    shouldPersist = true;
+  }
   const returningFree = seq2Done(storage);
+  /** Return visits stop just inside the door (looking into the room) instead of turning to the shelf. */
+  const introEnd = returningFree ? PHASE_STARTS.setpiece : INTRO_DURATION;
   // `/` always plays the walk-in. Sequence 2 unfinished: a finished shelf tutorial puts starters back in the box.
   // Sequence 2 finished: keep the room as it was and skip the shelf after the door.
   if (tutorialDone(initial) && !returningFree) {
@@ -165,6 +171,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   const box = buildCardboardBox(inBox(seedDemoRoom()).length);
   box.group.position.set(...BOX_POS);
   box.setFill(inBox(store.state).length);
+  if (returningFree) box.group.visible = false;
   const door = buildDoor();
   const savePoint = buildSavePoint();
   savePoint.group.position.set(...SAVE_POINT_POS);
@@ -322,7 +329,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       if (mode === 'walk') { watchForSavePoint(); return; }
       if (skippingIntro) return;
       if (mode === 'intro') {
-        elapsed = Math.min(INTRO_DURATION, elapsed + dt);
+        elapsed = Math.min(introEnd, elapsed + dt);
         const f = introFrame(elapsed, currentView());
         const bob = f.walking && !reduced ? Math.sin(t * 7.5) * 0.022 : 0;
         const sway = f.walking && !reduced ? Math.sin(t * 3.75) * 0.025 : 0;
@@ -331,7 +338,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
         door.leaf.rotation.y = f.doorOpen * Math.PI * 0.52;
         door.light.opacity = f.doorLight;
         door.veil.opacity = f.darkness;
-        if (f.phase === 'done') beginTutorial();
+        if (elapsed >= introEnd) beginTutorial();
         return;
       }
       if (mode !== 'tutorial') return;
@@ -346,7 +353,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     },
   };
 
-  /** Skip the walk-in only: cut through black to the tutorial view, where the tutorial starts as usual. */
+  /** Skip the walk-in: cut through black to the tutorial (or, on a return visit, to free mode just inside the door). */
   let skippingIntro = false;
   function skipIntro(): void {
     if (mode !== 'intro' || skippingIntro) return;
@@ -354,7 +361,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     black.style.transition = 'opacity 0.45s ease';
     black.style.opacity = '1';
     window.setTimeout(() => {
-      elapsed = INTRO_DURATION;
+      elapsed = introEnd;
       skippingIntro = false;
     }, reduced ? 0 : 480);
   }
@@ -377,7 +384,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
 
   // No instructions: the visitor drives. Once the last starter is on the shelf the box goes, then the lock lifts.
   let doneTimer = 0;
-  let boxGone = false;
+  let boxGone = returningFree;
   function checkDone(): void {
     if (mode !== 'tutorial') return;
     window.clearTimeout(doneTimer);
@@ -418,7 +425,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       showHint(picked.length ? 'No free spots left in the room' : 'Nothing new to drop in', 2200);
       return;
     }
-    walk?.lookToward(ROOM_MIDDLE[0], ROOM_MIDDLE[1], 0.75);
+    walk?.lookToward(ROOM_MIDDLE[0], ROOM_MIDDLE[1], 1);
     view.flyIn(placed, portalMouth.copy(savePoint.center).setY(savePoint.center.y + 1.1), FLY_IN);
     // Fade the jukebox in after the last object has landed.
     jukeboxFadeDelay = FLY_IN.delay + Math.max(0, placed.length - 1) * FLY_IN.stagger + FLY_IN.duration;
@@ -566,7 +573,11 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       return openFromAfar('portal', SAVE_POINT_POS, () => { hud?.goalMet(); savePanel.open(); });
     }
     if (!store.holding && tapped(tap, jukebox.hit)) {
-      return openFromAfar('jukebox', JUKEBOX_POS, () => { jukebox.setMouthOpen(0.5); jukeboxPanel.open(); });
+      return openFromAfar('jukebox', JUKEBOX_POS, () => {
+        jukebox.setMouthOpen(0.5);
+        jukeboxPanel.open();
+        if (music && music.soundState !== 'playing' && music.soundState !== 'paused') music.startFromGesture();
+      });
     }
     return onObjectTap(tap);
   }
@@ -636,11 +647,13 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   skip.addEventListener('click', () => (mode === 'intro' ? skipIntro() : release()));
   skipSeq.addEventListener('click', () => {
     if (mode === 'intro') {
-      elapsed = INTRO_DURATION;
+      elapsed = introEnd;
       skippingIntro = false;
       beginTutorial();
-      const v = currentView();
-      aimAt(v.camera, lookAround(v, 0, 0), v.fov);
+      if (!returningFree) {
+        const v = currentView();
+        aimAt(v.camera, lookAround(v, 0, 0), v.fov);
+      }
     }
     release();
   });
@@ -650,5 +663,5 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   const f = introFrame(0, currentView());
   aimAt(f.camera, f.lookAt, f.fov);
   black.style.opacity = '1';
-  if (reduced) elapsed = INTRO_DURATION;
+  if (reduced) elapsed = introEnd;
 }

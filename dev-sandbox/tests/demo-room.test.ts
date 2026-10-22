@@ -12,6 +12,7 @@ import { buildPreview } from '../src/core/preview';
 test('the seeded demo room is a valid cozy-loft with the three starters packed in the box (no slots yet)', () => {
   const room = normalizeRoom(seedDemoRoom());
   assert.equal(room.layoutId, 'cozy-loft');
+  assert.equal(room.surfaces?.floor?.preset, 'stone', 'slate floor so the loft edge reads against the walls');
   assert.deepEqual(room.representations.map((r) => r.objectKind), ['rocket', 'drum', 'cassette']);
   assert.deepEqual(room.placements, []);
   assert.deepEqual(inBox(room), INTRO_OBJECTS.map((o) => repIdFor(o.id)));

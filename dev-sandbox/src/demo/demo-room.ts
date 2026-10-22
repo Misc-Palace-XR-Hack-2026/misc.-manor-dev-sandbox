@@ -23,6 +23,8 @@ const STARTER_REPS = INTRO_OBJECTS.map((o) => repIdFor(o.id));
 
 export function seedDemoRoom(): RoomState {
   const room = newRoom(DEMO_OWNER);
+  // Slate on the floor (and loft) so the loft edge reads against the original purple walls from above.
+  room.surfaces = { floor: { preset: 'stone' } };
   const createdAt = new Date().toISOString();
   for (const o of INTRO_OBJECTS) {
     room.contentItems.push({

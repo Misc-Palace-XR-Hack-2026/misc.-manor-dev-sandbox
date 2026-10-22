@@ -231,8 +231,14 @@ export function mountSavePointPanel(
 const MUSIC_OFF = 'off';
 const MUSIC_FOLLOW = 'follow';
 
+function ensureRandomTrack(store: Store): void {
+  const s = store.state.soundtrack;
+  if (s && s.mode !== 'follow') return;
+  store.setSoundtrack({ mode: 'track', track: ROOM_TRACKS[Math.floor(Math.random() * ROOM_TRACKS.length)] });
+}
+
 /**
- * The jukebox's panel: pick the room's music (the same choice as Room music in the room editor). Feeding it your own
+ * The jukebox's panel: pick a track (a random song on first open, not Follow lighting) and Play. Feeding it your own
  * music comes later.
  */
 export function mountJukeboxPanel(store: Store, onClose: () => void, onPick?: () => void): SavePointPanel {
@@ -264,7 +270,8 @@ export function mountJukeboxPanel(store: Store, onClose: () => void, onPick?: ()
   });
   const label = el('label', 'demo-jukebox-label', 'Room music');
   label.htmlFor = select.id;
-  panel.append(head, label, select, el('p', 'demo-jukebox-note', 'Feeding it your own music comes later.'));
+  const play = button('demo-jukebox-play', 'Play song', () => onPick?.());
+  panel.append(head, label, select, play, el('p', 'demo-jukebox-note', 'Feeding it your own music comes later.'));
 
   function close(): void {
     if (backdrop.hidden) return;
@@ -278,6 +285,7 @@ export function mountJukeboxPanel(store: Store, onClose: () => void, onPick?: ()
   return {
     open() {
       if (!store.canEdit) return;
+      ensureRandomTrack(store);
       const s = store.state.soundtrack;
       select.value = !s || s.mode === 'follow' ? MUSIC_FOLLOW : s.mode === 'off' ? MUSIC_OFF : s.track;
       panel.hidden = backdrop.hidden = false;
