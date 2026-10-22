@@ -216,7 +216,7 @@ export function buildSavePoint(): SavePoint {
       floorGlowMat.opacity = 0.45 * pulse;
       light.intensity = 6 * pulse;
       if (still) return;
-      float.position.y = Math.sin(t * 1.3) * 0.06;
+      float.position.y = (1 + Math.sin(t * 1.3)) * 0.04; // bobs up from floor level, never below it
       runes.rotation.y += dt * 0.25;
       innerRing.rotation.y -= dt * 0.6;
       columnTex.offset.x = (columnTex.offset.x + dt * 0.04) % 1;

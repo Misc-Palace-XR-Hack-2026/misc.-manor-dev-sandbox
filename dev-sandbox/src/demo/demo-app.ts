@@ -6,7 +6,8 @@ import {
   markIntroSeen, tutorialView, type View,
 } from '../core/intro-timeline';
 import { RoomView, type DemoHooks, type DemoTap } from '../views/room';
-import { REPO_ROOMS } from '../core/repo-rooms';
+import { REPO_ROOMS, REPO_ROOM_MAP } from '../core/repo-rooms';
+import { devRoomObjects, pickDrop } from '../core/random-drop';
 import { buildKindInventory } from '../views/kind-picker';
 import { buildObject } from '../views/objects';
 import { disposeGroup } from '../views/resources';
@@ -41,6 +42,8 @@ const HELD_SCALE = 0.4;
 const POP_S = 0.45;
 /** Where the visitor stands once the tutorial is over: back from the bench, facing the shelf. */
 const STAND: WalkPose = { x: 8.3, y: EYE_HEIGHT, z: 4.8, yaw: 0, pitch: -0.12 };
+/** The goal line shows this long after the tutorial ends even if the visitor never looks toward the save point. */
+const GOAL_AFTER_MS = 6000;
 
 const DOOR_W = 2.2, DOOR_H = 3.3, POST = 0.2, DEPTH = 0.3;
 
@@ -165,7 +168,11 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   const dev = el('a', 'demo-dev', 'dev');
   dev.href = `${import.meta.env.BASE_URL}dev/`;
   dev.title = 'Dev sandbox';
-  document.body.append(black, skip, dock, hint, dev);
+  // Dev shortcut: straight to the save point part with the starters already on the shelf (still in the tutorial).
+  const skipSeq = el('button', 'demo-skip-seq', 'skip seq 1');
+  skipSeq.type = 'button';
+  skipSeq.title = 'Skip the walk-in and unpacking (starters go on the shelf)';
+  document.body.append(black, skip, dock, hint, dev, skipSeq);
   document.body.classList.add('demo-locked');
 
   let mode: Mode = 'intro';
@@ -249,6 +256,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
 
   let hintTimer = 0;
   function showHint(text = 'Place the object down', ms = 1600): void {
+    hud?.hideGoal(); // both sit at the top of the screen
     hint.textContent = text;
     hint.classList.add('demo-hint-on');
     window.clearTimeout(hintTimer);
@@ -364,14 +372,30 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   let hud: DemoHud | null = null;
   let exited = false;
   let goalShown = false;
-  const savePanel: SavePointPanel = mountSavePointPanel(store, (text, ms) => showHint(text, ms));
+  const savePanel: SavePointPanel = mountSavePointPanel(store, (text, ms) => showHint(text, ms), randomDrop);
+  const portalMouth = new THREE.Vector3();
+
+  /** A handful of the devs' objects sprout out of the save point and fly to random free spots. */
+  function randomDrop(): void {
+    const picked = pickDrop(devRoomObjects(REPO_ROOM_MAP), store.state);
+    const placed = store.dropIn(picked);
+    if (!placed.length) {
+      showHint(picked.length ? 'No free spots left in the room' : 'Nothing new to drop in', 2200);
+      return;
+    }
+    view.flyIn(placed, portalMouth.copy(savePoint.center).setY(savePoint.center.y + 1.1));
+  }
   const seen = new THREE.Vector3();
 
-  /** The first time the save point comes into view while walking, show the goal. */
+  /** The goal shows the first time the save point comes into view while walking, or after GOAL_AFTER_MS anyway. */
   function watchForSavePoint(): void {
     if (goalShown || !walk || !hud || walk.mode !== 'walk') return;
     const ndc = seen.copy(savePoint.center).project(walk.camera);
     if (ndc.z < -1 || ndc.z > 1 || Math.abs(ndc.x) > 0.8 || Math.abs(ndc.y) > 0.9) return;
+    showGoal();
+  }
+  function showGoal(): void {
+    if (goalShown || !hud) return;
     goalShown = true;
     hud.showGoal();
   }
@@ -396,7 +420,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   function onWalkTap(tap: DemoTap): boolean {
     if (!walk || !onSavePoint(tap)) return false;
     if (walk.mode === 'walk' && savePointDistance() > SAVE_POINT_REACH) {
-      showHint(exited ? 'Walk closer to use the save point' : 'Too far. Walk closer, or switch camera.', 2200);
+      showHint(exited ? 'Too far. Move closer to get to the portal.' : 'Too far. Move closer, or switch camera, to get to the portal.', 2400);
       return true;
     }
     hud?.goalMet();
@@ -438,6 +462,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       onCamera: (choice) => (choice === 'dollhouse' ? walk?.toOverview() : walk?.toWalk()),
       onExit: exitTutorial,
     });
+    window.setTimeout(showGoal, GOAL_AFTER_MS);
   }
 
   /** Lift the lock and walk in first person (tactile). The edit tools wait for Exit tutorial. */
@@ -450,6 +475,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     unpackRest();
     store.select(null);
     skip.remove();
+    skipSeq.remove();
     dock.remove();
     hint.classList.remove('demo-hint-on');
     door.group.visible = false;
@@ -478,6 +504,16 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
     syncDock();
   });
   skip.addEventListener('click', () => (mode === 'intro' ? skipIntro() : release()));
+  skipSeq.addEventListener('click', () => {
+    if (mode === 'intro') {
+      elapsed = INTRO_DURATION;
+      skippingIntro = false;
+      beginTutorial();
+      const v = currentView();
+      aimAt(v.camera, lookAround(v, 0, 0), v.fov);
+    }
+    release();
+  });
 
   // ---- start ----------------------------------------------------------------
   view.setDemo(hooks);

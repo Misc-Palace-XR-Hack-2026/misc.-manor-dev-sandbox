@@ -163,14 +163,15 @@ test('scene anchors line up with the real room layout', () => {
   assert.ok(JUKEBOX_POS[2] < 3, 'jukebox is by the back-right wall, not out front');
 });
 
-test('the save point floats off the room past the front edge, on the stairs half, within reach of the floor', () => {
+test('the save point stands just off the room past the front edge, on the stairs half, within reach of the floor', () => {
   const layout = getLayout('cozy-loft')!;
   const floor = layout.boxes.find((b) => b.id === 'floor')!;
   const front = floor.min[2] + floor.size[2];
   const [x, y, z] = SAVE_POINT_POS;
   const ringR = 0.55;
-  assert.ok(y > 0, 'floats');
-  assert.ok(z - ringR > front + 0.5, 'clearly off the room, past the open front edge');
+  assert.equal(y, 0, 'ground-floor level');
+  assert.ok(z - ringR > front + 0.2, 'off the room, past the open front edge');
+  assert.ok(z - front < 1.2, 'close to the edge, like the jukebox');
   assert.ok(x < ROOM_EAST / 2, 'on the other side from the jukebox (the stairs half)');
   assert.ok(x > 1.5, 'not tucked into the corner');
   // The closest a walking visitor gets: the front of the floor, kept BOUNDS_INSET in from its edge.

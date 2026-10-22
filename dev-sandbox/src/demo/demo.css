@@ -55,12 +55,14 @@ html, body { margin: 0; height: 100dvh; overflow: hidden; background: #000; font
 .demo-dev-raised { bottom: calc(92px + env(safe-area-inset-bottom)); }
 
 /* ---- after the tutorial: HUD, help, goal, Exit tutorial, save point ---- */
-.demo-exit {
+.demo-exit, .demo-skip-seq {
   position: fixed; z-index: 51; left: calc(max(12px, env(safe-area-inset-left)) + 44px); bottom: max(12px, env(safe-area-inset-bottom));
   padding: 3px 9px; border-radius: 6px; border: 1px solid rgba(241, 233, 220, 0.25); background: rgba(20, 16, 28, 0.55);
   color: rgba(241, 233, 220, 0.85); font: 600 11px/1.4 system-ui, sans-serif; cursor: pointer;
 }
-.demo-exit:hover, .demo-exit:focus-visible { color: #fff; background: rgba(241, 233, 220, 0.18); outline: none; }
+.demo-exit:hover, .demo-exit:focus-visible,
+.demo-skip-seq:hover, .demo-skip-seq:focus-visible { color: #fff; background: rgba(241, 233, 220, 0.18); outline: none; }
+.demo-skip-seq { font: 11px/1.4 ui-monospace, monospace; color: rgba(241, 233, 220, 0.6); }
 
 .demo-hud {
   position: fixed; z-index: 14; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%);
@@ -115,7 +117,5 @@ html, body { margin: 0; height: 100dvh; overflow: hidden; background: #000; font
 .demo-help-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; line-height: 1.35; }
 .demo-sp { border-color: rgba(77, 255, 210, 0.45); }
 .demo-sp > button { min-height: 44px; text-align: left; border-radius: 10px; }
-.demo-sp-soon { display: flex; align-items: center; justify-content: space-between; }
-.demo-sp-tag { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
 /* Phones: panels sit above dev and Exit tutorial, which are lifted above the HUD. */
 @media (max-width: 440px) { .demo-panel { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 92px); } }

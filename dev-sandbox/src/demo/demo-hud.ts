@@ -14,10 +14,12 @@ export const HELP_LINES = [
   'Drag to look around.',
   'Pinch or scroll to step back.',
   'Camera: Tactile walks the room, Dollhouse shows all of it.',
-  'Tap the glowing save point to add your stuff.',
+  'Tap the glowing portal to add your stuff.',
 ];
 
-export const GOAL_LINE = 'Choose your camera / motion to get to the save point';
+export const GOAL_LINE = 'Choose your camera / motion to get to the portal';
+/** The Camera choice stops pulsing after this long (ms) if it isn't used. */
+const PULSE_MS = 8000;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
@@ -38,6 +40,8 @@ export interface DemoHud {
   showGoal(): void;
   /** Stop drawing the eye to the Camera choice. */
   goalMet(): void;
+  /** Hide the goal line now (another line is about to show in its place). */
+  hideGoal(): void;
   /** Take the HUD away (Exit tutorial). */
   dispose(): void;
 }
@@ -94,8 +98,8 @@ export function mountDemoHud(opts: {
   // ---- goal ----
   const goal = el('p', 'demo-goal', GOAL_LINE);
   goal.setAttribute('role', 'status');
-  let goalTimer = 0;
-  const goalMet = () => cameraWrap.classList.remove('demo-pulse');
+  let goalTimer = 0, pulseTimer = 0;
+  const goalMet = () => { window.clearTimeout(pulseTimer); cameraWrap.classList.remove('demo-pulse'); };
 
   const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !help.hidden) closeHelp(); };
   const onDown = (e: PointerEvent) => {
@@ -112,10 +116,17 @@ export function mountDemoHud(opts: {
       cameraWrap.classList.add('demo-pulse');
       window.clearTimeout(goalTimer);
       goalTimer = window.setTimeout(() => goal.classList.remove('demo-goal-on'), 6000);
+      window.clearTimeout(pulseTimer);
+      pulseTimer = window.setTimeout(goalMet, PULSE_MS);
     },
     goalMet,
+    hideGoal() {
+      window.clearTimeout(goalTimer);
+      goal.classList.remove('demo-goal-on');
+    },
     dispose() {
       window.clearTimeout(goalTimer);
+      window.clearTimeout(pulseTimer);
       window.removeEventListener('keydown', onKey);
       document.removeEventListener('pointerdown', onDown, true);
       hud.remove();
@@ -134,9 +145,11 @@ export interface SavePointPanel {
 
 /**
  * What the save point offers: the sandbox's own Add object and Import forms (shared with its + menu), and Random drop
- * (not built yet). Element ids are prefixed so they never clash with the sandbox menu once it mounts.
+ * (`onRandomDrop`). Element ids are prefixed so they never clash with the sandbox menu once it mounts.
  */
-export function mountSavePointPanel(store: Store, say: (text: string, ms?: number) => void): SavePointPanel {
+export function mountSavePointPanel(
+  store: Store, say: (text: string, ms?: number) => void, onRandomDrop: () => void,
+): SavePointPanel {
   let version = 0;
   const backdrop = el('button', 'sheet-backdrop');
   backdrop.type = 'button';
@@ -176,16 +189,13 @@ export function mountSavePointPanel(store: Store, say: (text: string, ms?: numbe
     target.hidden = false;
     backdrop.hidden = false;
   };
-  const random = button('demo-sp-soon', 'Random drop', () => {});
-  random.disabled = true;
-  random.append(el('span', 'demo-sp-tag', 'soon'));
   const head = el('header', 'demo-panel-head');
   head.append(el('h2', '', 'Add objects to room'), button('demo-panel-close', 'Close', close));
   menu.append(
     head,
     button('', 'Add link or file', () => show(addSheet)),
     button('', 'Import from bookmarks (file)', () => show(importSheet)),
-    random,
+    button('', 'Random drop', () => { close(); onRandomDrop(); }),
   );
 
   function close(): void {

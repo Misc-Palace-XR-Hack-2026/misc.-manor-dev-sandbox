@@ -44,6 +44,21 @@ function ofKind(
     .filter((p): p is [number, number, number] => Boolean(p));
 }
 
+const FLOOR_ONLY = new Set<ObjectKind>([...LARGE, 'rug', 'console']);
+
+/** A random free slot (Random drop). Big things and rugs stay on the floor while there is floor left. */
+export function randomSlot(
+  kind: ObjectKind,
+  layout: RoomLayout,
+  occupied: Set<string>,
+  random: () => number = Math.random,
+): string | undefined {
+  const free = layout.slots.filter((s) => !occupied.has(s.id));
+  const floor = FLOOR_ONLY.has(kind) ? free.filter((s) => s.pos[1] < 0.2) : free;
+  const pool = floor.length ? floor : free;
+  return pool.length ? pool[Math.floor(random() * pool.length)].id : undefined;
+}
+
 /** Pick a free slot for auto-placement. Manual place() still accepts any slot. */
 export function chooseSlot(
   kind: ObjectKind,

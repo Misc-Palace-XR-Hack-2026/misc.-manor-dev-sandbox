@@ -64,6 +64,12 @@ interface Entry {
   selectedState?: { originalPos: THREE.Vector3; targetRotation: number };
 }
 
+interface Flight {
+  from: THREE.Vector3;
+  start: number;
+  duration: number;
+}
+
 export class RoomView {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -74,6 +80,7 @@ export class RoomView {
   private practicePad = document.createElement('div');
   private markerGroup = new THREE.Group();
   private objects = new Map<string, Entry>();
+  private flights = new Map<string, Flight>();
   private markers = new Map<string, THREE.Mesh>();
   private raycaster = new THREE.Raycaster();
   private tooltip: HTMLDivElement;
@@ -215,6 +222,32 @@ export class RoomView {
   }
 
   // ---- demo hooks ---------------------------------------------------------
+  /**
+   * Fly freshly placed objects in from a point (the demo's Random drop): each arcs out to its slot, one after another,
+   * then rests as usual. Instant under reduced motion.
+   */
+  flyIn(repIds: readonly string[], from: THREE.Vector3, stagger = 0.18, duration = 0.95): void {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    for (const id of this.flights.keys()) if (!this.objects.has(id)) this.flights.delete(id);
+    const start = performance.now() / 1000;
+    repIds.forEach((id, i) => this.flights.set(id, { from: from.clone(), start: start + i * stagger, duration }));
+  }
+
+  /** One frame of a fly-in; false once it has landed. */
+  private fly(e: Entry, f: Flight, t: number): boolean {
+    const k = (t - f.start) / f.duration;
+    if (k >= 1) {
+      e.group.position.copy(e.target);
+      return false;
+    }
+    const s = k <= 0 ? 0 : 1 - (1 - k) ** 3;
+    e.group.position.lerpVectors(f.from, e.target, s);
+    e.group.position.y += Math.sin(Math.PI * Math.max(0, k)) * (1 + 0.15 * f.from.distanceTo(e.target));
+    e.group.scale.setScalar(k <= 0 ? 0.001 : 1.6 * (0.2 + 0.8 * Math.min(1, k * 2)));
+    e.group.rotation.y = this.yaw + (1 - s) * Math.PI * 2;
+    return true;
+  }
+
   setDemo(hooks: DemoHooks | null): void {
     this.demo = hooks;
     this.resize();
@@ -456,6 +489,11 @@ export class RoomView {
     animateIgnite(this.objectsGroup, t, window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     const selected = this.demo?.liftSelected === false ? null : this.store.selectedId;
     for (const [id, e] of this.objects) {
+      const flight = this.flights.get(id);
+      if (flight) {
+        if (this.fly(e, flight, t)) continue;
+        this.flights.delete(id);
+      }
       const presenting = Boolean(this.xr?.presenting);
       const bob = presenting || id !== selected ? 0 : 0.2 + Math.sin(t * 4) * 0.05;
 
