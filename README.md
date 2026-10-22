@@ -28,7 +28,7 @@ Click **Export room**, save the JSON as `dev-sandbox/rooms/<yourname>.json`, com
 Choose **Levi's room** in the Rooms list for a warm maker studio based on Matt's
 loft implementation, with sunset lighting, terracotta terrazzo, rose stucco, and
 an amber horizon. The Sunset amber soundtrack stays selected when lighting changes;
-No music remains available in the editor. The 31 placed objects include a
+No music remains available in the editor. The 32 placed objects include a
 listening corner, engineering resources, a furnished maker loft, greenery,
 coffee corner, and a paper lantern.
 A second reading nook adds an armchair, side table, rug, fireplace, and sleeping
@@ -40,8 +40,13 @@ Semester, Nand to Tetris, and Red Blob Games’ interactive A* guide. Music and
 video objects open Levi’s supplied Rick Astley, Pure Moods, Bon Iver, araabMUZIK,
 Sequelitis, and Salad Fingers videos; the cat opens Kittens Game and the console
 opens The Binding of Isaac: Rebirth. YouTube links use direct video URLs without
-personal playlist IDs or tracking parameters. Select an object and choose
-**Edit** to change its content.
+personal playlist IDs or tracking parameters. The telescope opens Alchemy, the
+clock opens the Holocene Calendar, and the boombox opens twenty one pilots’
+live Car Radio performance. A book on the loft holds the owner-supplied CIA
+Reading Room link for The Adam and Eve Story; that URL redirected to the
+Reading Room homepage when checked on 2026-10-21. The floor cushion sits beside
+the downstairs reading nook. Select an object and choose **Edit** to change its
+content.
 
 The dedicated starter is `dev-sandbox/rooms/levi.json`. Existing local room saves
 still take priority. If you already have a Levi save, export it first, then use
