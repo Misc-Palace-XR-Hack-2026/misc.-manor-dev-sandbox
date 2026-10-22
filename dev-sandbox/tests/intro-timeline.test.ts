@@ -6,6 +6,7 @@ import {
   tutorialView, type Vec3, type View,
 } from '../src/core/intro-timeline';
 import { getLayout } from '../src/core/layout';
+import { BOUNDS_INSET } from '../src/core/walk';
 
 const fake = (initial: Record<string, string> = {}) => {
   const data = { ...initial };
@@ -162,21 +163,18 @@ test('scene anchors line up with the real room layout', () => {
   assert.ok(JUKEBOX_POS[2] < 3, 'jukebox is by the back-right wall, not out front');
 });
 
-test('the save point stands on the ground floor by the stairs, clear of every slot, the stairs and the loft', () => {
+test('the save point floats off the room past the front edge, on the stairs half, within reach of the floor', () => {
   const layout = getLayout('cozy-loft')!;
+  const floor = layout.boxes.find((b) => b.id === 'floor')!;
+  const front = floor.min[2] + floor.size[2];
   const [x, y, z] = SAVE_POINT_POS;
-  assert.equal(y, 0);
   const ringR = 0.55;
-  for (const slot of layout.slots.filter((s) => s.pos[1] === 0)) {
-    assert.ok(Math.hypot(slot.pos[0] - x, slot.pos[2] - z) > ringR + 0.3, `clear of ${slot.id}`);
-  }
-  for (const b of layout.boxes.filter((b) => b.walkable || b.id === 'loft')) {
-    const outside = x + ringR < b.min[0] || x - ringR > b.min[0] + b.size[0] || z + ringR < b.min[2] || z - ringR > b.min[2] + b.size[2];
-    assert.ok(outside, `nothing overhead or in the way: ${b.id}`);
-  }
-  const stairs = layout.boxes.filter((b) => b.id.startsWith('step-'));
-  const nearest = Math.min(...stairs.map((b) => x - (b.min[0] + b.size[0])));
-  assert.ok(nearest > 0 && nearest < 1, 'right beside the stairs');
+  assert.ok(y > 0, 'floats');
+  assert.ok(z - ringR > front + 0.5, 'clearly off the room, past the open front edge');
+  assert.ok(x < ROOM_EAST / 2, 'on the other side from the jukebox (the stairs half)');
+  assert.ok(x > 1.5, 'not tucked into the corner');
+  // The closest a walking visitor gets: the front of the floor, kept BOUNDS_INSET in from its edge.
+  assert.ok(Math.hypot(0, z - (front - BOUNDS_INSET)) < SAVE_POINT_REACH, 'within reach from the front of the floor');
   // Across the room from where the tutorial leaves the visitor (x 8.3, z 4.8): out of reach until they walk over.
   assert.ok(Math.hypot(8.3 - x, 4.8 - z) > SAVE_POINT_REACH * 2);
 });

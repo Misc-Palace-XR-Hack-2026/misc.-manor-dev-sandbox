@@ -12,7 +12,7 @@ import { buildObject } from '../views/objects';
 import { disposeGroup } from '../views/resources';
 import { buildJukebox } from './jukebox';
 import { buildCardboardBox } from './cardboard-box';
-import { SAVE_POINT_RADIUS, buildSavePoint } from './save-point';
+import { buildSavePoint } from './save-point';
 import { mountDemoHud, mountSavePointPanel, type DemoHud, type SavePointPanel } from './demo-hud';
 import { mountWalkMode, type WalkHandle } from './walk-mode';
 import {
@@ -386,11 +386,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
   function onSavePoint(tap: DemoTap): boolean {
     if (tap.repId) return false;
     const d = savePoint.hit(tap.raycaster);
-    if (d !== null) return !tap.room || tap.room.distance >= d;
-    // Standing inside the light the column isn't hit from within: looking down at the runes counts.
-    const p = tap.room?.point;
-    return walk?.mode === 'walk' && !!p && savePointDistance() < SAVE_POINT_RADIUS
-      && Math.hypot(p.x - SAVE_POINT_POS[0], p.z - SAVE_POINT_POS[2]) < SAVE_POINT_RADIUS;
+    return d !== null && (!tap.room || tap.room.distance >= d);
   }
 
   /**

@@ -193,6 +193,41 @@ export function overviewExitEnd(cam: Vec3, target: Vec3, pullback = OVERVIEW_PUL
   };
 }
 
+/** The long lens that stands in for the isometric camera at the far end of a dolly, degrees. */
+export const FLAT_FOV = 3;
+/** A full dolly between the walk lens and the isometric look, seconds. */
+export const DOLLY_S = 0.55;
+
+export interface Lens { pos: Vec3; lookAt: Vec3; fov: number; near: number; far: number }
+
+/**
+ * Dolly zoom between the walk lens and the isometric (orthographic) camera, so switching between them doesn't jump.
+ * `s` 0: the walk lens (WALK_FOV) at the overview pullback, looking at the target (where the exit glide ends).
+ * `s` 1: a long lens (FLAT_FOV) far back on the same line, framing the orthographic view's height and clipping where
+ * it clips, so it looks almost exactly like it. In between the lens narrows as it backs off: perspective flattens while
+ * the framing changes smoothly.
+ */
+export function dollyLens(
+  cam: Vec3, target: Vec3, ortho: { height: number; near: number; far: number }, s: number, pullback = OVERVIEW_PULLBACK,
+): Lens {
+  const k = clamp01(s);
+  const dx = cam[0] - target[0], dy = cam[1] - target[1], dz = cam[2] - target[2];
+  const camDist = Math.hypot(dx, dy, dz) || 1;
+  const tanA = Math.tan((WALK_FOV * Math.PI) / 360), tanB = Math.tan((FLAT_FOV * Math.PI) / 360);
+  const startHeight = 2 * pullback * tanA;
+  const height = Number.isFinite(ortho.height) && ortho.height > 0 ? ortho.height : startHeight;
+  const tan = tanA * Math.pow(tanB / tanA, k);
+  const dist = (startHeight + (height - startHeight) * k) / (2 * tan);
+  const along = dist / camDist;
+  return {
+    pos: [target[0] + dx * along, target[1] + dy * along, target[2] + dz * along],
+    lookAt: [target[0], target[1], target[2]],
+    fov: (2 * Math.atan(tan) * 180) / Math.PI,
+    near: Math.max(WALK_NEAR, dist - camDist + ortho.near),
+    far: Math.max(WALK_FAR, dist - camDist + ortho.far),
+  };
+}
+
 /** Grab-the-world drag (like Street View): drag right and the view turns left, drag down and it tilts up. */
 export function dragLook(yaw: number, pitch: number, dx: number, dy: number, sens = LOOK_SENS): { yaw: number; pitch: number } {
   return {

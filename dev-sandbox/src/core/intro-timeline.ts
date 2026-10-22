@@ -19,10 +19,11 @@ export const DOOR_POS: Vec3 = [E + 1.6, 0, 3.3];
 /** Stands on the ground level beside the east end of the back-right wall, outside the room, facing into it. */
 export const JUKEBOX_POS: Vec3 = [E + 1.1, 0, 1.3];
 /**
- * The save point: ground floor beside the bottom stair steps, across the room from where the tutorial leaves the
- * visitor, in the gap between the floor slots (open above, no slot under it).
+ * The save point floats off the room like the jukebox, but on the other side: past the open front edge on the stairs
+ * half (the west side itself is walled, which would hide it from the dollhouse). Across the room from where the
+ * tutorial leaves the visitor, and within reach from the front edge of the floor.
  */
-export const SAVE_POINT_POS: Vec3 = [2.05, 0, 5.0];
+export const SAVE_POINT_POS: Vec3 = [2.6, 0.4, 9.2];
 /** Walking, the save point opens from this close (metres, measured on the floor plan); farther taps say walk closer. */
 export const SAVE_POINT_REACH = 3;
 /** The cardboard box of starter objects, on the floor in front of the bench and wall shelf. */

@@ -2,8 +2,11 @@ import * as THREE from 'three';
 import type { Store } from '../core/store';
 import type { RoomView, DemoHooks, DemoTap } from '../views/room';
 import {
+  DOLLY_S,
+  dollyLens,
   dragLook,
   EYE_HEIGHT,
+  smooth,
   eyeYForFloor,
   FLOOR_NORMAL_MIN,
   floorRegionsFromBoxes,
@@ -45,6 +48,8 @@ interface Glide {
   t0: number;
   duration: number;
   onDone?: () => void;
+  /** A dolly zoom instead of a pose glide: flatness from..to (see dollyLens); start and end are unused. */
+  dolly?: { from: number; to: number };
 }
 
 const LOOK_DAMP = 14;
@@ -238,8 +243,30 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
     glide = { start: sanitizePose(start), end: sanitizePose(end), t0: t, duration, onDone };
   };
 
+  /** Where a dolly is (0 walk lens .. 1 isometric look); it drives the pose and the lens. */
+  let flat = 0;
+  const applyDolly = (s: number) => {
+    flat = s;
+    const { camera: oc, target } = view.overview;
+    const lens = dollyLens(
+      [oc.position.x, oc.position.y, oc.position.z],
+      [target.x, target.y, target.z],
+      { height: (oc.top - oc.bottom) / oc.zoom, near: oc.near, far: oc.far },
+      s,
+    );
+    applyPose(poseFromLookAt(lens.pos, lens.lookAt));
+    camera.fov = lens.fov;
+    camera.near = lens.near;
+    camera.far = lens.far;
+    camera.updateProjectionMatrix();
+  };
+  const startDolly = (from: number, to: number, onDone?: () => void) => {
+    applyDolly(from);
+    glide = { start: pose, end: pose, t0: frameTime, duration: DOLLY_S * Math.abs(to - from), onDone, dolly: { from, to } };
+  };
+
   const cancelGlidePose = (): WalkPose => {
-    if (!glide) return pose;
+    if (!glide || glide.dolly) return pose;
     if (Number.isNaN(glide.t0)) return glide.start;
     return sanitizePose(glidePose(glide.start, glide.end, frameTime - glide.t0, glide.duration));
   };
@@ -303,7 +330,18 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
     startGlide(from, end, GLIDE_MOVE_S, t);
   };
 
+  /**
+   * Up to the overview: glide to the pullback, then dolly out to the isometric look (lens narrowing as it backs off),
+   * then hand over to the isometric camera. The dolly is what keeps the hand-over from jumping.
+   */
   const returnToOverview = (t: number) => {
+    const finish = () => { leaving = false; leaveWalkUi(); };
+    if (glide?.dolly) {
+      // Mid-dolly on the way down: just dolly back out.
+      leaving = true;
+      startDolly(flat, 1, finish);
+      return;
+    }
     // Remember where the visitor stands (or is headed), at eye level, for toWalk().
     if (here) lastWalk = { pose: { ...(glide ? glide.end : pose), y: eyeYForFloor(here.floorY) }, region: here };
     zoom = zoomTarget = backed = 0;
@@ -313,23 +351,27 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
     const { pos, lookAt } = overviewExitEnd([oc.position.x, oc.position.y, oc.position.z], [target.x, target.y, target.z]);
     const end = poseFromLookAt(pos, lookAt);
     leaving = true;
-    const finish = () => { leaving = false; leaveWalkUi(); };
     if (reducedMotion()) {
       finish();
       return;
     }
-    startGlide(from, end, GLIDE_EXIT_S, t, finish);
+    startGlide(from, end, GLIDE_EXIT_S, t, () => startDolly(0, 1, finish));
   };
 
-  /** From the overview (or on the way up to it) back down to where the visitor stood. */
+  /**
+   * From the overview (or on the way up to it) back down to where the visitor stood: the reverse of returnToOverview,
+   * dolly in from the isometric look to the walk lens, then glide down.
+   */
   const walkBack = (t: number) => {
     const back = lastWalk;
     if (!back) return;
+    const glideDown = () => startGlide(pose, back.pose, GLIDE_ENTER_S, frameTime);
     if (leaving) {
-      // Still gliding up: turn around from wherever the glide is.
+      // Still on the way up: turn around from wherever it is.
       leaving = false;
-      const from = cancelGlidePose();
       stand(back.region);
+      if (glide?.dolly) { startDolly(flat, 0, glideDown); return; }
+      const from = cancelGlidePose();
       applyPose(from);
       if (reducedMotion()) applyPose(back.pose);
       else startGlide(from, back.pose, GLIDE_MOVE_S, t);
@@ -341,18 +383,8 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
       enterWalkUi();
       return;
     }
-    const { camera: oc, target } = view.overview;
-    const { pos, lookAt } = overviewEntryStart(
-      [oc.position.x, oc.position.y, oc.position.z],
-      [target.x, target.y, target.z],
-      back.pose.x,
-      back.pose.z,
-      back.region.floorY,
-    );
-    const start = poseFromLookAt(pos, lookAt);
-    applyPose(start);
     enterWalkUi();
-    startGlide(start, back.pose, GLIDE_ENTER_S, t);
+    startDolly(1, 0, glideDown);
   };
 
   function clampTap(x: number, z: number, region: FloorRegion): [number, number] {
@@ -392,14 +424,20 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
     const dt = lastFrameTime > 0 ? Math.min(0.05, t - lastFrameTime) : 1 / 60;
     lastFrameTime = frameTime = t;
     if (glide && Number.isNaN(glide.t0)) glide.t0 = t; // started before this module saw a frame
-    if (camera.fov !== WALK_FOV) {
+    if (camera.fov !== WALK_FOV && !glide?.dolly) {
       camera.fov = Math.abs(WALK_FOV - camera.fov) < 0.05 ? WALK_FOV : camera.fov + (WALK_FOV - camera.fov) * Math.min(1, dt * 3);
+      camera.near = WALK_NEAR;
+      camera.far = WALK_FAR;
       camera.updateProjectionMatrix();
     }
     if (glide) {
       const elapsed = t - glide.t0;
-      const p = glidePose(glide.start, glide.end, elapsed, glide.duration);
-      applyPose(p);
+      if (glide.dolly) {
+        const { from, to } = glide.dolly;
+        applyDolly(from + (to - from) * smooth(glide.duration > 0 ? elapsed / glide.duration : 1));
+      } else {
+        applyPose(glidePose(glide.start, glide.end, elapsed, glide.duration));
+      }
       if (elapsed >= glide.duration) {
         const done = glide.onDone;
         glide = null;

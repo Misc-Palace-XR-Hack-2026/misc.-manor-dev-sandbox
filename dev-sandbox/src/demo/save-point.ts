@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 
-// The save point (Kingdom Hearts save point vibe): a glowing rune circle on the floor, a soft column of light rising
-// out of it, sparkles drifting up and two wisps circling. It lights the floor around it in teal, so it shows at the
-// edge of the view before the visitor turns to it. Primitives and canvas textures only, nothing to load.
+// The save point (Kingdom Hearts save point vibe): a glowing rune circle, a soft column of light rising out of it,
+// sparkles drifting up and two wisps circling. It floats off the room (like the jukebox) and bobs gently; its teal
+// light reaches the edge of the room's floor, so it shows at the edge of the view before the visitor turns to it.
+// Primitives and canvas textures only, nothing to load.
 //
-// Size: about 1.1 wide, 2.4 tall. Origin is the centre of the circle on the floor.
+// Size: about 1.1 wide, 2.4 tall. Origin is the centre of the rune circle.
 
 export interface SavePoint {
   group: THREE.Group;
@@ -20,8 +21,6 @@ export interface SavePoint {
 const TEAL = 0x4dffd2;
 const MINT = 0xb8fff0;
 const RING_R = 0.55;
-/** Radius of the rune circle (and the tap target) on the floor plan. */
-export const SAVE_POINT_RADIUS = RING_R;
 const COLUMN_R = 0.38;
 const COLUMN_H = 2.4;
 const SPARKS = 48;
@@ -103,6 +102,9 @@ export function buildSavePoint(): SavePoint {
   const textures: THREE.Texture[] = [];
   const group = new THREE.Group();
   group.name = 'save-point';
+  // Everything bobs together inside `float`; update() never moves the group itself.
+  const float = new THREE.Group();
+  group.add(float);
   const geo = <T extends THREE.BufferGeometry>(g: T): T => { geometries.push(g); return g; };
   const mat = <T extends THREE.Material>(m: T): T => { materials.push(m); return m; };
   const tex = <T extends THREE.Texture>(t: T): T => { textures.push(t); return t; };
@@ -112,7 +114,7 @@ export function buildSavePoint(): SavePoint {
 
   const dot = tex(dotTexture());
 
-  // ---- on the floor: a wide soft glow, the rune circle and an inner counter-turning ring ----
+  // ---- at the base: a wide soft aura, the rune circle and an inner counter-turning ring ----
   const floorGlowMat = glow(TEAL, dot, 0.5);
   const floorGlow = new THREE.Mesh(geo(new THREE.PlaneGeometry(RING_R * 4, RING_R * 4).rotateX(-Math.PI / 2)), floorGlowMat);
   floorGlow.position.y = 0.012;
@@ -125,7 +127,7 @@ export function buildSavePoint(): SavePoint {
   const innerRing = new THREE.Mesh(geo(new THREE.RingGeometry(COLUMN_R * 0.92, COLUMN_R, 64).rotateX(-Math.PI / 2)), innerRingMat);
   innerRing.position.y = 0.026;
   innerRing.renderOrder = 6;
-  group.add(floorGlow, runes, innerRing);
+  float.add(floorGlow, runes, innerRing);
 
   // ---- the column of light: an outer veil and a brighter, thinner core ----
   const columnTex = tex(columnTexture());
@@ -139,7 +141,7 @@ export function buildSavePoint(): SavePoint {
   const core = new THREE.Mesh(geo(new THREE.CylinderGeometry(COLUMN_R * 0.4, COLUMN_R * 0.55, COLUMN_H * 0.8, 32, 1, true)), coreMat);
   core.position.y = COLUMN_H * 0.4;
   core.renderOrder = 7;
-  group.add(veil, core);
+  float.add(veil, core);
 
   // ---- sparkles drifting up through the column ----
   const sparkPos = new Float32Array(SPARKS * 3);
@@ -158,7 +160,7 @@ export function buildSavePoint(): SavePoint {
   const sparks = new THREE.Points(sparkGeo, sparkMat);
   sparks.renderOrder = 8;
   sparks.frustumCulled = false;
-  group.add(sparks);
+  float.add(sparks);
 
   // ---- two wisps circling the column ----
   const wispMat = mat(new THREE.SpriteMaterial({ color: TEAL, map: dot, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
@@ -166,20 +168,20 @@ export function buildSavePoint(): SavePoint {
     const sprite = new THREE.Sprite(wispMat);
     sprite.scale.setScalar(0.38);
     sprite.renderOrder = 8;
-    group.add(sprite);
+    float.add(sprite);
     return { sprite, phase };
   });
 
-  // ---- teal light on the floor and the stairs nearby ----
-  const light = new THREE.PointLight(TEAL, 5, 4.5, 1.6);
+  // ---- teal light, reaching the edge of the room's floor ----
+  const light = new THREE.PointLight(TEAL, 6, 5.5, 1.6);
   light.position.y = 0.9;
-  group.add(light);
+  float.add(light);
 
   // ---- invisible tap target: the column's volume ----
   const hitMat = mat(new THREE.MeshBasicMaterial({ visible: false }));
   const hitMesh = new THREE.Mesh(geo(new THREE.CylinderGeometry(RING_R, RING_R, COLUMN_H, 16)), hitMat);
   hitMesh.position.y = COLUMN_H / 2;
-  group.add(hitMesh);
+  float.add(hitMesh);
 
   const center = new THREE.Vector3();
   const placeSparks = () => {
@@ -204,7 +206,7 @@ export function buildSavePoint(): SavePoint {
     group,
     get center() {
       group.updateMatrixWorld();
-      return center.set(0, COLUMN_H * 0.45, 0).applyMatrix4(group.matrixWorld);
+      return center.set(0, COLUMN_H * 0.45, 0).applyMatrix4(float.matrixWorld);
     },
     update(t, dt) {
       const still = reduced();
@@ -212,8 +214,9 @@ export function buildSavePoint(): SavePoint {
       veilMat.opacity = 0.5 * pulse;
       coreMat.opacity = 0.42 * (still ? 1 : 1 + 0.18 * Math.sin(t * 3.1 + 1));
       floorGlowMat.opacity = 0.45 * pulse;
-      light.intensity = 5 * pulse;
+      light.intensity = 6 * pulse;
       if (still) return;
+      float.position.y = Math.sin(t * 1.3) * 0.06;
       runes.rotation.y += dt * 0.25;
       innerRing.rotation.y -= dt * 0.6;
       columnTex.offset.x = (columnTex.offset.x + dt * 0.04) % 1;

@@ -145,7 +145,7 @@ export function mountSavePointPanel(store: Store, say: (text: string, ms?: numbe
 
   const menu = el('section', 'demo-panel demo-sp');
   menu.setAttribute('role', 'dialog');
-  menu.setAttribute('aria-label', 'Save point');
+  menu.setAttribute('aria-label', 'Add objects to room');
   menu.hidden = true;
 
   const sheet = (title: string, body: HTMLElement) => {
@@ -180,7 +180,7 @@ export function mountSavePointPanel(store: Store, say: (text: string, ms?: numbe
   random.disabled = true;
   random.append(el('span', 'demo-sp-tag', 'soon'));
   const head = el('header', 'demo-panel-head');
-  head.append(el('h2', '', 'Save point'), button('demo-panel-close', 'Close', close));
+  head.append(el('h2', '', 'Add objects to room'), button('demo-panel-close', 'Close', close));
   menu.append(
     head,
     button('', 'Add link or file', () => show(addSheet)),
