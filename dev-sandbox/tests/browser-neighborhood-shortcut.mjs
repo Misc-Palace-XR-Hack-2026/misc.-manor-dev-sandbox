@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+const {chromium}=await import(process.env.PLAYWRIGHT_MODULE??'playwright');
+const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--use-angle=gl','--enable-webgl','--ignore-gpu-blocklist']});
+try {
+ const page=await browser.newPage({viewport:{width:1440,height:960}});
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(process.env.MP_URL??'https://omarchy-1.tail589b59.ts.net/');
+ await page.locator('.demo-skip-seq').click();await page.locator('.demo-exit').click();
+ const control=page.locator('.demo-hud .neighborhood-back');
+ await control.waitFor({state:'visible'});
+ assert.equal(await control.getAttribute('aria-label'),'Explore neighborhood');
+ assert.equal(await control.textContent(),'');
+ const before=await page.locator('.demo-hud').boundingBox();
+ await page.screenshot({path:'/home/dvgpro/.hermes/cache/scratch/neighborhood-shortcut.png'});
+ await control.click();
+ await page.waitForFunction(()=>document.querySelector('.neighborhood-back')?.getAttribute('aria-label')==='Return to my room');
+ const away=await page.locator('.demo-hud').boundingBox();
+ assert.equal(away.width,before.width);
+ assert.equal(away.x,before.x);
+ await control.click();
+ await page.waitForFunction(()=>document.querySelector('.neighborhood-back')?.getAttribute('aria-label')==='Explore neighborhood');
+ assert.equal(await control.getAttribute('data-action'),'neighborhood');
+ assert.deepEqual(errors,[]);
+ console.log('PASS: neighborhood shortcut -> world -> home; stable HUD bounds; zero page errors');
+} finally {await browser.close();}

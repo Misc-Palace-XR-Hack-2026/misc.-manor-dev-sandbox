@@ -150,7 +150,20 @@ export class RoomView {
     this.neighborhoodHint.textContent = this.neighborhood?.mode === 'dollhouse'
       ? 'Neighborhood · drag to pan · scroll / pinch to zoom · select a pavilion to visit'
       : 'Neighborhood · WASD / arrows to walk · drag to look · tap path to walk or a room to visit';
-    this.neighborhoodBack.hidden = !this.neighborhood && !this.store.visiting;
+    const away = Boolean(this.neighborhood || this.store.visiting);
+    const action = away ? 'home' : 'neighborhood';
+    const label = away ? 'Return to my room' : 'Explore neighborhood';
+    this.neighborhoodBack.hidden = false;
+    if (this.neighborhoodBack.dataset.action !== action) {
+      this.neighborhoodBack.dataset.action = action;
+      this.neighborhoodBack.title = label;
+      this.neighborhoodBack.setAttribute('aria-label', label);
+      this.neighborhoodBack.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'
+        + (away
+          ? '<path d="M3 11.2 12 4l9 7.2M5.6 10.4V20h4.2v-5h4.4v5h4.2v-9.6"/>'
+          : '<path d="m2 10 5-4 5 4M3.5 9v9h7V9m1-2 5-4 5 4m-8.5-1v7h7V6M10 16l5-4 5 4m-8.5-1v6h7v-6"/>')
+        + '</svg>';
+    }
   }
   openNeighborhood(): void {
     if (this.neighborhood) return;
@@ -201,7 +214,10 @@ export class RoomView {
       + '</svg>';
     this.neighborhoodHint.className = 'neighborhood-hint';
     this.neighborhoodBack.hidden = this.neighborhoodHint.hidden = true;
-    this.neighborhoodBack.onclick = () => { this.closeNeighborhood(); this.store.returnHome(); this.xr?.neighborhoodEnteredRoom(); this.updateNeighborhoodHint(); };
+    this.neighborhoodBack.onclick = () => {
+      if (!this.neighborhood && !this.store.visiting) { this.openNeighborhood(); return; }
+      this.closeNeighborhood(); this.store.returnHome(); this.xr?.neighborhoodEnteredRoom(); this.updateNeighborhoodHint();
+    };
     document.body.append(this.neighborhoodBack, this.neighborhoodHint);
     document.addEventListener('palace-neighborhood', event => { if ((event as CustomEvent).detail === this.store) this.openNeighborhood(); });
     document.addEventListener('palace-neighborhood-home', event => { if ((event as CustomEvent).detail === this.store) this.neighborhoodBack.click(); });
