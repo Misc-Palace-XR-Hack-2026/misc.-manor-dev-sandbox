@@ -1,0 +1,13 @@
+.neighborhood-search { box-sizing: border-box; width: min(460px, calc(100vw - 32px)); max-height: min(75dvh, 650px); padding: 22px; border-radius: 24px; border: 1px solid #ffffff38; color: #f1e9dc; background: #211c2bf2; backdrop-filter: blur(16px); font: 14px system-ui, sans-serif; }
+.neighborhood-search::backdrop { background: #100b1870; }
+.neighborhood-search h2 { margin: 0 0 16px; font-size: 22px; }
+.neighborhood-search input { width: 100%; box-sizing: border-box; border: 1px solid #ffffff40; border-radius: 12px; background: #ffffff10; color: inherit; padding: 12px; font: inherit; }
+.neighborhood-search input::placeholder { color: #d8ceddc0; }
+.neighborhood-search-results { list-style: none; padding: 0; margin: 12px 0 18px; }
+.neighborhood-search button { border: 1px solid #ffffff24; border-radius: 999px; color: inherit; background: #ffffff12; padding: 10px 16px; cursor: pointer; font: inherit; }
+.neighborhood-search-results button { width: 100%; text-align: left; margin-bottom: 6px; }
+.neighborhood-search button:hover { background: #ffffff24; }
+.neighborhood-search :focus-visible { outline: 2px solid #eadcc4; outline-offset: 3px; }
+.neighborhood-search-button { display: grid; place-items: center; width: 38px; padding: 0; }
+.neighborhood-search-button[hidden] { display: none; }
+.neighborhood-search-button svg { width: 20px; height: 20px; }

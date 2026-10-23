@@ -268,6 +268,7 @@ export class NeighborhoodWorld {
     const nearby=new Set([...this.courtLights].sort((a,b)=>a.position.distanceToSquared(viewer)-b.position.distanceToSquared(viewer)).slice(0,4));
     for(const light of this.courtLights)light.visible=nearby.has(light);
     const dt = this.last ? Math.min(.05, now - this.last) : 0; this.last = now;
+    if (typeof document !== 'undefined' && document.querySelector('dialog[open]')) { this.keys.clear(); this.drag = null; this.destination = null; return; }
     if (immersive) { this.keys.clear(); return; }
     if (this.mode === 'dollhouse') { this.controls?.update(); return; }
     this.street.rotation.set(this.pitch, this.yaw, 0, 'YXZ');

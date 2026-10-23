@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { openRoomSearch } from './room-search';
 import { surfaceTexture, surfaceGeometry } from './surface-textures';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { Store } from '../core/store';
@@ -137,6 +138,8 @@ export class RoomView {
   private neighborhoodHidden = new Map<THREE.Object3D, boolean>();
   private neighborhoodBackground: THREE.Scene['background'] = null;
   private neighborhoodBack = document.createElement('button');
+  private neighborhoodSearch = document.createElement('button');
+  private searchDialog: HTMLDialogElement | null = null;
   private neighborhoodHint = document.createElement('p');
 
   get homeControl(): HTMLButtonElement { return this.neighborhoodBack; }
@@ -146,6 +149,8 @@ export class RoomView {
   }
   private updateNeighborhoodHint(): void {
     const hud=document.querySelector('.demo-hud');if(hud&&this.neighborhoodBack.parentElement!==hud)hud.append(this.neighborhoodBack);
+    this.neighborhoodSearch.hidden = !this.neighborhood;
+    if (hud && this.neighborhoodSearch.parentElement !== hud) hud.insertBefore(this.neighborhoodSearch, this.neighborhoodBack);
     this.neighborhoodHint.hidden = !this.neighborhood;
     this.neighborhoodHint.textContent = this.neighborhood?.mode === 'dollhouse'
       ? 'Neighborhood · drag to pan · scroll / pinch to zoom · select a pavilion to visit'
@@ -193,6 +198,7 @@ export class RoomView {
   }
   closeNeighborhood(): void {
     if (!this.neighborhood) return;
+    this.searchDialog?.close();
     this.xr?.setNeighborhood(null);
     this.neighborhood.dispose(); this.neighborhood = null;
     for (const [object, visible] of this.neighborhoodHidden) object.visible = visible;
@@ -218,7 +224,21 @@ export class RoomView {
       if (!this.neighborhood && !this.store.visiting) { this.openNeighborhood(); return; }
       this.closeNeighborhood(); this.store.returnHome(); this.xr?.neighborhoodEnteredRoom(); this.updateNeighborhoodHint();
     };
-    document.body.append(this.neighborhoodBack, this.neighborhoodHint);
+    this.neighborhoodSearch.className = 'demo-hud-btn neighborhood-search-button';
+    this.neighborhoodSearch.type = 'button';
+    this.neighborhoodSearch.hidden = true;
+    this.neighborhoodSearch.title = 'Search rooms';
+    this.neighborhoodSearch.setAttribute('aria-label', 'Search rooms');
+    this.neighborhoodSearch.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5" stroke-linecap="round"/></svg>';
+    this.neighborhoodSearch.onclick = () => {
+      const world = this.neighborhood;
+      if (!world || this.searchDialog?.open) return;
+      const catalog = roomCatalog(this.neighborhoodRooms).map(room => room.id === 'home'
+        ? {...room, data: this.store.personalRoom}
+        : room.id === this.store.visiting ? {...room, data: this.store.state} : room);
+      this.searchDialog = openRoomSearch(catalog, id => { if (this.neighborhood === world) world.visit(id); }, this.neighborhoodSearch);
+    };
+    document.body.append(this.neighborhoodBack, this.neighborhoodSearch, this.neighborhoodHint);
     document.addEventListener('palace-neighborhood', event => { if ((event as CustomEvent).detail === this.store) this.openNeighborhood(); });
     document.addEventListener('palace-neighborhood-home', event => { if ((event as CustomEvent).detail === this.store) this.neighborhoodBack.click(); });
     this.store.subscribe(() => this.updateNeighborhoodHint());
