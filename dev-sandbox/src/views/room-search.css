@@ -6,6 +6,12 @@
 .neighborhood-search-results { list-style: none; padding: 0; margin: 12px 0 18px; }
 .neighborhood-search button { border: 1px solid #ffffff24; border-radius: 999px; color: inherit; background: #ffffff12; padding: 10px 16px; cursor: pointer; font: inherit; }
 .neighborhood-search-results button { width: 100%; text-align: left; margin-bottom: 6px; }
+.neighborhood-search-results button > strong, .neighborhood-search-results button > span { display: block; overflow-wrap: anywhere; }
+.neighborhood-search-results button > span { margin-top: 4px; font-size: 12px; }
+.neighborhood-search-results small { display: block; margin: 0 10px 12px; color: #d8cedd; }
+.neighborhood-search-results button:disabled { cursor: default; opacity: .7; }
+.search-link-disclosure { font-size: 12px; line-height: 1.5; color: #d8cedd; }
+.search-link-summary { font-size: 12px; }
 .neighborhood-search button:hover { background: #ffffff24; }
 .neighborhood-search :focus-visible { outline: 2px solid #eadcc4; outline-offset: 3px; }
 .neighborhood-search-button { display: grid; place-items: center; width: 38px; padding: 0; }

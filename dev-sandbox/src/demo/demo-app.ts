@@ -745,6 +745,7 @@ export function startDemo(container: HTMLElement, storage: Storage | null): void
       dev,
       camera: cameraChoice,
       homeControl: view.homeControl,
+      searchControl: view.searchControl,
       onCamera: (choice) => {
         saveCamera(storage, choice);
         view.setNeighborhoodMode(choice);

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { openRoomSearch } from './room-search';
+import { openRoomSearch, openItemSearch } from './room-search';
 import { surfaceTexture, surfaceGeometry } from './surface-textures';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { Store } from '../core/store';
@@ -143,13 +143,17 @@ export class RoomView {
   private neighborhoodHint = document.createElement('p');
 
   get homeControl(): HTMLButtonElement { return this.neighborhoodBack; }
+  get searchControl(): HTMLButtonElement { return this.neighborhoodSearch; }
   setNeighborhoodMode(mode: 'tactile' | 'dollhouse'): void {
     this.neighborhoodMode = mode; this.neighborhood?.setMode(mode);
     this.updateNeighborhoodHint();
   }
   private updateNeighborhoodHint(): void {
     const hud=document.querySelector('.demo-hud');if(hud&&this.neighborhoodBack.parentElement!==hud)hud.append(this.neighborhoodBack);
-    this.neighborhoodSearch.hidden = !this.neighborhood;
+    this.neighborhoodSearch.hidden = false;
+    const searchLabel = this.neighborhood ? 'Search rooms' : 'Search this room';
+    this.neighborhoodSearch.title = searchLabel;
+    this.neighborhoodSearch.setAttribute('aria-label', searchLabel);
     if (hud && this.neighborhoodSearch.parentElement !== hud) hud.insertBefore(this.neighborhoodSearch, this.neighborhoodBack);
     this.neighborhoodHint.hidden = !this.neighborhood;
     this.neighborhoodHint.textContent = this.neighborhood?.mode === 'dollhouse'
@@ -172,6 +176,7 @@ export class RoomView {
   }
   openNeighborhood(): void {
     if (this.neighborhood) return;
+    this.searchDialog?.close();
     this.store.select(null); this.card.show(null);
     const catalog=roomCatalog(this.neighborhoodRooms).map(room=>room.id===this.store.visiting?{...room,data:structuredClone(this.store.state)}:room);
     const world = new NeighborhoodWorld(catalog, this.store.personalRoom, id => {
@@ -226,13 +231,17 @@ export class RoomView {
     };
     this.neighborhoodSearch.className = 'demo-hud-btn neighborhood-search-button';
     this.neighborhoodSearch.type = 'button';
-    this.neighborhoodSearch.hidden = true;
-    this.neighborhoodSearch.title = 'Search rooms';
-    this.neighborhoodSearch.setAttribute('aria-label', 'Search rooms');
+    this.neighborhoodSearch.hidden = false;
+    this.neighborhoodSearch.title = 'Search this room';
+    this.neighborhoodSearch.setAttribute('aria-label', 'Search this room');
     this.neighborhoodSearch.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5" stroke-linecap="round"/></svg>';
     this.neighborhoodSearch.onclick = () => {
       const world = this.neighborhood;
-      if (!world || this.searchDialog?.open) return;
+      if (this.searchDialog?.open) return;
+      if (!world) {
+        this.searchDialog = openItemSearch(this.store, this.neighborhoodSearch);
+        return;
+      }
       const catalog = roomCatalog(this.neighborhoodRooms).map(room => room.id === 'home'
         ? {...room, data: this.store.personalRoom}
         : room.id === this.store.visiting ? {...room, data: this.store.state} : room);

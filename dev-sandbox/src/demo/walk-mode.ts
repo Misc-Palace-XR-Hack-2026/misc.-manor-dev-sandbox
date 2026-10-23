@@ -442,6 +442,16 @@ export function mountWalkMode(view: RoomView, store: Store, options: WalkOptions
     base.frame?.(t);
     const dt = lastFrameTime > 0 ? Math.min(0.05, t - lastFrameTime) : 1 / 60;
     lastFrameTime = frameTime = t;
+    if (document.querySelector('dialog[open]')) {
+      // A key held before a dialog opened must not keep walking under it (or stick after keyup).
+      keys.clear(); touches.clear(); dragging = false; dragPointer = null; pinching = false;
+      lookVelYaw = lookVelPitch = 0;
+      lookTargetYaw = lookYaw; lookTargetPitch = lookPitch;
+      if (glide && !glide.dolly && !glide.onDone && !leaving) glide = null;
+      else if (glide && !Number.isNaN(glide.t0)) glide.t0 += dt;
+      options.afterFrame?.(t);
+      return;
+    }
     if (glide && Number.isNaN(glide.t0)) glide.t0 = t; // started before this module saw a frame
     if (camera.fov !== WALK_FOV && !glide?.dolly) {
       camera.fov = Math.abs(WALK_FOV - camera.fov) < 0.05 ? WALK_FOV : camera.fov + (WALK_FOV - camera.fov) * Math.min(1, dt * 3);

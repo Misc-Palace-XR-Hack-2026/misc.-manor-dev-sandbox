@@ -10,8 +10,12 @@ try {
  await control.waitFor({state:'visible'});
  assert.equal(await control.getAttribute('aria-label'),'Explore neighborhood');
  assert.equal(await control.textContent(),'');
+ await page.locator('.demo-hud .neighborhood-search-button').waitFor({state:'visible'});
  const before=await page.locator('.demo-hud').boundingBox();
  await page.screenshot({path:'/home/dvgpro/.hermes/cache/scratch/neighborhood-shortcut.png'});
+ await page.getByRole('button',{name:'Search this room',exact:true}).waitFor({state:'visible'});
+ const helpBefore=await page.locator('.demo-hud').getByRole('button',{name:'Help',exact:true}).boundingBox();
+ const cameraBefore=await page.locator('.demo-camera').boundingBox();
  const search=page.getByRole('button',{name:'Search rooms',exact:true});
  assert.equal(await search.isVisible(),false);
  await control.click();
@@ -37,7 +41,9 @@ try {
  await control.click();
  await page.waitForFunction(()=>document.querySelector('.neighborhood-back')?.getAttribute('aria-label')==='Return to my room');
  const away=await page.locator('.demo-hud').boundingBox();
- assert.ok(away.width>before.width,'search expands the bar leftward');
+ assert.equal(away.width,before.width,'contextual search occupies the same slot in both contexts');
+ assert.deepEqual(await page.locator('.demo-hud').getByRole('button',{name:'Help',exact:true}).boundingBox(),helpBefore);
+ assert.deepEqual(await page.locator('.demo-camera').boundingBox(),cameraBefore);
  assert.equal(away.x+away.width,before.x+before.width,'right edge stays fixed');
  await control.click();
  await page.waitForFunction(()=>document.querySelector('.neighborhood-back')?.getAttribute('aria-label')==='Explore neighborhood');
