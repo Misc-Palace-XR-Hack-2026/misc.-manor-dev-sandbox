@@ -72,6 +72,7 @@ export function mountDemoHud(opts: {
   dev: HTMLElement;
   camera: CameraChoice;
   homeControl?: HTMLElement;
+  searchControl?: HTMLElement;
   onCamera: (choice: CameraChoice) => void;
   onVr?: () => Promise<void>;
   onExit: () => void;
@@ -116,6 +117,7 @@ export function mountDemoHud(opts: {
     } else { opts.camera = select.value as CameraChoice; opts.onCamera(opts.camera); }
     select.blur(); // arrow keys and WASD walk again
   });
+  if(opts.searchControl)hud.append(opts.searchControl);
   if(opts.homeControl)hud.append(opts.homeControl);
   hud.append(helpBtn, cameraWrap);
 
